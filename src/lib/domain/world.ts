@@ -5,6 +5,11 @@ export interface WorldWithControl {
 	id: string;
 	name: string;
 	type: string;
+	/** Strategic value, e.g. "Critical", "Decisive", "Moderate". */
+	value: string | null;
+	garrison: string | null;
+	supply: string | null;
+	description: string | null;
 	/** PixelPlanets render recipe (e.g. "lava", "ocean", "hive"). */
 	render: string;
 	shares: { warbandId: string; share: number }[];

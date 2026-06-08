@@ -10,6 +10,8 @@ export type { WorldWithControl };
 export async function getWorldsWithControl(campaignId: string): Promise<WorldWithControl[]> {
 	const rows = await db.query.world.findMany({
 		where: eq(world.campaignId, campaignId),
+		// Stable order so the map's derived orbital positions never shuffle.
+		orderBy: (w, { asc }) => [asc(w.createdAt), asc(w.id)],
 		with: { control: true }
 	});
 
@@ -19,6 +21,10 @@ export async function getWorldsWithControl(campaignId: string): Promise<WorldWit
 			id: w.id,
 			name: w.name,
 			type: w.type,
+			value: w.value,
+			garrison: w.garrison,
+			supply: w.supply,
+			description: w.description,
 			render: w.render,
 			shares,
 			derived: deriveControl(shares)

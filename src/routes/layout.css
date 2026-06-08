@@ -2,12 +2,13 @@
 
 /* ============================================================
    Dominatus — design token system (structural, not final design)
-   Type: Chakra Petch (display) · IBM Plex Mono (body/console)
-   Themes: amber (default) · phosphor (green) · blood (red)
+   Type: Chakra Petch (display) · Spectral (lore prose) · IBM Plex Mono (body/console)
+   Accent: single fixed phosphor green (#46e08a) — not user-customizable
    ============================================================ */
 
 @theme {
 	--font-display: 'Chakra Petch', sans-serif;
+	--font-prose: 'Spectral', Georgia, serif;
 	--font-body: 'IBM Plex Mono', monospace;
 
 	--color-void: #07070a;
@@ -21,23 +22,39 @@
 :root {
 	color-scheme: dark;
 
-	--bg-0: #07070a;
-	--bg-1: #0b0b10;
-	--panel: #101018;
+	/* surfaces — depth is tonal, near-black layered over the void */
+	--bg-0: #07070a; /* void */
+	--bg-1: #0b0b10; /* panel */
+	--panel: #0b0b10;
+	--panel-2: #101018;
+	--panel-solid: #0a0a0f;
+
+	/* hairlines & ink */
 	--border: #2a2a33;
+	--border-lum: rgba(70, 224, 138, 0.55);
 	--text: #ece5d2;
 	--text-dim: #9b9276;
+	--text-faint: #5e5847;
 
-	/* amber cogitator (default theme) */
-	--accent: #ffb000;
-}
-
-[data-theme='phosphor'] {
+	/* cogitator phosphor — the single fixed accent */
 	--accent: #46e08a;
-}
+	--accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+	--accent-mid: color-mix(in srgb, var(--accent) 42%, transparent);
+	--accent-glow: color-mix(in srgb, var(--accent) 55%, transparent);
+	--accent-ink: color-mix(in srgb, var(--accent) 85%, #ffffff 15%);
 
-[data-theme='blood'] {
-	--accent: #e2483d;
+	/* celestial + atmosphere */
+	--star: #cfc6ad;
+	--sun-core: #e8fff0;
+	--sun-glow: #2fcf86;
+	--ring: rgba(160, 152, 130, 0.22);
+	--ring-strong: rgba(70, 224, 138, 0.34);
+	--grid-line: rgba(70, 224, 138, 0.05);
+
+	/* control / outcome states — always paired with a label, never colour alone */
+	--state-contested: #ffce54;
+	--state-attacker: #ff8a6a;
+	--state-defender: #6ad6ff;
 }
 
 html,
@@ -57,4 +74,83 @@ h2,
 h3,
 .font-display {
 	font-family: var(--font-display);
+}
+
+/* long lore prose only — rules charter, world descriptions */
+.font-prose {
+	font-family: var(--font-prose);
+}
+
+/* ============================================================
+   Shared button primitive — hard corners, label type, one
+   accent. The whole app speaks this vocabulary (DESIGN §5).
+   ============================================================ */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 14px;
+	border: 1px solid var(--border);
+	border-radius: 0;
+	background: var(--panel-2);
+	color: var(--text-dim);
+	font-family: var(--font-display);
+	font-weight: 600;
+	font-size: 11px;
+	letter-spacing: 0.09em;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: pointer;
+	text-decoration: none;
+	transition:
+		color 0.12s,
+		background 0.12s,
+		border-color 0.12s,
+		box-shadow 0.12s;
+}
+.btn:hover {
+	color: var(--accent);
+	border-color: var(--border-lum);
+	background: var(--accent-soft);
+	box-shadow: inset 0 0 0 1px var(--accent-mid);
+}
+.btn:focus-visible {
+	outline: none;
+	color: var(--accent);
+	border-color: var(--accent);
+	box-shadow: 0 0 0 1px var(--accent-mid);
+}
+.btn:active {
+	transform: translateY(1px);
+}
+.btn svg {
+	width: 15px;
+	height: 15px;
+}
+.btn-primary {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--bg-0);
+	font-weight: 700;
+	box-shadow: 0 0 16px var(--accent-soft);
+}
+.btn-primary:hover {
+	background: var(--accent-ink);
+	color: var(--bg-0);
+	box-shadow: 0 0 22px var(--accent-glow);
+}
+.btn-ghost {
+	background: transparent;
+}
+.btn-icon {
+	width: 38px;
+	height: 38px;
+	padding: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.btn:active {
+		transform: none;
+	}
 }
