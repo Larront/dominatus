@@ -19,6 +19,13 @@ world's control state when no warband holds it.)
 _Avoid_: Faction (the prototype's term for the same thing — retired to prevent confusion
 with a 40k army allegiance).
 
+**Join Code**:
+The short random credential a commander enters to enlist in a campaign — a 5-character,
+case-insensitive code from an unambiguous alphabet, distinct from the campaign's slug. Unique
+per campaign, generated when founded, and regeneratable by the arbiter to revoke a leaked code.
+The slug is for URLs; the join code is for joining.
+_Avoid_: Code (unqualified — collides with the slug, which used to double as the join code).
+
 **Commander**:
 A user in the context of the warband(s) they command. A user may command several warbands
 in one campaign, but each warband has only one commander.
@@ -40,6 +47,14 @@ central object of the map and the thing battles are fought over.
 _Avoid_: Planet (reserve "planet" for the rendered visual of a world on the map, not the
 entity).
 
+**Archetype**:
+A kind of world — its render recipe (which PixelPlanets layers, in which palette) paired with
+a pool of fitting `type` labels and flavour (value/garrison/supply/description). The world
+generator rolls an archetype to produce a world; the resulting `type` text and `render` recipe
+are then independently editable by the arbiter. Most archetypes are recolours of the same few
+ported layer shaders, so adding one is data, not new shader code.
+_Avoid_: Render (the recipe is one part of an archetype, not the whole thing).
+
 **Control**:
 How much of a world each warband holds, stored as a share per warband. Everything else is
 derived from those shares: the **owner** is the majority holder, a world is **contested**
@@ -58,8 +73,51 @@ computer vision. A draft is only ever a starting point: the commander reviews, e
 confirms it, and no battle report is committed without that human confirmation. Uploading an
 image is optional — a report can always be filled in by hand.
 
+**Planetary Effect**:
+A named narrative modifier (title + description) the arbiter can declare in play on a world —
+e.g. a warp storm or toxic atmosphere. **Descriptive only**: the app displays effects but never
+enforces them or folds them into control or standings, the same hands-off stance as the army-
+size ladder. Each campaign owns a **pool** of effects (authored when founded, editable after),
+and any world may currently carry zero or more of them. Attachment is mutable current state,
+not a cycle-stamped history — the arbiter rotates which effects sit on which worlds over the
+campaign (weekly, in the running group), and the app remembers only the present assignment.
+
 **Cycle**:
 A numbered phase of a campaign. The campaign tracks its current cycle, and each battle
 report is stamped with the cycle it was fought in. (How long a cycle lasts and what happens
 when one closes are deferred rules.)
 _Avoid_: Turn.
+
+**Standings** (the **Leaderboard**):
+The campaign-wide points table ranking warbands. Deliberately **separate from control** (ADR
+0002): control is the map, standings are the points. Most points are derived by folding battle
+reports (win, draw, underdog, narrative, control milestones); painting is granted as Awards. A
+pure function of the report log plus awards, recomputed on read (ADR 0003).
+_Avoid_: Score (a battle report's VP is a "score"; the campaign tally is "standings"/"points").
+
+**Award**:
+A discrete point grant the arbiter makes by hand, for things no battle report captures —
+currently painting (a unit, a character/monster/vehicle, or a terrain/display piece). An award
+logs only its **kind**; its point value is read from the campaign's Scoring Profile at compute
+time, so editing the profile re-scores past awards alongside the derived points. Distinct from
+the derived points only in that a human, not the report log, decides it happened.
+
+**Scoring Category**:
+One line of points a warband can earn — the derived ones folded from reports (win, draw,
+underdog, narrative, control milestone, loss, win streak, kingkiller) and the awarded ones a
+human grants (painting kinds). Each category has a point value; some carry a threshold too
+(milestone its control step, win streak its run length). **Win streak** is a repeatable bounty
+every Yth consecutive decisive win — a draw or loss resets the run. **Kingkiller** rewards
+ending another warband's reigning streak (run ≥ the streak length, read before the battle), by
+beating them *or* drawing them; a draw between two kings pays both. Win streak and kingkiller
+are the only categories whose value depends on the sequence of prior reports, not just the
+report in hand.
+_Avoid_: Task (reads as a 40k mission objective — collides with the in-game layer not modelled).
+
+**Scoring Profile**:
+The per-campaign set of point values for every Scoring Category, set when the campaign is
+founded and editable by the arbiter thereafter. Standings read the founding campaign's profile
+rather than any global default, so two campaigns in the same install can score differently. A
+category set to **0** is inert — it grants nothing and is hidden from commanders' standings
+(see the standings rules). Because standings recompute on read, editing the profile re-scores
+the whole campaign's history.
