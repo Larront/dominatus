@@ -3,7 +3,7 @@
 	import Planet from './Planet.svelte';
 	import StandingsLegend from './StandingsLegend.svelte';
 	import { systemGeometry, type OrbitGeometry } from '$lib/domain/orbit';
-	import type { WorldWithControl } from '$lib/domain/world';
+	import type { WorldWithControl, WorldsHeld } from '$lib/domain/world';
 
 	interface WarbandRef {
 		id: string;
@@ -11,26 +11,18 @@
 		short: string;
 		color: string;
 	}
-	interface Standing {
-		id: string;
-		name: string;
-		short: string;
-		color: string;
-		held: number;
-		you: boolean;
-	}
 
 	let {
 		worlds,
 		warbands,
-		standings,
+		worldsHeld,
 		selectedId,
 		campaignName,
 		basePath
 	}: {
 		worlds: WorldWithControl[];
 		warbands: WarbandRef[];
-		standings: Standing[];
+		worldsHeld: WorldsHeld[];
 		selectedId?: string;
 		campaignName: string;
 		basePath: string;
@@ -197,7 +189,7 @@
 		</div>
 	{/if}
 
-	<StandingsLegend {standings} />
+	<StandingsLegend {worldsHeld} />
 
 	<div
 		class="absolute top-5 right-5 z-[6] flex border border-border bg-[color-mix(in_srgb,var(--color-panel)_86%,transparent)] backdrop-blur-[8px] max-[720px]:top-3 max-[720px]:right-3"

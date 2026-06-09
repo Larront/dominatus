@@ -1,16 +1,9 @@
 <script lang="ts">
 	import { Collapsible } from 'bits-ui';
+	import type { WorldsHeld } from '$lib/domain/world';
 
-	interface Standing {
-		id: string;
-		name: string;
-		short: string;
-		color: string;
-		held: number;
-		you: boolean;
-	}
-
-	let { standings }: { standings: Standing[] } = $props();
+	// The map's spatial tally (CONTEXT: Worlds Held) — worlds owned, not the points Standings.
+	let { worldsHeld }: { worldsHeld: WorldsHeld[] } = $props();
 
 	let open = $state(true);
 </script>
@@ -43,7 +36,7 @@
 			<span>Warband</span>
 			<span>Worlds</span>
 		</div>
-		{#each standings as wb (wb.id)}
+		{#each worldsHeld as wb (wb.id)}
 			<div
 				class="grid grid-cols-[12px_1fr_auto] items-center gap-2.5 py-[7px] font-body text-[13px]
 					[&+&]:border-t [&+&]:border-border"

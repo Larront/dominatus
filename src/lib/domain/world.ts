@@ -17,3 +17,40 @@ export interface WorldWithControl {
 	/** Planetary effects currently in play on this world (descriptive; ADR/CONTEXT). */
 	effects: { id: string; title: string; description: string | null }[];
 }
+
+/**
+ * One row of the map's Worlds Held tally (CONTEXT.md): a warband and the count of worlds it
+ * outright owns. The spatial metric the map legend shows — distinct from the points Standings.
+ */
+export interface WorldsHeld {
+	id: string;
+	name: string;
+	short: string;
+	color: string;
+	/** Number of worlds this warband outright owns (holds a majority of). */
+	held: number;
+	/** True when the viewing user commands this warband. */
+	you: boolean;
+}
+
+/**
+ * Worlds Held (CONTEXT.md): per warband, the count of worlds it outright owns, strongest first
+ * (ties broken by name). This is the map legend's spatial tally — deliberately separate from the
+ * points Standings (ADR 0003), which fold the report log. A pure derivation over current control.
+ */
+export function worldsHeld(
+	worlds: WorldWithControl[],
+	warbands: { id: string; name: string; short: string; color: string; commanderUserId: string }[],
+	viewerId?: string | null
+): WorldsHeld[] {
+	return warbands
+		.map((wb) => ({
+			id: wb.id,
+			name: wb.name,
+			short: wb.short,
+			color: wb.color,
+			held: worlds.filter((w) => w.derived.owner === wb.id).length,
+			you: viewerId ? wb.commanderUserId === viewerId : false
+		}))
+		.sort((a, b) => b.held - a.held || a.name.localeCompare(b.name));
+}

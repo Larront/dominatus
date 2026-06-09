@@ -1,6 +1,7 @@
 import { getWorldsWithControl } from '$lib/server/worlds';
 import { getWarbandsForCampaign } from '$lib/server/warbands';
 import { getBattleLog } from '$lib/server/reports';
+import { worldsHeld } from '$lib/domain/world';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
@@ -11,18 +12,9 @@ export const load: PageServerLoad = async ({ parent }) => {
 		getBattleLog(campaign.id)
 	]);
 
-	// Standings are derived, never stored: a warband's score is the count of
-	// worlds it outright owns (holds a majority of). Sorted strongest-first.
-	const standings = warbands
-		.map((wb) => ({
-			id: wb.id,
-			name: wb.name,
-			short: wb.short,
-			color: wb.color,
-			held: worlds.filter((w) => w.derived.owner === wb.id).length,
-			you: user ? wb.commanderUserId === user.id : false
-		}))
-		.sort((a, b) => b.held - a.held || a.name.localeCompare(b.name));
+	// The map legend's spatial tally — worlds outright owned per warband (CONTEXT: Worlds Held).
+	// Deliberately distinct from the points Standings at /standings (ADR 0003).
+	const held = worldsHeld(worlds, warbands, user?.id);
 
-	return { worlds, warbands, battleLog, standings };
+	return { worlds, warbands, battleLog, worldsHeld: held };
 };

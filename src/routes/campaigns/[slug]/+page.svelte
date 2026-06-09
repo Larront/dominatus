@@ -17,7 +17,7 @@
 <SystemView
 	worlds={data.worlds}
 	warbands={data.warbands}
-	standings={data.standings}
+	worldsHeld={data.worldsHeld}
 	{selectedId}
 	campaignName={data.campaign.name}
 	basePath={base}

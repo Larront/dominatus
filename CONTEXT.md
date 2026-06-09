@@ -105,6 +105,15 @@ reports (win, draw, underdog, narrative, control milestones); painting is grante
 pure function of the report log plus awards, recomputed on read (ADR 0003).
 _Avoid_: Score (a battle report's VP is a "score"; the campaign tally is "standings"/"points").
 
+**Worlds Held**:
+The map legend's **spatial** tally — per warband, the count of worlds it outright owns (holds a
+majority of), strongest first. A pure derivation over current Control, shown in the map's "Warband
+Standings" legend. Deliberately **not** the **Standings**: that is the points Leaderboard folded
+from the report log, this is just "who holds more planets right now". The two answer different
+questions and are computed differently; keep their names apart in code (`worldsHeld` vs
+`computeStandings`).
+_Avoid_: Standings (those are the points; this is the planet count).
+
 **Award**:
 A discrete point grant the arbiter makes by hand, for things no battle report captures —
 currently painting (a unit, a character/monster/vehicle, or a terrain/display piece). An award
