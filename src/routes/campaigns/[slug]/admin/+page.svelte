@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
@@ -21,7 +22,7 @@
 		message: profileMessage,
 		submitting: profileSubmitting,
 		enhance: profileEnhance
-	} = superForm(data.profileForm, { id: 'profile', resetForm: false });
+	} = untrack(() => superForm(data.profileForm, { id: 'profile', resetForm: false }));
 
 	// Join code — the credential commanders enter to enlist. Copyable, and regeneratable to revoke
 	// one that's been shared too widely (the load re-reads the campaign, so the new code shows).
@@ -44,7 +45,7 @@
 		message: detailsMessage,
 		submitting: detailsSubmitting,
 		enhance: detailsEnhance
-	} = superForm(data.detailsForm, { id: 'details', resetForm: false });
+	} = untrack(() => superForm(data.detailsForm, { id: 'details', resetForm: false }));
 
 	const outcomeMeta = {
 		attacker: {

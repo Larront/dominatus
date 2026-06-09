@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { superForm, type SuperValidated } from 'sveltekit-superforms';
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import type { IdActionInput } from '$lib/schemas/id-action';
 
 	// A Superforms-backed single-button form for an id-only destructive action in a list. Each
@@ -27,9 +27,9 @@
 		children: Snippet;
 	} = $props();
 
-	const { form: fields, submitting, enhance } = superForm(form, { id: formId });
+	const { form: fields, submitting, enhance } = untrack(() => superForm(form, { id: formId }));
 	// Seed the row's id so client validation passes and the POST carries it.
-	$fields.id = recordId;
+	$fields.id = untrack(() => recordId);
 </script>
 
 <form method="POST" {action} use:enhance>

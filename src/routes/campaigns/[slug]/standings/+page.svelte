@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
@@ -17,7 +18,7 @@
 		message: awardMessage,
 		submitting: granting,
 		enhance: awardEnhance
-	} = superForm(data.awardForm, { id: 'award' });
+	} = untrack(() => superForm(data.awardForm, { id: 'award' }));
 
 	const warbandItems = $derived(data.warbands.map((w) => ({ value: w.id, label: w.name })));
 	const leadColor = $derived(data.warbands.find((w) => w.id === $award.warbandId)?.color);

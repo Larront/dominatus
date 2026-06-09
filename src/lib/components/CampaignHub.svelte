@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { untrack } from 'svelte';
 	import { superForm, type SuperValidated } from 'sveltekit-superforms';
 	import { signOut } from '$lib/auth-client';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -31,7 +32,7 @@
 		errors: joinErrors,
 		enhance: joinEnhance,
 		submitting: joinSubmitting
-	} = superForm(joinForm, { resetForm: false });
+	} = untrack(() => superForm(joinForm, { resetForm: false }));
 
 	async function logout() {
 		await signOut();

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
@@ -20,7 +21,9 @@
 
 	// One nested form for the whole rite. dataType:'json' lets the worlds array, the scoring
 	// profile object, and the effect pool post as structured data rather than flat fields.
-	const { form, errors, enhance, submitting } = superForm(data.form, { dataType: 'json' });
+	const { form, errors, enhance, submitting } = untrack(() =>
+		superForm(data.form, { dataType: 'json' })
+	);
 
 	// ── identity ──────────────────────────────────────────────────────────────
 	// Client mirror of the server's slugify, so the arbiter sees the link as they name it.

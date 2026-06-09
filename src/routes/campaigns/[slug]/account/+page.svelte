@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { goto } from '$app/navigation';
 	import { signOut } from '$lib/auth-client';
@@ -7,7 +8,7 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const { form, errors, message, submitting, enhance } = superForm(data.form);
+	const { form, errors, message, submitting, enhance } = untrack(() => superForm(data.form));
 
 	// The colour swatches mirror the seed palette so a fresh campaign reads as deliberate
 	// rather than browser-default.

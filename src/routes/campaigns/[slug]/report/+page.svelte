@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { page } from '$app/state';
 	import { applyReport } from '$lib/domain/control-fold';
@@ -10,7 +11,9 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const { form, errors, enhance, message, submitting } = superForm(data.form, { dataType: 'json' });
+	const { form, errors, enhance, message, submitting } = untrack(() =>
+		superForm(data.form, { dataType: 'json' })
+	);
 
 	const base = $derived(`/campaigns/${page.params.slug}`);
 	// Arbiter amend mode (?edit=<id>): the form is prefilled and posts back to the same URL, which
