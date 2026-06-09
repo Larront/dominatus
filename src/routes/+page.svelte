@@ -1,32 +1,25 @@
 <script lang="ts">
+	import AccessGate from '$lib/components/AccessGate.svelte';
+	import CampaignHub from '$lib/components/CampaignHub.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 </script>
 
-<main class="mx-auto max-w-3xl p-8">
-	<h1 class="font-display text-3xl" style="color: var(--accent)">Dominatus</h1>
-	<p class="mt-1 text-sm" style="color: var(--text-dim)">Campaign command</p>
+<div class="relative min-h-[100dvh] overflow-hidden bg-void">
+	<!-- Atmosphere: a faint phosphor bloom at the crown and an edge vignette, nothing louder. -->
+	<div aria-hidden="true" class="pointer-events-none absolute inset-0">
+		<div
+			class="absolute top-0 left-1/2 h-[440px] w-[860px] max-w-[150vw] -translate-x-1/2 -translate-y-[38%] rounded-full bg-[radial-gradient(ellipse_at_center,var(--color-accent-soft),transparent_70%)] opacity-70 blur-[42px]"
+		></div>
+		<div class="absolute inset-0 shadow-[inset_0_0_240px_70px_rgba(0,0,0,0.85)]"></div>
+	</div>
 
-	<h2 class="mt-8 mb-3 font-display text-lg">Your campaigns</h2>
-	{#if data.campaigns.length === 0}
-		<p style="color: var(--text-dim)">You are not part of any campaigns yet.</p>
-	{:else}
-		<ul class="flex flex-col gap-2">
-			{#each data.campaigns as campaign (campaign.id)}
-				<li>
-					<a
-						href="/campaigns/{campaign.slug}"
-						class="flex items-center justify-between border p-4"
-						style="border-color: var(--border)"
-					>
-						<span class="font-display">{campaign.name}</span>
-						<span class="text-xs uppercase" style="color: var(--text-dim)">
-							{campaign.role} · cycle {campaign.currentCycle}
-						</span>
-					</a>
-				</li>
-			{/each}
-		</ul>
-	{/if}
-</main>
+	<div class="relative">
+		{#if data.user && data.joinForm}
+			<CampaignHub user={data.user} campaigns={data.campaigns} joinForm={data.joinForm} />
+		{:else}
+			<AccessGate />
+		{/if}
+	</div>
+</div>

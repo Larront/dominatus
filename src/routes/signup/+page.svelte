@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { signUp } from '$lib/auth-client';
+	import Button from '$lib/components/ui/Button.svelte';
 
 	let name = $state('');
 	let email = $state('');
@@ -20,57 +21,39 @@
 		}
 		await goto('/');
 	}
+
+	const lbl = 'font-display text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-dim';
+	const field =
+		'w-full bg-void border border-border px-3 py-2.5 font-body text-[13px] text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent-mid),0_0_14px_var(--color-accent-soft)]';
 </script>
 
 <main class="mx-auto max-w-sm p-8">
-	<h1 class="font-display text-2xl" style="color: var(--accent)">Enlist</h1>
+	<h1 class="font-display text-2xl font-bold text-accent">Enlist</h1>
 
 	<form class="mt-6 flex flex-col gap-4" onsubmit={submit}>
-		<label class="flex flex-col gap-1 text-sm">
-			Commander name
-			<input
-				bind:value={name}
-				required
-				class="border p-2"
-				style="background: var(--bg-1); border-color: var(--border)"
-			/>
+		<label class="flex flex-col gap-1.5">
+			<span class={lbl}>Commander name</span>
+			<input bind:value={name} required class={field} />
 		</label>
-		<label class="flex flex-col gap-1 text-sm">
-			Email
-			<input
-				type="email"
-				bind:value={email}
-				required
-				class="border p-2"
-				style="background: var(--bg-1); border-color: var(--border)"
-			/>
+		<label class="flex flex-col gap-1.5">
+			<span class={lbl}>Email</span>
+			<input type="email" bind:value={email} required class={field} />
 		</label>
-		<label class="flex flex-col gap-1 text-sm">
-			Password
-			<input
-				type="password"
-				bind:value={password}
-				required
-				class="border p-2"
-				style="background: var(--bg-1); border-color: var(--border)"
-			/>
+		<label class="flex flex-col gap-1.5">
+			<span class={lbl}>Password</span>
+			<input type="password" bind:value={password} required class={field} />
 		</label>
 
 		{#if errorMsg}
-			<p class="text-sm" style="color: var(--accent)">{errorMsg}</p>
+			<p class="font-body text-[12px] text-state-attacker">{errorMsg}</p>
 		{/if}
 
-		<button
-			type="submit"
-			disabled={loading}
-			class="p-2 font-display uppercase"
-			style="background: var(--accent); color: var(--bg-0)"
-		>
+		<Button type="submit" variant="primary" disabled={loading}>
 			{loading ? 'Enlisting…' : 'Enlist'}
-		</button>
+		</Button>
 	</form>
 
-	<p class="mt-4 text-sm" style="color: var(--text-dim)">
-		Already enlisted? <a href="/login" style="color: var(--accent)">Sign in</a>
+	<p class="mt-4 font-body text-[13px] text-ink-dim">
+		Already enlisted? <a href="/login" class="text-accent hover:underline">Sign in</a>
 	</p>
 </main>
