@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Planet from './Planet.svelte';
+	import Button from './ui/Button.svelte';
 	import type { WorldWithControl } from '$lib/domain/world';
 	import type { BattleLogEntry } from '$lib/server/reports';
 
@@ -28,9 +29,8 @@
 	const byId = $derived(new Map(warbands.map((w) => [w.id, w])));
 	const wb = (id: string) => byId.get(id);
 	const name = (id: string) => byId.get(id)?.name ?? 'Unknown warband';
-	const color = (id: string) => byId.get(id)?.color ?? 'var(--text-dim)';
+	const color = (id: string) => byId.get(id)?.color ?? 'var(--color-ink-dim)';
 
-	// Control, sorted strongest-first, plus any share of the world no warband holds.
 	const segments = $derived(
 		[...world.shares].filter((s) => s.share > 0).sort((a, b) => b.share - a.share)
 	);
@@ -41,38 +41,51 @@
 	const leader = $derived(world.derived.leader ? wb(world.derived.leader) : null);
 	const leaderShare = $derived(segments[0]?.share ?? 0);
 	const ownerColor = $derived(
-		world.derived.contested ? 'var(--state-contested)' : (owner?.color ?? 'var(--text-dim)')
+		world.derived.contested ? 'var(--color-state-contested)' : (owner?.color ?? 'var(--color-ink-dim)')
 	);
 
 	const outcomeMeta = {
-		attacker: { label: 'Attacker won', cls: 'res-attacker' },
-		defender: { label: 'Defender held', cls: 'res-defender' },
-		stalemate: { label: 'Stalemate', cls: 'res-stalemate' }
+		attacker: { label: 'Attacker won', cls: 'text-state-attacker bg-state-attacker-soft border-state-attacker-line' },
+		defender: { label: 'Defender held', cls: 'text-state-defender bg-state-defender-soft border-state-defender-line' },
+		stalemate: { label: 'Stalemate', cls: 'text-state-contested bg-state-contested-soft border-state-contested-line' }
 	} as const;
 
 	// Escape closes the panel; selection lives in the URL so it stays shareable.
 	function onKey(e: KeyboardEvent) {
 		if (e.key === 'Escape') goto(closeHref, { keepFocus: false });
 	}
+
+	const sectionLabel =
+		"flex items-center gap-2.5 font-display text-[10px] font-semibold tracking-[0.14em] uppercase text-ink-dim mb-3.5 before:content-['//'] before:text-accent after:content-[''] after:flex-1 after:h-px after:bg-border";
 </script>
 
 <svelte:window onkeydown={onKey} />
 
-<a class="scrim" href={closeHref} aria-label="Close world intel"></a>
+<a
+	class="fixed inset-0 z-30 block bg-[radial-gradient(circle_at_72%_50%,rgba(0,0,0,0.3),rgba(0,0,0,0.66))] animate-scrim-in motion-reduce:animate-none"
+	href={closeHref}
+	aria-label="Close world intel"
+></a>
 
-<aside class="drawer" aria-label="{world.name} intel">
-	<header class="drawer-hero" style="--fcol: {ownerColor}">
-		<a class="drawer-close btn btn-icon" href={closeHref} aria-label="Close">
+<aside
+	class="fixed top-0 right-0 z-[31] flex h-full w-[min(460px,100vw)] flex-col border-l border-border-lum bg-[linear-gradient(180deg,var(--color-panel-solid),var(--color-panel))] shadow-[-30px_0_80px_rgba(0,0,0,0.7)] animate-drawer-in motion-reduce:animate-none max-[720px]:w-screen"
+	aria-label="{world.name} intel"
+>
+	<header
+		class="relative overflow-hidden border-b border-border px-6 pt-[22px] pb-5 before:pointer-events-none before:absolute before:inset-0 before:content-[''] before:bg-[radial-gradient(120%_80%_at_82%_-10%,color-mix(in_srgb,var(--fcol)_30%,transparent),transparent_60%)]"
+		style="--fcol: {ownerColor}"
+	>
+		<Button icon href={closeHref} aria-label="Close" class="absolute top-3.5 right-3.5 z-[2]">
 			<svg viewBox="0 0 16 16" aria-hidden="true">
 				<path d="M3 3l10 10M13 3L3 13" fill="none" stroke="currentColor" stroke-width="1.6" />
 			</svg>
-		</a>
-		<div class="hero-visual">
-			<div class="hero-globe">
+		</Button>
+		<div class="relative mb-3.5 flex items-center gap-[18px]">
+			<div class="shrink-0 leading-[0] [filter:drop-shadow(0_0_18px_color-mix(in_srgb,var(--fcol)_30%,transparent))_drop-shadow(0_4px_10px_rgba(0,0,0,0.6))]">
 				<Planet render={world.render} size={104} resolution={110} name={world.name} />
 			</div>
-			<div class="hero-text">
-				<p class="drawer-kicker">
+			<div class="min-w-0">
+				<p class="mb-[7px] font-display text-[10px] font-semibold tracking-[0.14em] uppercase [color:var(--fcol)]">
 					{#if world.derived.unclaimed}
 						Unclaimed Territory
 					{:else if world.derived.contested}
@@ -81,120 +94,122 @@
 						Held · {owner?.name}
 					{/if}
 				</p>
-				<h2 class="drawer-title">{world.name}</h2>
-				<p class="drawer-type">{world.type}{world.value ? ` · ${world.value}` : ''}</p>
+				<h2 class="font-display text-[28px] leading-none font-bold tracking-[0.01em] text-balance text-ink">{world.name}</h2>
+				<p class="mt-[9px] font-display text-[9.5px] font-medium tracking-[0.1em] uppercase text-ink-dim">
+					{world.type}{world.value ? ` · ${world.value}` : ''}
+				</p>
 			</div>
 		</div>
 		{#if world.description}
-			<p class="drawer-desc font-prose">{world.description}</p>
+			<p class="relative max-w-[62ch] font-prose text-[14px] leading-[1.6] text-ink-dim">{world.description}</p>
 		{/if}
 	</header>
 
-	<div class="drawer-scroll">
-		<section class="section">
-			<h3 class="section-label">Control</h3>
-			<div class="control-meta">
-				<span class="owner-big" style="color: {ownerColor}">
-					{#if world.derived.unclaimed}
-						Unclaimed
-					{:else if world.derived.contested}
-						Contested
-					{:else}
-						{owner?.name}
-					{/if}
+	<div class="flex-1 overflow-y-auto [scrollbar-color:var(--color-accent-mid)_var(--color-void)] [scrollbar-width:thin]">
+		<section class="border-b border-border px-6 py-5">
+			<h3 class={sectionLabel}>Control</h3>
+			<div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+				<span class="font-display text-[17px] leading-[1.1] font-semibold" style="color: {ownerColor}">
+					{#if world.derived.unclaimed}Unclaimed{:else if world.derived.contested}Contested{:else}{owner?.name}{/if}
 				</span>
 				{#if !world.derived.unclaimed && leader}
-					<span class="owner-pct">{leader.name} leads at {leaderShare}%</span>
+					<span class="font-body text-[12px] text-ink-dim">{leader.name} leads at {leaderShare}%</span>
 				{/if}
 			</div>
 
 			<div
-				class="split-bar"
+				class="flex h-4 gap-px overflow-hidden border border-border bg-void"
 				role="img"
-				aria-label={segments.map((s) => `${name(s.warbandId)} ${s.share}%`).join(', ') ||
-					'No control held'}
+				aria-label={segments.map((s) => `${name(s.warbandId)} ${s.share}%`).join(', ') || 'No control held'}
 			>
 				{#each segments as seg (seg.warbandId)}
-					<span class="split-seg" style="flex: {seg.share}; background: {color(seg.warbandId)}"
-					></span>
+					<span class="h-full min-w-0.5" style="flex: {seg.share}; background: {color(seg.warbandId)}"></span>
 				{/each}
 				{#if unclaimedShare > 0}
-					<span class="split-seg split-empty" style="flex: {unclaimedShare}"></span>
+					<span class="h-full min-w-0 bg-[repeating-linear-gradient(-45deg,transparent,transparent_4px,var(--color-border)_4px,var(--color-border)_5px)]" style="flex: {unclaimedShare}"></span>
 				{/if}
 			</div>
 
 			{#if segments.length > 0}
-				<div class="split-legend">
+				<div class="mt-3 flex flex-wrap gap-x-3.5 gap-y-2">
 					{#each segments as seg (seg.warbandId)}
-						<span class="split-key">
-							<span class="dot" style="background: {color(seg.warbandId)}"></span>
+						<span class="flex items-center gap-1.5 font-body text-[12px] text-ink-dim">
+							<span class="size-[9px] shrink-0" style="background: {color(seg.warbandId)}"></span>
 							{name(seg.warbandId)}
-							<b>{seg.share}%</b>
+							<b class="font-semibold text-ink">{seg.share}%</b>
 						</span>
 					{/each}
 				</div>
 			{/if}
 		</section>
 
-		<section class="section">
-			<h3 class="section-label">System Intel</h3>
-			<div class="stat-grid">
-				<div class="stat-cell">
-					<div class="k">Classification</div>
-					<div class="v">{world.type}</div>
-				</div>
-				<div class="stat-cell">
-					<div class="k">Strategic Value</div>
-					<div class="v accent">{world.value ?? 'Unrated'}</div>
-				</div>
-				<div class="stat-cell">
-					<div class="k">Garrison</div>
-					<div class="v">{world.garrison ?? 'Unknown'}</div>
-				</div>
-				<div class="stat-cell">
-					<div class="k">Supply Lines</div>
-					<div class="v">{world.supply ?? 'Unknown'}</div>
-				</div>
+		<section class="border-b border-border px-6 py-5">
+			<h3 class={sectionLabel}>System Intel</h3>
+			<div class="grid grid-cols-2 gap-px border border-border bg-border">
+				{#each [{ k: 'Classification', v: world.type, accent: false }, { k: 'Strategic Value', v: world.value ?? 'Unrated', accent: true }, { k: 'Garrison', v: world.garrison ?? 'Unknown', accent: false }, { k: 'Supply Lines', v: world.supply ?? 'Unknown', accent: false }] as cell (cell.k)}
+					<div class="bg-panel-solid px-3.5 py-3">
+						<div class="mb-1.5 font-display text-[9px] font-medium tracking-[0.1em] uppercase text-ink-faint">{cell.k}</div>
+						<div class="font-body text-[13.5px] leading-[1.25] {cell.accent ? 'text-accent' : 'text-ink'}">{cell.v}</div>
+					</div>
+				{/each}
 			</div>
 		</section>
 
-		<section class="section">
-			<h3 class="section-label">Battle Log</h3>
+		{#if world.effects.length}
+			<section class="border-b border-border px-6 py-5">
+				<h3 class={sectionLabel}>Planetary Effects</h3>
+				<ul class="flex flex-col gap-3">
+					{#each world.effects as effect (effect.id)}
+						<li>
+							<p class="font-display text-[12px] font-semibold tracking-[0.05em] text-accent uppercase">
+								{effect.title}
+							</p>
+							{#if effect.description}
+								<p class="mt-1 font-body text-[12.5px] leading-[1.5] text-ink-dim">{effect.description}</p>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
+
+		<section class="border-b border-border px-6 py-5">
+			<h3 class={sectionLabel}>Battle Log</h3>
 			{#if battleLog.length === 0}
-				<p class="log-empty">
+				<p class="max-w-[60ch] font-body text-[13px] leading-[1.55] text-ink-dim">
 					No battles logged over {world.name} yet. The first report filed here will appear in this ledger.
 				</p>
 			{:else}
-				<div class="battle-list">
+				<div>
 					{#each battleLog as report (report.id)}
 						{@const meta = outcomeMeta[report.outcome]}
-						<article class="battle">
-							<div class="battle-turn">
-								<div class="t-num">{report.cycle}</div>
-								<div class="t-lbl">Cycle</div>
+						<article class="grid grid-cols-[42px_1fr] gap-3.5 py-[13px] [&+&]:border-t [&+&]:border-border">
+							<div class="text-center">
+								<div class="font-body text-[19px] leading-none font-semibold text-accent">{report.cycle}</div>
+								<div class="mt-[3px] font-display text-[8.5px] font-medium tracking-[0.1em] uppercase text-ink-faint">Cycle</div>
 							</div>
-							<div class="battle-main">
-								<div class="battle-head">
-									<span class="vs-side">
+							<div class="min-w-0">
+								<div class="mb-[5px] flex flex-wrap items-center gap-2">
+									<span class="inline-flex items-center gap-1.5 font-display text-[11px] font-semibold tracking-[0.04em] text-ink">
 										{#each report.attackers as c (c.warbandId)}
-											<span class="dot" style="background: {color(c.warbandId)}"></span>
+											<span class="size-2" style="background: {color(c.warbandId)}"></span>
 											{wb(c.warbandId)?.short ?? '??'}
 										{/each}
 									</span>
-									<span class="vs-x">vs</span>
-									<span class="vs-side">
+									<span class="font-display text-[9.5px] font-medium tracking-[0.1em] uppercase text-ink-faint">vs</span>
+									<span class="inline-flex items-center gap-1.5 font-display text-[11px] font-semibold tracking-[0.04em] text-ink">
 										{#each report.defenders as c (c.warbandId)}
-											<span class="dot" style="background: {color(c.warbandId)}"></span>
+											<span class="size-2" style="background: {color(c.warbandId)}"></span>
 											{wb(c.warbandId)?.short ?? '??'}
 										{/each}
 									</span>
-									<span class="battle-result {meta.cls}">{meta.label}</span>
+									<span class="ml-auto border px-[7px] py-[3px] font-display text-[9px] font-semibold tracking-[0.05em] uppercase {meta.cls}">{meta.label}</span>
 								</div>
 								{#if report.narrative}
-									<p class="battle-sub">{report.narrative}</p>
+									<p class="font-body text-[12.5px] leading-[1.5] text-ink-dim">{report.narrative}</p>
 								{/if}
 								{#if report.pointsSize}
-									<p class="battle-meta">{report.pointsSize} pts engagement</p>
+									<p class="mt-1.5 font-display text-[9.5px] font-medium tracking-[0.06em] uppercase text-ink-faint">{report.pointsSize} pts engagement</p>
 								{/if}
 							</div>
 						</article>
@@ -204,388 +219,7 @@
 		</section>
 	</div>
 
-	<footer class="drawer-foot">
-		<a class="btn btn-primary" href={reportHref}>Submit battle report</a>
+	<footer class="flex gap-2.5 border-t border-border-lum bg-panel px-6 py-[15px]">
+		<Button variant="primary" href={reportHref} class="flex-1">Submit battle report</Button>
 	</footer>
 </aside>
-
-<style>
-	.scrim {
-		position: fixed;
-		inset: 0;
-		z-index: 30;
-		display: block;
-		background: radial-gradient(circle at 72% 50%, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.66));
-		animation: fade 0.25s ease;
-	}
-	@keyframes fade {
-		from {
-			opacity: 0;
-		}
-	}
-
-	.drawer {
-		position: fixed;
-		top: 0;
-		right: 0;
-		z-index: 31;
-		height: 100%;
-		width: min(460px, 100vw);
-		background: linear-gradient(180deg, var(--panel-solid), var(--bg-1));
-		border-left: 1px solid var(--border-lum);
-		box-shadow: -30px 0 80px rgba(0, 0, 0, 0.7);
-		display: flex;
-		flex-direction: column;
-		animation: slide-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
-	}
-	@keyframes slide-in {
-		from {
-			transform: translateX(100%);
-		}
-	}
-
-	.drawer-scroll {
-		flex: 1;
-		overflow-y: auto;
-		scrollbar-width: thin;
-		scrollbar-color: var(--accent-mid) var(--bg-0);
-	}
-
-	/* hero */
-	.drawer-hero {
-		position: relative;
-		padding: 22px 24px 20px;
-		border-bottom: 1px solid var(--border);
-		overflow: hidden;
-	}
-	.drawer-hero::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: radial-gradient(
-			120% 80% at 82% -10%,
-			color-mix(in srgb, var(--fcol) 30%, transparent),
-			transparent 60%
-		);
-		pointer-events: none;
-	}
-	.drawer-close {
-		position: absolute;
-		top: 14px;
-		right: 14px;
-		z-index: 2;
-	}
-	.drawer-close svg {
-		width: 15px;
-		height: 15px;
-	}
-	.hero-visual {
-		display: flex;
-		align-items: center;
-		gap: 18px;
-		margin-bottom: 14px;
-		position: relative;
-	}
-	.hero-globe {
-		flex-shrink: 0;
-		line-height: 0;
-		filter: drop-shadow(0 0 18px color-mix(in srgb, var(--fcol) 30%, transparent))
-			drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
-	}
-	.hero-text {
-		min-width: 0;
-	}
-	.drawer-kicker {
-		font-family: var(--font-display);
-		font-weight: 600;
-		font-size: 10px;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--fcol);
-		margin-bottom: 7px;
-	}
-	.drawer-title {
-		font-family: var(--font-display);
-		font-weight: 700;
-		font-size: 28px;
-		letter-spacing: 0.01em;
-		line-height: 1;
-		color: var(--text);
-		text-wrap: balance;
-	}
-	.drawer-type {
-		font-family: var(--font-display);
-		font-weight: 500;
-		font-size: 9.5px;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--text-dim);
-		margin-top: 9px;
-	}
-	.drawer-desc {
-		font-size: 14px;
-		line-height: 1.6;
-		color: var(--text-dim);
-		position: relative;
-		max-width: 62ch;
-	}
-
-	/* sections */
-	.section {
-		padding: 20px 24px;
-		border-bottom: 1px solid var(--border);
-	}
-	.section-label {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		font-family: var(--font-display);
-		font-weight: 600;
-		font-size: 10px;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--text-dim);
-		margin-bottom: 14px;
-	}
-	.section-label::before {
-		content: '//';
-		color: var(--accent);
-	}
-	.section-label::after {
-		content: '';
-		flex: 1;
-		height: 1px;
-		background: var(--border);
-	}
-
-	/* control */
-	.control-meta {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-		flex-wrap: wrap;
-		gap: 4px 12px;
-		margin-bottom: 12px;
-	}
-	.owner-big {
-		font-family: var(--font-display);
-		font-weight: 600;
-		font-size: 17px;
-		line-height: 1.1;
-	}
-	.owner-pct {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-dim);
-	}
-	.split-bar {
-		display: flex;
-		height: 16px;
-		gap: 1px;
-		overflow: hidden;
-		border: 1px solid var(--border);
-		background: var(--bg-0);
-	}
-	.split-seg {
-		height: 100%;
-		min-width: 2px;
-	}
-	.split-empty {
-		background: repeating-linear-gradient(
-			-45deg,
-			transparent,
-			transparent 4px,
-			var(--border) 4px,
-			var(--border) 5px
-		);
-		min-width: 0;
-	}
-	.split-legend {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px 14px;
-		margin-top: 12px;
-	}
-	.split-key {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-dim);
-	}
-	.split-key b {
-		color: var(--text);
-		font-weight: 600;
-	}
-	.split-key .dot {
-		width: 9px;
-		height: 9px;
-		flex-shrink: 0;
-	}
-
-	/* stats */
-	.stat-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1px;
-		background: var(--border);
-		border: 1px solid var(--border);
-	}
-	.stat-cell {
-		background: var(--panel-solid);
-		padding: 12px 14px;
-	}
-	.stat-cell .k {
-		font-family: var(--font-display);
-		font-weight: 500;
-		font-size: 9px;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--text-faint);
-		margin-bottom: 6px;
-	}
-	.stat-cell .v {
-		font-family: var(--font-body);
-		font-size: 13.5px;
-		color: var(--text);
-		line-height: 1.25;
-	}
-	.stat-cell .v.accent {
-		color: var(--accent);
-	}
-
-	/* battle log */
-	.battle {
-		display: grid;
-		grid-template-columns: 42px 1fr;
-		gap: 14px;
-		padding: 13px 0;
-	}
-	.battle + .battle {
-		border-top: 1px solid var(--border);
-	}
-	.battle-turn {
-		text-align: center;
-	}
-	.battle-turn .t-num {
-		font-family: var(--font-body);
-		font-weight: 600;
-		font-size: 19px;
-		color: var(--accent);
-		line-height: 1;
-	}
-	.battle-turn .t-lbl {
-		font-family: var(--font-display);
-		font-weight: 500;
-		font-size: 8.5px;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--text-faint);
-		margin-top: 3px;
-	}
-	.battle-main {
-		min-width: 0;
-	}
-	.battle-head {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		flex-wrap: wrap;
-		margin-bottom: 5px;
-	}
-	.vs-side {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		font-family: var(--font-display);
-		font-weight: 600;
-		font-size: 11px;
-		letter-spacing: 0.04em;
-		color: var(--text);
-	}
-	.vs-side .dot {
-		width: 8px;
-		height: 8px;
-	}
-	.vs-x {
-		font-family: var(--font-display);
-		font-weight: 500;
-		font-size: 9.5px;
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		color: var(--text-faint);
-	}
-	.battle-result {
-		font-family: var(--font-display);
-		font-weight: 600;
-		font-size: 9px;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
-		padding: 3px 7px;
-		margin-left: auto;
-	}
-	.res-attacker {
-		color: var(--state-attacker);
-		background: color-mix(in srgb, var(--state-attacker) 12%, transparent);
-		border: 1px solid color-mix(in srgb, var(--state-attacker) 35%, transparent);
-	}
-	.res-defender {
-		color: var(--state-defender);
-		background: color-mix(in srgb, var(--state-defender) 12%, transparent);
-		border: 1px solid color-mix(in srgb, var(--state-defender) 35%, transparent);
-	}
-	.res-stalemate {
-		color: var(--state-contested);
-		background: color-mix(in srgb, var(--state-contested) 12%, transparent);
-		border: 1px solid color-mix(in srgb, var(--state-contested) 35%, transparent);
-	}
-	.battle-sub {
-		font-family: var(--font-body);
-		font-size: 12.5px;
-		color: var(--text-dim);
-		line-height: 1.5;
-	}
-	.battle-meta {
-		font-family: var(--font-display);
-		font-weight: 500;
-		font-size: 9.5px;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		color: var(--text-faint);
-		margin-top: 6px;
-	}
-	.log-empty {
-		font-family: var(--font-body);
-		font-size: 13px;
-		line-height: 1.55;
-		color: var(--text-dim);
-		max-width: 60ch;
-	}
-
-	/* footer */
-	.drawer-foot {
-		padding: 15px 24px;
-		border-top: 1px solid var(--border-lum);
-		background: var(--panel);
-		display: flex;
-		gap: 10px;
-	}
-	.drawer-foot .btn {
-		flex: 1;
-		justify-content: center;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.drawer,
-		.scrim {
-			animation: none;
-		}
-	}
-
-	@media (max-width: 720px) {
-		.drawer {
-			width: 100vw;
-		}
-	}
-</style>

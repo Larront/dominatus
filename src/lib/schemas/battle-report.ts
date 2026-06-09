@@ -9,10 +9,26 @@ import { z } from 'zod';
 export const battleSide = z.enum(['attacker', 'defender']);
 export const battleOutcome = z.enum(['attacker', 'defender', 'stalemate']);
 
+/**
+ * One secondary mission's score, recorded separately so the full game sheet is
+ * captured. Stored as a flexible list (not fixed columns) so a future edition's
+ * different secondary set is data, never a schema change.
+ */
+export const secondaryScoreSchema = z.object({
+	name: z.string().min(1, 'Name the secondary').max(80),
+	victoryPoints: z.number().int().min(0)
+});
+
 export const combatantSchema = z.object({
 	warbandId: z.string().min(1, 'Select a warband'),
 	side: battleSide,
-	victoryPoints: z.number().int().min(0).optional()
+	// Full score breakdown — all optional so manual entry never blocks while the CV
+	// draft (ADR 0001), which populates these, is stubbed. Control uses `outcome`,
+	// not these values; they are the durable record. Total VP is derived for display.
+	// `nullish` because an empty number input binds to null, not undefined.
+	primaryVp: z.number().int().min(0).nullish(),
+	secondaries: z.array(secondaryScoreSchema).max(6).default([]),
+	battleReadyVp: z.number().int().min(0).nullish()
 });
 
 export const battleReportSchema = z
@@ -20,7 +36,11 @@ export const battleReportSchema = z
 		worldId: z.string().min(1, 'Select a world'),
 		cycle: z.number().int().positive(),
 		outcome: battleOutcome,
-		pointsSize: z.number().int().positive().optional(),
+		/** Which side took the first turn — at most one. */
+		wentFirst: battleSide.nullish(),
+		pointsSize: z.number().int().positive().nullish(),
+		/** The weekly planetary effect in play, if the players used one. Display-only. */
+		planetaryEffect: z.string().max(120).optional(),
 		narrative: z.string().max(4000).optional(),
 		combatants: z.array(combatantSchema).min(2).max(4)
 	})
@@ -40,3 +60,4 @@ export const battleReportSchema = z
 
 export type BattleReportInput = z.infer<typeof battleReportSchema>;
 export type CombatantInput = z.infer<typeof combatantSchema>;
+export type SecondaryScore = z.infer<typeof secondaryScoreSchema>;
