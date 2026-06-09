@@ -1,4 +1,4 @@
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { campaignDetailsSchema } from '$lib/schemas/campaign-details';
@@ -6,7 +6,7 @@ import { scoringProfileSchema } from '$lib/domain/scoring-profile';
 import { foundingWorldSchema } from '$lib/schemas/campaign-founding';
 import { idActionSchema } from '$lib/schemas/id-action';
 import {
-	requireCampaignAccess,
+	requireArbiter,
 	updateCampaignDetails,
 	regenerateJoinCode,
 	updateScoringProfile
@@ -46,14 +46,6 @@ export const load: PageServerLoad = async ({ parent }) => {
 	]);
 	return { detailsForm, profileForm, deleteForm, reports, effects, worlds };
 };
-
-/** Re-assert arbiter authority inside every action — the load guard alone doesn't protect POSTs. */
-async function requireArbiter(slug: string, userId: string | undefined) {
-	if (!userId) redirect(302, '/login');
-	const access = await requireCampaignAccess(slug, userId);
-	if (access.role !== 'arbiter') error(403, 'Only the arbiter can manage this campaign');
-	return access;
-}
 
 /** Pull a trimmed string field out of a posted form. */
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();

@@ -1,9 +1,9 @@
-import { error, fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { superValidate, message, setError } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { paintingAwardSchema } from '$lib/schemas/painting-award';
 import { idActionSchema } from '$lib/schemas/id-action';
-import { requireCampaignAccess } from '$lib/server/campaigns';
+import { requireArbiter } from '$lib/server/campaigns';
 import {
 	getStandings,
 	getPaintingAwards,
@@ -44,10 +44,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 export const actions: Actions = {
 	grantAward: async ({ request, params, locals }) => {
-		if (!locals.user) redirect(302, '/login');
-		const { campaign, role } = await requireCampaignAccess(params.slug, locals.user.id);
-		// Granting is an arbiter authority (CONTEXT.md), enforced server-side, not just hidden in UI.
-		if (role !== 'arbiter') error(403, 'Only the arbiter can grant awards.');
+		// Granting is an arbiter authority (CONTEXT.md), enforced server-side at the one guard.
+		const { campaign, userId } = await requireArbiter(params.slug, locals.user?.id);
 
 		const form = await superValidate(request, zod4(paintingAwardSchema), { id: 'award' });
 		if (!form.valid) return fail(400, { form });
@@ -64,15 +62,13 @@ export const actions: Actions = {
 			cycle: campaign.currentCycle,
 			kind: form.data.kind,
 			note: form.data.note,
-			grantedByUserId: locals.user.id
+			grantedByUserId: userId
 		});
 		return message(form, 'Award granted.');
 	},
 
 	revokeAward: async ({ request, params, locals }) => {
-		if (!locals.user) redirect(302, '/login');
-		const { campaign, role } = await requireCampaignAccess(params.slug, locals.user.id);
-		if (role !== 'arbiter') error(403, 'Only the arbiter can revoke awards.');
+		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
 
 		// The form id is read from the POST so the response routes back to the right row's form.
 		const form = await superValidate(request, zod4(idActionSchema));

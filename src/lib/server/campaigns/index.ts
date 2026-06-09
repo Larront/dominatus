@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { and, eq, like } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { campaign, membership, world, planetaryEffect } from '$lib/server/db/schema';
@@ -216,4 +216,19 @@ export async function requireCampaignAccess(slug: string, userId: string) {
 	const member = await getMembership(found.id, userId);
 	if (!member) throw error(404, 'Campaign not found');
 	return { campaign: found, role: member.role as CampaignRole };
+}
+
+/**
+ * The single seam for arbiter authority (CONTEXT.md — campaign authority): an anonymous visitor is
+ * sent to login, a non-member gets a 404 (don't leak existence), and a commander gets a 403. The
+ * one place every wholly-arbiter route action crosses, so authority is decided here, not re-stated
+ * per action. Mixed-authority actions (e.g. report submit-or-edit) still compose `requireCampaignAccess`
+ * with their own conditional check.
+ */
+export async function requireArbiter(slug: string, userId: string | undefined) {
+	if (!userId) throw redirect(302, '/login');
+	const access = await requireCampaignAccess(slug, userId);
+	if (access.role !== 'arbiter') throw error(403, 'Only the arbiter can manage this campaign.');
+	// `userId` is proven present here — return it so actions don't re-narrow `locals.user`.
+	return { ...access, userId };
 }
