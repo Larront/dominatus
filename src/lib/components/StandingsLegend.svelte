@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Collapsible } from 'bits-ui';
+
 	interface Standing {
 		id: string;
 		name: string;
@@ -11,165 +13,54 @@
 	let { standings }: { standings: Standing[] } = $props();
 
 	let open = $state(true);
-	const panelId = 'standings-body';
 </script>
 
-<aside class="legend" class:collapsed={!open}>
-	<button
-		class="legend-head"
-		onclick={() => (open = !open)}
-		aria-expanded={open}
-		aria-controls={panelId}
+<Collapsible.Root
+	bind:open
+	class="absolute bottom-5 left-5 z-[6] w-64 overflow-hidden border border-border bg-[color-mix(in_srgb,var(--color-panel)_86%,transparent)] backdrop-blur-[8px]
+		before:absolute before:inset-x-0 before:top-0 before:z-[1] before:h-0.5 before:bg-[linear-gradient(90deg,var(--color-accent),transparent_70%)] before:opacity-70 before:content-['']"
+>
+	<Collapsible.Trigger
+		class="flex w-full items-center justify-between gap-2.5 bg-transparent px-3.5 py-3 font-display text-[10.5px]
+			font-semibold tracking-[0.14em] text-ink-dim uppercase transition-colors duration-[120ms]
+			hover:text-accent focus-visible:text-accent focus-visible:outline-none"
 	>
-		<span class="legend-title">Warband Standings</span>
-		<svg class="legend-chev" viewBox="0 0 14 14" aria-hidden="true">
+		<span class="before:text-accent before:content-['▸_']">Warband Standings</span>
+		<svg
+			class="size-[13px] shrink-0 text-accent transition-transform duration-200 {open ? '' : '-rotate-90'}"
+			viewBox="0 0 14 14"
+			aria-hidden="true"
+		>
 			<path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" />
 		</svg>
-	</button>
+	</Collapsible.Trigger>
 
-	{#if open}
-		<div class="legend-body" id={panelId}>
-			<div class="legend-cols">
-				<span>Warband</span>
-				<span>Worlds</span>
-			</div>
-			{#each standings as wb (wb.id)}
-				<div class="standing-row">
-					<span class="standing-swatch" style="color: {wb.color}; background: {wb.color}"></span>
-					<span class="standing-name">
-						{wb.name}
-						{#if wb.you}<span class="you-tag">You</span>{/if}
-					</span>
-					<span class="standing-count">{wb.held}</span>
-				</div>
-			{:else}
-				<p class="legend-empty">No warbands have mustered yet.</p>
-			{/each}
+	<Collapsible.Content class="px-3.5 pb-3">
+		<div
+			class="mb-1 flex justify-between border-b border-border pb-2 font-display text-[9px] font-medium
+				tracking-[0.12em] text-ink-faint uppercase"
+		>
+			<span>Warband</span>
+			<span>Worlds</span>
 		</div>
-	{/if}
-</aside>
-
-<style>
-	.legend {
-		position: absolute;
-		left: 20px;
-		bottom: 20px;
-		z-index: 6;
-		width: 256px;
-		background: color-mix(in srgb, var(--panel) 86%, transparent);
-		border: 1px solid var(--border);
-		backdrop-filter: blur(8px);
-		overflow: hidden;
-	}
-	.legend::before {
-		content: '';
-		position: absolute;
-		inset: 0 0 auto 0;
-		height: 2px;
-		background: linear-gradient(90deg, var(--accent), transparent 70%);
-		opacity: 0.7;
-	}
-
-	.legend-head {
-		width: 100%;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 10px;
-		padding: 12px 14px;
-		background: none;
-		border: none;
-		cursor: pointer;
-		font-family: var(--font-display);
-		font-weight: 600;
-		font-size: 10.5px;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--text-dim);
-		transition: color 0.12s;
-	}
-	.legend-head:hover,
-	.legend-head:focus-visible {
-		color: var(--accent);
-		outline: none;
-	}
-	.legend-title::before {
-		content: '▸ ';
-		color: var(--accent);
-	}
-	.legend-chev {
-		width: 13px;
-		height: 13px;
-		flex-shrink: 0;
-		color: var(--accent);
-		transition: transform 0.2s ease;
-	}
-	.legend.collapsed .legend-chev {
-		transform: rotate(-90deg);
-	}
-
-	.legend-body {
-		padding: 0 14px 12px;
-	}
-	.legend-cols {
-		display: flex;
-		justify-content: space-between;
-		font-family: var(--font-display);
-		font-weight: 500;
-		font-size: 9px;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: var(--text-faint);
-		padding-bottom: 8px;
-		margin-bottom: 4px;
-		border-bottom: 1px solid var(--border);
-	}
-	.standing-row {
-		display: grid;
-		grid-template-columns: 12px 1fr auto;
-		align-items: center;
-		gap: 10px;
-		padding: 7px 0;
-		font-family: var(--font-body);
-		font-size: 13px;
-	}
-	.standing-row + .standing-row {
-		border-top: 1px solid var(--border);
-	}
-	.standing-swatch {
-		width: 11px;
-		height: 11px;
-		box-shadow: 0 0 8px currentColor;
-	}
-	.standing-name {
-		color: var(--text);
-		line-height: 1.2;
-		min-width: 0;
-		display: flex;
-		align-items: center;
-		gap: 6px;
-	}
-	.you-tag {
-		font-family: var(--font-display);
-		font-weight: 600;
-		font-size: 8.5px;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		padding: 2px 4px;
-		border: 1px solid var(--accent-mid);
-		color: var(--accent);
-	}
-	.standing-count {
-		font-family: var(--font-body);
-		font-weight: 600;
-		font-size: 15px;
-		color: var(--accent);
-		line-height: 1;
-	}
-	.legend-empty {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-dim);
-		line-height: 1.5;
-	}
-</style>
+		{#each standings as wb (wb.id)}
+			<div
+				class="grid grid-cols-[12px_1fr_auto] items-center gap-2.5 py-[7px] font-body text-[13px]
+					[&+&]:border-t [&+&]:border-border"
+			>
+				<span class="size-[11px] shadow-[0_0_8px_currentColor]" style="color: {wb.color}; background: {wb.color}"></span>
+				<span class="flex min-w-0 items-center gap-1.5 leading-[1.2] text-ink">
+					{wb.name}
+					{#if wb.you}
+						<span class="border border-accent-mid px-1 py-0.5 font-display text-[8.5px] font-semibold tracking-[0.08em] text-accent uppercase">
+							You
+						</span>
+					{/if}
+				</span>
+				<span class="font-body text-[15px] leading-none font-semibold text-accent">{wb.held}</span>
+			</div>
+		{:else}
+			<p class="font-body text-[12px] leading-normal text-ink-dim">No warbands have mustered yet.</p>
+		{/each}
+	</Collapsible.Content>
+</Collapsible.Root>
