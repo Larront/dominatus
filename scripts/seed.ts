@@ -15,6 +15,9 @@ import { Database } from 'bun:sqlite';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import * as schema from '../src/lib/server/db/schema';
+// Pure domain fold (ADR 0002) — control is derived from the report log, not hand-set.
+import { foldControl, type FoldReport } from '../src/lib/domain/control-fold';
+import { DEFAULT_PROFILE } from '../src/lib/domain/scoring-profile';
 
 const {
 	user,
@@ -64,8 +67,10 @@ async function main() {
 		.insert(campaign)
 		.values({
 			slug: 'vorhast',
+			joinCode: 'VRH42',
 			name: 'The Vorhast Conflict',
 			subtitle: 'Vorhast System Theatre',
+			scoringProfile: DEFAULT_PROFILE,
 			currentCycle: 4
 		})
 		.returning();
@@ -153,110 +158,118 @@ async function main() {
 		.returning();
 	const wd = Object.fromEntries(worldRows.map((w) => [w.name, w.id])) as Record<string, string>;
 
-	await db.insert(worldControl).values([
-		// Cindermaw — Gilded Synod hold (owner)
-		{ worldId: wd['Cindermaw'], warbandId: wb['GS'], share: 64 },
-		{ worldId: wd['Cindermaw'], warbandId: wb['IW'], share: 21 },
-		{ worldId: wd['Cindermaw'], warbandId: wb['AC'], share: 15 },
-		// Veska Prime — contested, no majority
-		{ worldId: wd['Veska Prime'], warbandId: wb['AC'], share: 44 },
-		{ worldId: wd['Veska Prime'], warbandId: wb['IW'], share: 39 },
-		{ worldId: wd['Veska Prime'], warbandId: wb['VR'], share: 12 },
-		{ worldId: wd['Veska Prime'], warbandId: wb['GS'], share: 5 },
-		// Coralis Tertius — Verdant Scourge hold (owner)
-		{ worldId: wd['Coralis Tertius'], warbandId: wb['VS'], share: 58 },
-		{ worldId: wd['Coralis Tertius'], warbandId: wb['VR'], share: 27 },
-		{ worldId: wd['Coralis Tertius'], warbandId: wb['IW'], share: 15 }
-	]);
-
-	// Battle reports — the per-world ledger shown in the intel drawer. Combatants
-	// are split attacker/defender; control shifts from these are a deferred rule.
-	const log: {
-		worldId: string;
+	// Battle reports drive everything: control is the fold of this log (ADR 0002), never
+	// hand-set, so worlds start uncontested and these games produce the standings. Each
+	// entry is one game over a world; `win` is attacker-victory, `draw` moves no control.
+	type SeedReport = {
+		world: string;
 		cycle: number;
-		outcome: 'attacker' | 'defender' | 'stalemate';
-		pointsSize: number;
+		pts: number;
+		win: boolean; // false → stalemate
+		att: string;
+		def: string;
 		narrative: string;
-		attackers: { warbandId: string; victoryPoints: number }[];
-		defenders: { warbandId: string; victoryPoints: number }[];
-	}[] = [
-		{
-			worldId: wd['Cindermaw'],
-			cycle: 4,
-			outcome: 'defender',
-			pointsSize: 2000,
-			narrative:
-				'Iron Wardens breached the outer slag-walls but were thrown back from the primary forge-gate by entrenched Synod artillery.',
-			attackers: [{ warbandId: wb['IW'], victoryPoints: 14 }],
-			defenders: [{ warbandId: wb['GS'], victoryPoints: 17 }]
-		},
-		{
-			worldId: wd['Cindermaw'],
-			cycle: 3,
-			outcome: 'attacker',
-			pointsSize: 1500,
-			narrative:
-				'Gilded Synod seized the magma-tap stations, cutting Ashen supply lines to the southern hemisphere.',
-			attackers: [{ warbandId: wb['GS'], victoryPoints: 19 }],
-			defenders: [{ warbandId: wb['AC'], victoryPoints: 8 }]
-		},
-		{
-			worldId: wd['Veska Prime'],
-			cycle: 4,
-			outcome: 'stalemate',
-			pointsSize: 2000,
-			narrative:
-				'Brutal hab-block fighting across forty levels of Spire Primus. Neither warband could claim the command pinnacle.',
-			attackers: [{ warbandId: wb['IW'], victoryPoints: 15 }],
-			defenders: [{ warbandId: wb['AC'], victoryPoints: 15 }]
-		},
-		{
-			worldId: wd['Veska Prime'],
-			cycle: 3,
-			outcome: 'attacker',
-			pointsSize: 2500,
-			narrative:
-				'The great cathedral changed hands amid catastrophic collateral. Ashen Covenant holds the relic-vaults.',
-			attackers: [{ warbandId: wb['AC'], victoryPoints: 21 }],
-			defenders: [{ warbandId: wb['IW'], victoryPoints: 16 }]
-		},
-		{
-			worldId: wd['Coralis Tertius'],
-			cycle: 4,
-			outcome: 'defender',
-			pointsSize: 2000,
-			narrative:
-				'Void boarding-craft struck the floating rigs at high tide but were swept off by Verdant counter-batteries.',
-			attackers: [{ warbandId: wb['VR'], victoryPoints: 13 }],
-			defenders: [{ warbandId: wb['VS'], victoryPoints: 17 }]
-		}
+	};
+	const win = (
+		world: string,
+		att: string,
+		def: string,
+		cycle: number,
+		pts: number,
+		narrative: string
+	): SeedReport => ({ world, cycle, pts, win: true, att, def, narrative });
+	const draw = (
+		world: string,
+		att: string,
+		def: string,
+		cycle: number,
+		pts: number,
+		narrative: string
+	): SeedReport => ({ world, cycle, pts, win: false, att, def, narrative });
+
+	// Chronological order; control reflects the *recent* games, so later wins stick.
+	const log: SeedReport[] = [
+		// Cindermaw — a Gilded Synod ascendancy (ends GS 60% owner, IW 20%).
+		win('Cindermaw', 'GS', 'AC', 1, 1000, 'Synod batteries break the first Ashen push at the slag-walls.'),
+		win('Cindermaw', 'GS', 'AC', 1, 1500, 'The magma-tap stations fall to the Synod.'),
+		win('Cindermaw', 'GS', 'IW', 2, 1500, 'Iron Wardens repulsed from the primary forge-gate.'),
+		win('Cindermaw', 'GS', 'AC', 2, 2000, 'Ashen supply lines to the southern hemisphere severed.'),
+		win('Cindermaw', 'GS', 'IW', 3, 2000, 'The Synod hold the foundry-spires against a Warden night-assault.'),
+		win('Cindermaw', 'GS', 'AC', 3, 2000, 'Cindermaw all but cast in Synod gold.'),
+		win('Cindermaw', 'IW', 'AC', 4, 1500, 'Iron Wardens claw back the northern refineries from the Ashen.'),
+		win('Cindermaw', 'IW', 'AC', 4, 2000, 'A second Warden gain along the cooling-canals.'),
+
+		// Veska Prime — a three-way grind that ends contested (IW 20 / VR 10 / AC 10).
+		win('Veska Prime', 'AC', 'IW', 1, 1000, 'Ashen Covenant seize the cathedral district.'),
+		win('Veska Prime', 'AC', 'VR', 1, 1500, 'Void Reavers driven from the relic-vaults.'),
+		win('Veska Prime', 'AC', 'IW', 2, 2000, 'The Covenant tighten their grip on Spire Primus.'),
+		win('Veska Prime', 'AC', 'VR', 2, 2000, 'Another Reaver boarding-party repelled.'),
+		draw('Veska Prime', 'IW', 'AC', 3, 2000, 'Brutal hab-block fighting; neither side claims the command pinnacle.'),
+		win('Veska Prime', 'IW', 'AC', 3, 2000, 'Iron Wardens storm forty levels of the spire.'),
+		win('Veska Prime', 'IW', 'AC', 4, 1500, 'The Wardens break the Ashen hold on the upper hives.'),
+		win('Veska Prime', 'VR', 'AC', 4, 1000, 'Void Reavers seize a foothold amid the collapse.'),
+
+		// Coralis Tertius — lightly fought, Verdant Scourge ahead but far from owning it.
+		win('Coralis Tertius', 'VS', 'VR', 2, 1500, 'Tide-Wardens swamp a Reaver landing at high tide.'),
+		win('Coralis Tertius', 'VS', 'VR', 3, 2000, 'Verdant counter-batteries sweep the floating rigs clean.'),
+		win('Coralis Tertius', 'VS', 'IW', 3, 2000, 'Iron Wardens fail to hold the promethium platforms.'),
+		win('Coralis Tertius', 'VR', 'IW', 4, 1500, 'Void Reavers raid the deep-derricks under cover of storm.')
 	];
 
-	for (const entry of log) {
-		const [report] = await db
-			.insert(battleReport)
-			.values({
-				campaignId: camp.id,
-				worldId: entry.worldId,
-				cycle: entry.cycle,
-				outcome: entry.outcome,
-				pointsSize: entry.pointsSize,
-				narrative: entry.narrative,
-				submittedByUserId: dev.id
-			})
-			.returning();
-		await db
-			.insert(battleReportCombatant)
-			.values([
-				...entry.attackers.map((c) => ({ reportId: report.id, side: 'attacker' as const, ...c })),
-				...entry.defenders.map((c) => ({ reportId: report.id, side: 'defender' as const, ...c }))
-			]);
-	}
+	// Stamp each report into the past in array order so the DB's submit-time fold order
+	// matches the chronology folded here. (Live submissions land after `base`.)
+	const base = Date.now();
+	const reportRows = log.map((e, i) => ({
+		id: crypto.randomUUID(),
+		campaignId: camp.id,
+		worldId: wd[e.world],
+		cycle: e.cycle,
+		outcome: (e.win ? 'attacker' : 'stalemate') as 'attacker' | 'stalemate',
+		pointsSize: e.pts,
+		narrative: e.narrative,
+		submittedByUserId: dev.id,
+		createdAt: new Date(base - (log.length - i) * 60_000)
+	}));
+	await db.insert(battleReport).values(reportRows);
+	await db.insert(battleReportCombatant).values(
+		log.flatMap((e, i) => [
+			{ reportId: reportRows[i].id, warbandId: wb[e.att], side: 'attacker' as const },
+			{ reportId: reportRows[i].id, warbandId: wb[e.def], side: 'defender' as const }
+		])
+	);
+
+	// Fold each world's reports into its control snapshot — exactly what the app does on submit.
+	const controlRows = worldRows.flatMap((w) => {
+		const reports = log
+			.filter((e) => wd[e.world] === w.id)
+			.map<FoldReport>((e) => ({
+				outcome: e.win ? 'attacker' : 'stalemate',
+				combatants: [
+					{ warbandId: wb[e.att], side: 'attacker' },
+					{ warbandId: wb[e.def], side: 'defender' }
+				]
+			}));
+		return [...foldControl(reports).entries()].map(([warbandId, share]) => ({
+			worldId: w.id,
+			warbandId,
+			share
+		}));
+	});
+	if (controlRows.length) await db.insert(worldControl).values(controlRows);
 
 	console.log('Seeded campaign:', camp.slug);
 	console.log(
 		`  ${warbandRows.length} warbands, ${worldRows.length} worlds, ${log.length} battle reports`
 	);
+	console.log('  control (folded from reports):');
+	for (const w of worldRows) {
+		const held = controlRows
+			.filter((c) => c.worldId === w.id)
+			.sort((a, b) => b.share - a.share)
+			.map((c) => `${warbandRows.find((x) => x.id === c.warbandId)?.short}:${c.share}%`)
+			.join(' ');
+		console.log(`    ${w.name}: ${held || 'uncontested'}`);
+	}
 	console.log(`Dev login → ${DEV_EMAIL} / ${DEV_PASSWORD}`);
 	console.log(`Map → /campaigns/${camp.slug}`);
 }

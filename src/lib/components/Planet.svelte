@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { PixelPlanet } from '$lib/pixelplanet/pixelplanet';
 
 	let {
@@ -12,10 +13,14 @@
 	// clamp()); `resolution` is the fixed pixel-art backing-buffer size.
 	const dim = $derived(typeof size === 'number' ? `${size}px` : size);
 
-	// Attachment: mount a PixelPlanet on the canvas, and dispose it on teardown.
-	// Re-runs if `render`/`resolution` change (the canvas node is recreated by the key).
+	// Attachment: mount one PixelPlanet (one WebGL context) on the canvas, disposed on teardown.
+	// `render`/`resolution` are read *untracked* so the attachment runs exactly once per mounted
+	// canvas — without untrack it re-subscribes and a benign prop change (e.g. `name` updating on
+	// every keystroke) would re-run it, spawning a fresh WebGL context each time until the browser
+	// hits its context limit and contexts start failing. Recreation on a genuine render/resolution
+	// change is handled by the {#key} below, which remounts the canvas node and re-runs this.
 	function planet(node: HTMLCanvasElement) {
-		const instance = new PixelPlanet(node, render, { resolution });
+		const instance = untrack(() => new PixelPlanet(node, render, { resolution }));
 		return () => instance.dispose();
 	}
 </script>

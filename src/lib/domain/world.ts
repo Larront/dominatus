@@ -14,4 +14,6 @@ export interface WorldWithControl {
 	render: string;
 	shares: { warbandId: string; share: number }[];
 	derived: DerivedControl;
+	/** Planetary effects currently in play on this world (descriptive; ADR/CONTEXT). */
+	effects: { id: string; title: string; description: string | null }[];
 }

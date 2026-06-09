@@ -363,7 +363,370 @@ function rseed(): number {
 }
 const LIGHT = [0.39, 0.7];
 
-// ---- planet recipes (which layers + colors) ----
+// ---- planet recipes (which layers + colours), as a data-driven registry (ADR 0005) ----
+// Each archetype is a builder keyed by its render key. They are NOT distinct shader programs:
+// every world reuses the same handful of layer shaders (base/land/cloud/crater/river/atmo) and
+// differs only in which layers it stacks and in their palette. Adding a world type is an entry
+// here, not new GLSL. `base()` supplies the shared per-layer uniforms; `seed` desyncs the noise.
+type RecipeBuilder = (base: (extra: Uniforms) => Uniforms, seed: number) => LayerSpec[];
+
+const RECIPES: Record<string, RecipeBuilder> = {
+	star: (): LayerSpec[] => [
+		{
+			kind: 'starblob',
+			scale: 0.92,
+			u: {
+				pixels: 200,
+				time_speed: 0.1,
+				rotation: Math.random(),
+				seed: rseed(),
+				time: 0,
+				circle_amount: 3.0,
+				circle_size: 1.5,
+				color: c(255, 168, 38, 1)
+			}
+		},
+		{
+			kind: 'star',
+			scale: 0.46,
+			u: { pixels: 100, time_speed: 0.012, rotation: Math.random(), seed: rseed(), time: 0 }
+		},
+		{
+			kind: 'starflare',
+			scale: 0.72,
+			u: {
+				pixels: 200,
+				time_speed: 0.05,
+				rotation: Math.random(),
+				seed: rseed(),
+				time: 0,
+				storm_width: 0.2,
+				storm_dither_width: 0.07,
+				circle_amount: 2.0,
+				circle_scale: 1.0,
+				scale: 1.0
+			}
+		}
+	],
+
+	ocean: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.84,
+			u: base({ color1: c(102, 176, 199), color2: c(70, 130, 165), color3: c(52, 65, 157) })
+		},
+		{
+			kind: 'land',
+			scale: 0.84,
+			u: base({
+				land_cutoff: 0.62,
+				time_speed: 0.05,
+				col1: c(120, 180, 90),
+				col2: c(99, 171, 63),
+				col3: c(47, 87, 83),
+				col4: c(40, 53, 64)
+			})
+		},
+		{
+			kind: 'cloud',
+			scale: 0.84,
+			u: base({
+				time_speed: 0.07,
+				cloud_cover: 0.52,
+				stretch: 2.5,
+				base_color: c(225, 242, 255),
+				outline_color: c(192, 227, 255),
+				shadow_base_color: c(94, 112, 165),
+				shadow_outline_color: c(64, 73, 115)
+			})
+		},
+		{
+			kind: 'atmo',
+			scale: 1.0,
+			u: {
+				color: c(150, 205, 225, 0.22),
+				color2: c(70, 150, 220, 0.32),
+				color3: c(20, 60, 140, 0.42)
+			}
+		}
+	],
+
+	lava: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.84,
+			u: base({
+				color1: [0.560784, 0.301961, 0.341176, 1],
+				color2: [0.321569, 0.2, 0.247059, 1],
+				color3: [0.239216, 0.160784, 0.211765, 1]
+			})
+		},
+		{
+			kind: 'crater',
+			scale: 0.84,
+			u: base({ color1: [0.321569, 0.2, 0.247059, 1], color2: [0.239216, 0.160784, 0.211765, 1] })
+		},
+		{
+			kind: 'river',
+			scale: 0.84,
+			u: base({
+				river_cutoff: 0.6,
+				time_speed: 0.04,
+				color1: [1, 0.537255, 0.2, 1],
+				color2: [0.901961, 0.270588, 0.223529, 1],
+				color3: [0.678431, 0.184314, 0.270588, 1]
+			})
+		},
+		{
+			kind: 'atmo',
+			scale: 1.0,
+			u: {
+				color: c(255, 150, 70, 0.16),
+				color2: c(220, 90, 50, 0.24),
+				color3: c(120, 30, 30, 0.3)
+			}
+		}
+	],
+
+	hive: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.84,
+			u: base({ color1: c(176, 182, 196), color2: c(112, 118, 134), color3: c(64, 68, 84) })
+		},
+		{ kind: 'crater', scale: 0.84, u: base({ color1: c(120, 126, 142), color2: c(70, 74, 90) }) },
+		{
+			kind: 'land',
+			scale: 0.84,
+			u: base({
+				land_cutoff: 0.55,
+				col1: c(150, 156, 168),
+				col2: c(112, 118, 132),
+				col3: c(80, 84, 98),
+				col4: c(56, 60, 72)
+			})
+		},
+		{
+			kind: 'atmo',
+			scale: 1.0,
+			u: {
+				color: c(170, 185, 205, 0.16),
+				color2: c(120, 140, 175, 0.22),
+				color3: c(70, 85, 120, 0.3)
+			}
+		}
+	],
+
+	// ── recolour archetypes (ADR 0005): same layers, new palettes ──
+	ice: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.84,
+			u: base({ color1: c(224, 238, 246), color2: c(160, 196, 214), color3: c(108, 146, 176) })
+		},
+		{ kind: 'crater', scale: 0.84, u: base({ color1: c(198, 220, 232), color2: c(140, 174, 196) }) },
+		{
+			kind: 'atmo',
+			scale: 1.0,
+			u: {
+				color: c(196, 230, 245, 0.2),
+				color2: c(140, 200, 235, 0.28),
+				color3: c(90, 150, 205, 0.34)
+			}
+		}
+	],
+
+	desert: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.84,
+			u: base({ color1: c(216, 178, 122), color2: c(181, 137, 79), color3: c(138, 94, 52) })
+		},
+		{
+			kind: 'land',
+			scale: 0.84,
+			u: base({
+				land_cutoff: 0.5,
+				time_speed: 0.03,
+				col1: c(202, 158, 99),
+				col2: c(168, 121, 66),
+				col3: c(128, 86, 46),
+				col4: c(96, 62, 34)
+			})
+		},
+		{
+			kind: 'atmo',
+			scale: 1.0,
+			u: {
+				color: c(232, 198, 142, 0.16),
+				color2: c(196, 150, 84, 0.22),
+				color3: c(150, 104, 52, 0.28)
+			}
+		}
+	],
+
+	verdant: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.84,
+			u: base({ color1: c(64, 132, 92), color2: c(40, 96, 64), color3: c(26, 64, 46) })
+		},
+		{
+			kind: 'land',
+			scale: 0.84,
+			u: base({
+				land_cutoff: 0.42,
+				col1: c(126, 188, 96),
+				col2: c(86, 154, 72),
+				col3: c(52, 110, 56),
+				col4: c(34, 74, 44)
+			})
+		},
+		{
+			kind: 'cloud',
+			scale: 0.84,
+			u: base({
+				time_speed: 0.06,
+				cloud_cover: 0.6,
+				stretch: 2.2,
+				base_color: c(232, 246, 228),
+				outline_color: c(200, 226, 196),
+				shadow_base_color: c(96, 132, 100),
+				shadow_outline_color: c(64, 92, 68)
+			})
+		},
+		{
+			kind: 'atmo',
+			scale: 1.0,
+			u: {
+				color: c(170, 224, 168, 0.16),
+				color2: c(110, 184, 116, 0.22),
+				color3: c(56, 130, 78, 0.3)
+			}
+		}
+	],
+
+	death: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.84,
+			u: base({ color1: c(122, 110, 70), color2: c(90, 78, 50), color3: c(60, 52, 36) })
+		},
+		{
+			kind: 'land',
+			scale: 0.84,
+			u: base({
+				land_cutoff: 0.48,
+				col1: c(150, 178, 78),
+				col2: c(112, 144, 56),
+				col3: c(78, 104, 44),
+				col4: c(52, 68, 36)
+			})
+		},
+		{
+			kind: 'atmo',
+			scale: 1.0,
+			u: {
+				color: c(170, 200, 96, 0.18),
+				color2: c(126, 162, 60, 0.26),
+				color3: c(82, 110, 44, 0.32)
+			}
+		}
+	],
+
+	// Dead, airless rock — base + craters, deliberately NO atmosphere ring.
+	barren: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.84,
+			u: base({ color1: c(150, 146, 138), color2: c(106, 102, 96), color3: c(66, 63, 59) })
+		},
+		{ kind: 'crater', scale: 0.84, u: base({ color1: c(122, 118, 110), color2: c(74, 71, 66) }) }
+	],
+
+	river: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.84,
+			u: base({ color1: c(96, 132, 92), color2: c(68, 102, 70), color3: c(46, 72, 52) })
+		},
+		{
+			kind: 'land',
+			scale: 0.84,
+			u: base({
+				land_cutoff: 0.5,
+				col1: c(132, 168, 96),
+				col2: c(96, 138, 74),
+				col3: c(64, 102, 56),
+				col4: c(44, 72, 46)
+			})
+		},
+		{
+			kind: 'river',
+			scale: 0.84,
+			u: base({
+				river_cutoff: 0.55,
+				time_speed: 0.03,
+				color1: c(120, 188, 210),
+				color2: c(74, 140, 178),
+				color3: c(46, 96, 140)
+			})
+		},
+		{
+			kind: 'atmo',
+			scale: 1.0,
+			u: {
+				color: c(176, 214, 196, 0.16),
+				color2: c(118, 178, 168, 0.22),
+				color3: c(70, 130, 130, 0.3)
+			}
+		}
+	],
+
+	// Gas giant: banded body + heavily-stretched cloud bands. No new shader — the cloud layer's
+	// `stretch` flattens its noise into horizontal storm bands (ADR 0005).
+	gas: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.84,
+			u: base({ color1: c(226, 178, 120), color2: c(192, 134, 78), color3: c(150, 96, 58) })
+		},
+		{
+			kind: 'cloud',
+			scale: 0.84,
+			u: base({
+				time_speed: 0.05,
+				cloud_cover: 0.28,
+				stretch: 6.5,
+				base_color: c(238, 206, 158),
+				outline_color: c(214, 168, 112),
+				shadow_base_color: c(150, 96, 58),
+				shadow_outline_color: c(112, 70, 44)
+			})
+		},
+		{
+			kind: 'atmo',
+			scale: 1.0,
+			u: {
+				color: c(238, 198, 150, 0.2),
+				color2: c(206, 150, 92, 0.26),
+				color3: c(150, 96, 58, 0.32)
+			}
+		}
+	],
+
+	// Asteroid: a dark, heavily-cratered planetoid, no atmosphere. A true many-rock *field* needs
+	// its own shader; this reads as the largest body in the cluster (ADR 0005).
+	asteroid: (base): LayerSpec[] => [
+		{
+			kind: 'base',
+			scale: 0.78,
+			u: base({ color1: c(120, 112, 100), color2: c(86, 80, 70), color3: c(52, 48, 42) })
+		},
+		{ kind: 'crater', scale: 0.78, u: base({ color1: c(98, 92, 82), color2: c(58, 54, 48) }) }
+	]
+};
+
 function recipe(type: PlanetType | string): LayerSpec[] {
 	const seed = rseed();
 	const base = (extra: Uniforms): Uniforms =>
@@ -379,162 +742,7 @@ function recipe(type: PlanetType | string): LayerSpec[] {
 			},
 			extra
 		);
-	switch (type) {
-		case 'star':
-			return [
-				{
-					kind: 'starblob',
-					scale: 0.92,
-					u: {
-						pixels: 200,
-						time_speed: 0.1,
-						rotation: Math.random(),
-						seed: rseed(),
-						time: 0,
-						circle_amount: 3.0,
-						circle_size: 1.5,
-						color: c(255, 168, 38, 1)
-					}
-				},
-				{
-					kind: 'star',
-					scale: 0.46,
-					u: { pixels: 100, time_speed: 0.012, rotation: Math.random(), seed: rseed(), time: 0 }
-				},
-				{
-					kind: 'starflare',
-					scale: 0.72,
-					u: {
-						pixels: 200,
-						time_speed: 0.05,
-						rotation: Math.random(),
-						seed: rseed(),
-						time: 0,
-						storm_width: 0.2,
-						storm_dither_width: 0.07,
-						circle_amount: 2.0,
-						circle_scale: 1.0,
-						scale: 1.0
-					}
-				}
-			];
-		case 'ocean':
-			return [
-				{
-					kind: 'base',
-					scale: 0.84,
-					u: base({ color1: c(102, 176, 199), color2: c(70, 130, 165), color3: c(52, 65, 157) })
-				},
-				{
-					kind: 'land',
-					scale: 0.84,
-					u: base({
-						land_cutoff: 0.62,
-						time_speed: 0.05,
-						col1: c(120, 180, 90),
-						col2: c(99, 171, 63),
-						col3: c(47, 87, 83),
-						col4: c(40, 53, 64)
-					})
-				},
-				{
-					kind: 'cloud',
-					scale: 0.84,
-					u: base({
-						time_speed: 0.07,
-						cloud_cover: 0.52,
-						stretch: 2.5,
-						base_color: c(225, 242, 255),
-						outline_color: c(192, 227, 255),
-						shadow_base_color: c(94, 112, 165),
-						shadow_outline_color: c(64, 73, 115)
-					})
-				},
-				{
-					kind: 'atmo',
-					scale: 1.0,
-					u: {
-						color: c(150, 205, 225, 0.22),
-						color2: c(70, 150, 220, 0.32),
-						color3: c(20, 60, 140, 0.42)
-					}
-				}
-			];
-		case 'lava':
-			return [
-				{
-					kind: 'base',
-					scale: 0.84,
-					u: base({
-						color1: [0.560784, 0.301961, 0.341176, 1],
-						color2: [0.321569, 0.2, 0.247059, 1],
-						color3: [0.239216, 0.160784, 0.211765, 1]
-					})
-				},
-				{
-					kind: 'crater',
-					scale: 0.84,
-					u: base({
-						color1: [0.321569, 0.2, 0.247059, 1],
-						color2: [0.239216, 0.160784, 0.211765, 1]
-					})
-				},
-				{
-					kind: 'river',
-					scale: 0.84,
-					u: base({
-						river_cutoff: 0.6,
-						time_speed: 0.04,
-						color1: [1, 0.537255, 0.2, 1],
-						color2: [0.901961, 0.270588, 0.223529, 1],
-						color3: [0.678431, 0.184314, 0.270588, 1]
-					})
-				},
-				{
-					kind: 'atmo',
-					scale: 1.0,
-					u: {
-						color: c(255, 150, 70, 0.16),
-						color2: c(220, 90, 50, 0.24),
-						color3: c(120, 30, 30, 0.3)
-					}
-				}
-			];
-		case 'hive':
-		default:
-			return [
-				{
-					kind: 'base',
-					scale: 0.84,
-					u: base({ color1: c(176, 182, 196), color2: c(112, 118, 134), color3: c(64, 68, 84) })
-				},
-				{
-					kind: 'crater',
-					scale: 0.84,
-					u: base({ color1: c(120, 126, 142), color2: c(70, 74, 90) })
-				},
-				{
-					kind: 'land',
-					scale: 0.84,
-					u: base({
-						land_cutoff: 0.55,
-						col1: c(150, 156, 168),
-						col2: c(112, 118, 132),
-						col3: c(80, 84, 98),
-						col4: c(56, 60, 72)
-					})
-				},
-				{
-					kind: 'atmo',
-					scale: 1.0,
-					u: {
-						color: c(170, 185, 205, 0.16),
-						color2: c(120, 140, 175, 0.22),
-						color3: c(70, 85, 120, 0.3)
-					}
-				}
-			];
-	}
+	return (RECIPES[type] ?? RECIPES.hive)(base, seed);
 }
 
 // ---- GL helpers ----
