@@ -24,8 +24,12 @@ export const battleReport = sqliteTable(
 		/** The cycle the battle was fought in. */
 		cycle: integer('cycle').notNull(),
 		outcome: text('outcome', { enum: ['attacker', 'defender', 'stalemate'] }).notNull(),
+		/** Which side took the first turn, if recorded. */
+		wentFirst: text('went_first', { enum: ['attacker', 'defender'] }),
 		/** Agreed points size of the game, e.g. 2000. */
 		pointsSize: integer('points_size'),
+		/** The weekly planetary effect in play, if the players used one. Display-only. */
+		planetaryEffect: text('planetary_effect'),
 		narrative: text('narrative'),
 		/** Path to the uploaded image on the local volume, if any. */
 		imagePath: text('image_path'),
@@ -56,7 +60,14 @@ export const battleReportCombatant = sqliteTable(
 			.notNull()
 			.references(() => warband.id, { onDelete: 'cascade' }),
 		side: text('side', { enum: ['attacker', 'defender'] }).notNull(),
-		victoryPoints: integer('victory_points')
+		/** Primary-mission VP. Null when not recorded (e.g. unanalysed manual entry). */
+		primaryVp: integer('primary_vp'),
+		/** Battle-ready / paint VP. */
+		battleReadyVp: integer('battle_ready_vp'),
+		/** Per-secondary scores as a flexible list, so an edition's secondary set is data. */
+		secondaries: text('secondaries', { mode: 'json' }).$type<
+			{ name: string; victoryPoints: number }[]
+		>()
 	},
 	(t) => [index('battle_report_combatant_report_idx').on(t.reportId)]
 );

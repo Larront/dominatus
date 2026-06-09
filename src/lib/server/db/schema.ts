@@ -8,3 +8,5 @@ export * from './schema/warband';
 export * from './schema/world';
 export * from './schema/world-control';
 export * from './schema/battle-report';
+export * from './schema/painting-award';
+export * from './schema/planetary-effect';

@@ -8,6 +8,41 @@
       "when": 1780881610807,
       "tag": "0000_wakeful_shaman",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1780949777109,
+      "tag": "0001_last_barracuda",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1780967436305,
+      "tag": "0002_fine_secret_warriors",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1780968523632,
+      "tag": "0003_lazy_spacker_dave",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1781037230233,
+      "tag": "0004_founding_profile_effects",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1781042104472,
+      "tag": "0005_slimy_roulette",
+      "breakpoints": true
     }
   ]
 }

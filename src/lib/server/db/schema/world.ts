@@ -3,6 +3,7 @@ import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { campaign } from './campaign';
 import { worldControl } from './world-control';
 import { battleReport } from './battle-report';
+import { worldEffect } from './planetary-effect';
 
 /**
  * A celestial body fought over within a campaign. Map positioning is intentionally
@@ -37,7 +38,8 @@ export const world = sqliteTable(
 export const worldRelations = relations(world, ({ one, many }) => ({
 	campaign: one(campaign, { fields: [world.campaignId], references: [campaign.id] }),
 	control: many(worldControl),
-	battleReports: many(battleReport)
+	battleReports: many(battleReport),
+	effects: many(worldEffect)
 }));
 
 export type World = typeof world.$inferSelect;

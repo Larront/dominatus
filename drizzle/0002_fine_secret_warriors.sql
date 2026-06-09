@@ -1,0 +1,1 @@
+ALTER TABLE `battle_report` ADD `went_first` text;
