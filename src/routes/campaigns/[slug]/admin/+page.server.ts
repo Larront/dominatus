@@ -3,8 +3,9 @@ import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { campaignDetailsSchema } from '$lib/schemas/campaign-details';
 import { scoringProfileSchema } from '$lib/domain/scoring-profile';
-import { foundingWorldSchema } from '$lib/schemas/campaign-founding';
+import { worldEditSchema } from '$lib/schemas/campaign-founding';
 import { idActionSchema } from '$lib/schemas/id-action';
+import { effectSchema, effectEditSchema, worldEffectSchema } from '$lib/schemas/planetary-effect';
 import {
 	requireArbiter,
 	updateCampaignDetails,
@@ -47,9 +48,6 @@ export const load: PageServerLoad = async ({ parent }) => {
 	return { detailsForm, profileForm, deleteForm, reports, effects, worlds };
 };
 
-/** Pull a trimmed string field out of a posted form. */
-const str = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
-
 export const actions: Actions = {
 	saveDetails: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
@@ -83,60 +81,51 @@ export const actions: Actions = {
 
 	createEffect: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		const fd = await request.formData();
-		const title = str(fd, 'title');
-		if (!title) return fail(400, { effectError: 'Name the effect.' });
-		await createEffect(campaign.id, { title, description: str(fd, 'description') });
+		const parsed = effectSchema.safeParse(Object.fromEntries(await request.formData()));
+		if (!parsed.success) return fail(400, { effectError: parsed.error.issues[0]?.message ?? 'Check the effect.' });
+		await createEffect(campaign.id, parsed.data);
 		return { effect: 'created' };
 	},
 
 	editEffect: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		const fd = await request.formData();
-		const id = str(fd, 'id');
-		const title = str(fd, 'title');
-		if (!id || !title) return fail(400, { effectError: 'Name the effect.' });
-		await updateEffect(id, campaign.id, { title, description: str(fd, 'description') });
+		const parsed = effectEditSchema.safeParse(Object.fromEntries(await request.formData()));
+		if (!parsed.success) return fail(400, { effectError: parsed.error.issues[0]?.message ?? 'Check the effect.' });
+		const { id, ...fields } = parsed.data;
+		await updateEffect(id, campaign.id, fields);
 		return { effect: 'edited' };
 	},
 
 	deleteEffect: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		const fd = await request.formData();
-		const id = str(fd, 'id');
-		if (id) await deleteEffect(id, campaign.id);
+		const parsed = idActionSchema.safeParse(Object.fromEntries(await request.formData()));
+		if (!parsed.success) return fail(400, { effectError: 'Missing record.' });
+		await deleteEffect(parsed.data.id, campaign.id);
 		return { effect: 'deleted' };
 	},
 
 	attachEffect: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		const fd = await request.formData();
-		await attachEffect(campaign.id, str(fd, 'worldId'), str(fd, 'effectId'));
+		const parsed = worldEffectSchema.safeParse(Object.fromEntries(await request.formData()));
+		if (!parsed.success) return fail(400, { attachError: 'Missing world or effect.' });
+		await attachEffect(campaign.id, parsed.data.worldId, parsed.data.effectId);
 		return { attach: 'on' };
 	},
 
 	detachEffect: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		const fd = await request.formData();
-		await detachEffect(campaign.id, str(fd, 'worldId'), str(fd, 'effectId'));
+		const parsed = worldEffectSchema.safeParse(Object.fromEntries(await request.formData()));
+		if (!parsed.success) return fail(400, { attachError: 'Missing world or effect.' });
+		await detachEffect(campaign.id, parsed.data.worldId, parsed.data.effectId);
 		return { attach: 'off' };
 	},
 
 	saveWorld: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		const fd = await request.formData();
-		const worldId = str(fd, 'worldId');
-		const parsed = foundingWorldSchema.safeParse({
-			name: str(fd, 'name'),
-			type: str(fd, 'type'),
-			render: str(fd, 'render'),
-			value: str(fd, 'value'),
-			garrison: str(fd, 'garrison'),
-			supply: str(fd, 'supply'),
-			description: str(fd, 'description')
-		});
-		if (!worldId || !parsed.success) return fail(400, { worldError: 'Check the world fields.' });
-		await updateWorld(worldId, campaign.id, parsed.data);
+		const parsed = worldEditSchema.safeParse(Object.fromEntries(await request.formData()));
+		if (!parsed.success) return fail(400, { worldError: parsed.error.issues[0]?.message ?? 'Check the world fields.' });
+		const { worldId, ...fields } = parsed.data;
+		await updateWorld(worldId, campaign.id, fields);
 		return { world: 'saved' };
 	},
 

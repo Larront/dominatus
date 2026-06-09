@@ -26,6 +26,11 @@ export const foundingEffectSchema = z.object({
 	description: z.string().trim().max(400, 'Keep the description under 400 characters.').default('')
 });
 
+/** Edit a charted world after founding (admin console): the founding world shape plus its id. */
+export const worldEditSchema = foundingWorldSchema.extend({
+	worldId: z.string().min(1, 'Missing world.')
+});
+
 export const foundingSchema = z.object({
 	name: z.string().trim().min(1, 'Name the campaign.').max(80, 'Keep the name under 80 characters.'),
 	subtitle: z.string().trim().max(120, 'Keep the subtitle under 120 characters.').default(''),
@@ -40,3 +45,4 @@ export const foundingSchema = z.object({
 export type FoundingInput = z.infer<typeof foundingSchema>;
 export type FoundingWorldInput = z.infer<typeof foundingWorldSchema>;
 export type FoundingEffectInput = z.infer<typeof foundingEffectSchema>;
+export type WorldEditInput = z.infer<typeof worldEditSchema>;
