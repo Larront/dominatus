@@ -6,11 +6,12 @@
  * Two categories need the control context, which is why this isn't a stateless sum of results:
  *   - **Underdog** reads each combatant's share *before* the battle (you beat someone bigger).
  *   - **Milestones** read the *max* share ever reached on a world (banked, never lost).
- * So this folds the per-world control replay (reusing `applyReport`) alongside the points tally.
- * Like control, the result is a pure function of the ordered log plus awards — recomputed on read.
+ * So this reads the same per-world `replay` Control reads, and layers the points on top of each
+ * report's before/after shares. Like control, the result is a pure function of the ordered log
+ * plus awards — recomputed on read.
  */
 
-import { applyReport, type FoldReport, type FoldSide } from './control-fold';
+import { replay, type FoldReport } from './control-fold';
 import type { ScoringProfile } from './scoring-profile';
 
 /**
@@ -31,13 +32,13 @@ export const POINTS = {
 export const PAINTING_POINTS = { unit: 1, character: 2, terrain: 1 } as const;
 export type PaintingKind = keyof typeof PAINTING_POINTS;
 
-/** A battle report shaped for the standings fold. Order is the same fold order as control. */
-export interface StandingsReport {
-	worldId: string;
-	outcome: FoldSide | 'stalemate';
+/**
+ * A battle report shaped for the standings fold: a `FoldReport` (the same shape Control replays)
+ * plus whether it carries a narrative. Order is the same fold order as control.
+ */
+export interface StandingsReport extends FoldReport {
 	/** Whether the report carries a narrative — earns every combatant +1. */
 	hasNarrative: boolean;
-	combatants: { warbandId: string; side: FoldSide }[];
 }
 
 /** A painting award reduced to its warband and kind; its points are read from the profile. */
@@ -105,8 +106,9 @@ export function computeStandings(
 		points.set(warbandId, b);
 	};
 
-	// Per-world control state, replayed as we go so underdog/milestones see live shares.
-	const controlByWorld = new Map<string, Map<string, number>>();
+	// The one replay Control also reads: each step carries its world's shares before/after the
+	// report. We read those rather than threading control here, so points and the map never diverge.
+	const { steps } = replay(reports);
 	// Highest share each warband has ever held on each world — milestones are banked off this.
 	const maxByWorld = new Map<string, Map<string, number>>();
 	// Campaign-wide consecutive-decisive-win run per warband, for streak + kingkiller.
@@ -114,8 +116,10 @@ export function computeStandings(
 	const runLength = Math.max(2, profile.streakLength);
 	const isKing = (warbandId: string) => (streak.get(warbandId) ?? 0) >= runLength;
 
-	for (const r of reports) {
-		const pre = controlByWorld.get(r.worldId) ?? new Map<string, number>();
+	for (let i = 0; i < reports.length; i++) {
+		const r = reports[i];
+		// `pre` = shares before this report (underdog reads it); `post` = after (milestones bank it).
+		const { pre, post } = steps[i];
 		const attackers = r.combatants.filter((c) => c.side === 'attacker');
 		const defenders = r.combatants.filter((c) => c.side === 'defender');
 
@@ -160,9 +164,6 @@ export function computeStandings(
 		if (r.hasNarrative) {
 			for (const c of r.combatants) add(c.warbandId, 'narrative', profile.narrative);
 		}
-
-		const post = applyReport(pre, r as FoldReport);
-		controlByWorld.set(r.worldId, post);
 
 		const mx = maxByWorld.get(r.worldId) ?? new Map<string, number>();
 		for (const [warbandId, share] of post) {

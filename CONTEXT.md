@@ -60,6 +60,16 @@ How much of a world each warband holds, stored as a share per warband. Everythin
 derived from those shares: the **owner** is the majority holder, a world is **contested**
 when no warband holds a majority, and **unclaimed** when no warband holds any share.
 
+**Replay**:
+The ordered re-derivation of world control from the approved battle-report log: reports are
+folded oldest-first, one at a time, each moving control by ±10% (ADR 0002). It is never a
+stateless sum — the 0% floor and the 100% pool make order matter — so it is a pure function of
+the ordered log. Both readers sit on the *same* replay: world **Control** takes the final
+per-world shares, and the points **Standings** read each report's shares *before* and *after*
+it applies (to score underdog and milestones). Streak and kingkiller are scored on top of the
+replay, not part of it — they are points state, not control.
+_Avoid_: Recompute (too generic — a replay is specifically the ordered fold over the log).
+
 **Battle Report**:
 The record a commander submits documenting a game fought over a world. Splits its combatant
 warbands across two sides — attacker and defender — each holding one or two warbands (1v1 or

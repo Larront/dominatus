@@ -16,7 +16,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import * as schema from '../src/lib/server/db/schema';
 // Pure domain fold (ADR 0002) — control is derived from the report log, not hand-set.
-import { foldControl, type FoldReport } from '../src/lib/domain/control-fold';
+import { replay, type FoldReport } from '../src/lib/domain/control-fold';
 import { DEFAULT_PROFILE } from '../src/lib/domain/scoring-profile';
 
 const {
@@ -243,13 +243,15 @@ async function main() {
 		const reports = log
 			.filter((e) => wd[e.world] === w.id)
 			.map<FoldReport>((e) => ({
+				worldId: w.id,
 				outcome: e.win ? 'attacker' : 'stalemate',
 				combatants: [
 					{ warbandId: wb[e.att], side: 'attacker' },
 					{ warbandId: wb[e.def], side: 'defender' }
 				]
 			}));
-		return [...foldControl(reports).entries()].map(([warbandId, share]) => ({
+		const folded = replay(reports).final.get(w.id) ?? new Map<string, number>();
+		return [...folded.entries()].map(([warbandId, share]) => ({
 			worldId: w.id,
 			warbandId,
 			share

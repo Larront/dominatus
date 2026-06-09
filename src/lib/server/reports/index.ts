@@ -1,7 +1,7 @@
 import { and, eq, asc, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { battleReport, battleReportCombatant, worldControl } from '$lib/server/db/schema';
-import { foldControl, type FoldReport } from '$lib/domain/control-fold';
+import { replay, type FoldReport } from '$lib/domain/control-fold';
 import type { BattleReportInput } from '$lib/schemas/battle-report';
 
 /** The exact transaction-client type drizzle hands the `db.transaction` callback. */
@@ -115,9 +115,15 @@ export function recomputeWorldControl(tx: Tx, worldId: string): void {
 		byReport.set(c.reportId, list);
 	}
 
-	const folded = foldControl(
-		reports.map<FoldReport>((r) => ({ outcome: r.outcome, combatants: byReport.get(r.id) ?? [] }))
-	);
+	// Per-world recompute: replay just this world's reports and read its final shares.
+	const folded =
+		replay(
+			reports.map<FoldReport>((r) => ({
+				worldId,
+				outcome: r.outcome,
+				combatants: byReport.get(r.id) ?? []
+			}))
+		).final.get(worldId) ?? new Map<string, number>();
 
 	// The snapshot is a pure cache of the fold: clear and rewrite the live holders.
 	tx.delete(worldControl).where(eq(worldControl.worldId, worldId)).run();
