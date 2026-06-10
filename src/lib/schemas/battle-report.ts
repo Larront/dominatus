@@ -10,6 +10,14 @@ export const battleSide = z.enum(['attacker', 'defender']);
 export const battleOutcome = z.enum(['attacker', 'defender', 'stalemate']);
 
 /**
+ * Upper bound on secondaries per combatant — a safety ceiling above a real scoresheet's row
+ * count, not a game rule. A Tabletop Battles sheet lists every mission in play (≈11), so the
+ * old limit of six silently dropped real scoring rows. Shared by the schema, the OCR draft,
+ * and the form so the three never disagree on the cap.
+ */
+export const MAX_SECONDARIES = 20;
+
+/**
  * One secondary mission's score, recorded separately so the full game sheet is
  * captured. Stored as a flexible list (not fixed columns) so a future edition's
  * different secondary set is data, never a schema change.
@@ -27,7 +35,7 @@ export const combatantSchema = z.object({
 	// not these values; they are the durable record. Total VP is derived for display.
 	// `nullish` because an empty number input binds to null, not undefined.
 	primaryVp: z.number().int().min(0).nullish(),
-	secondaries: z.array(secondaryScoreSchema).max(6).default([]),
+	secondaries: z.array(secondaryScoreSchema).max(MAX_SECONDARIES).default([]),
 	battleReadyVp: z.number().int().min(0).nullish()
 });
 

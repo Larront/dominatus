@@ -11,6 +11,24 @@ export async function getWarbandsForCampaign(campaignId: string) {
 	});
 }
 
+/**
+ * Warband identities for matching an OCR'd scoresheet to this campaign's forces (ADR 0001):
+ * the warband name/tag plus the commander's name, since the sheet names a player and a faction.
+ */
+export async function getWarbandIdentitiesForCampaign(campaignId: string) {
+	const rows = await db.query.warband.findMany({
+		where: eq(warband.campaignId, campaignId),
+		columns: { id: true, name: true, short: true },
+		with: { commander: { columns: { name: true } } }
+	});
+	return rows.map((r) => ({
+		id: r.id,
+		name: r.name,
+		short: r.short,
+		commanderName: r.commander.name
+	}));
+}
+
 /** The warbands a single commander fields in one campaign — their roster on the account page. */
 export async function getWarbandsForCommander(campaignId: string, userId: string) {
 	return db.query.warband.findMany({

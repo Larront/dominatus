@@ -26,3 +26,7 @@ vite.config.ts.timestamp-*
 
 # Dev server output
 dev-server.log
+
+# Tesseract OCR language data, fetched at runtime to cwd
+eng.traineddata
+*.traineddata

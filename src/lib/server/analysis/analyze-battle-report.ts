@@ -6,23 +6,44 @@
  * no report is committed without that confirmation. A wrong or unavailable analysis
  * therefore degrades to manual entry rather than blocking submission.
  *
- * The real implementation will be a dedicated computer-vision stack, built later as
- * its own vertical slice. For now this is stubbed to return an empty draft.
+ * The image is a standardised end-of-match export from the Tabletop Battles app, so
+ * the analyzer OCRs a known layout rather than running general computer vision. The
+ * sheet carries each player's name, faction, and score breakdown — but NOT which side
+ * attacked, which world was fought over, or the game's points size. Those are left for
+ * the commander to supply during review, so this draft never invents them.
  */
 
+export interface ReportDraftSecondary {
+	name: string;
+	victoryPoints: number;
+}
+
 export interface ReportDraftCombatant {
+	/** OCR'd player name (e.g. "Aaron") — used to match a warband, and shown when unmatched. */
+	detectedName?: string;
+	/** OCR'd faction / army (e.g. "World Eaters"). */
+	detectedFaction?: string;
+	/**
+	 * The campaign warband this player resolves to. The analyzer never sets this (it has no
+	 * campaign context); the matching step fills it from `detectedName`/`detectedFaction`,
+	 * leaving it blank when unsure so the commander picks.
+	 */
 	warbandId?: string;
-	side: 'attacker' | 'defender';
-	victoryPoints?: number;
+	/** Primary-mission total, read from the sheet's `NN/NN` (reliable). */
+	primaryVp?: number;
+	/**
+	 * Per-secondary scores. Names read cleanly; the points are summed from the sheet's sparse
+	 * per-round grid and are the LEAST certain field — surfaced for the commander to correct.
+	 */
+	secondaries: ReportDraftSecondary[];
+	/** Battle-ready / paint VP, read from `10/10` (reliable). */
+	battleReadyVp?: number;
 }
 
 export interface ReportDraft {
-	worldId?: string;
-	outcome?: 'attacker' | 'defender' | 'stalemate';
-	pointsSize?: number;
+	/** Players in score-sheet order; the form seats the first as attacker, the second as defender. */
 	combatants: ReportDraftCombatant[];
-	narrative?: string;
-	/** 0–1 analyzer confidence, when the implementation reports it. */
+	/** 0–1 mean OCR confidence. The grid-derived secondary points are the least certain part. */
 	confidence?: number;
 }
 
@@ -39,8 +60,17 @@ export const stubAnalyzer: BattleReportAnalyzer = {
 	}
 };
 
-/** The analyzer the app uses. Swap this binding when the CV stack lands. */
-export const analyzer: BattleReportAnalyzer = stubAnalyzer;
+/**
+ * The analyzer the app uses. Lazily wraps the tesseract analyzer so the (heavy) OCR
+ * stack is only loaded on the first analysis, not at server start. Swap this binding to
+ * `stubAnalyzer` to force manual entry.
+ */
+export const analyzer: BattleReportAnalyzer = {
+	async analyze(image) {
+		const { tesseractAnalyzer } = await import('./tesseract-analyzer');
+		return tesseractAnalyzer.analyze(image);
+	}
+};
 
 export function analyzeBattleReport(image: Blob): Promise<ReportDraft> {
 	return analyzer.analyze(image);

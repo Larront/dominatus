@@ -7,6 +7,7 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import SegmentedField from '$lib/components/ui/SegmentedField.svelte';
 	import Checkbox from '$lib/components/ui/Checkbox.svelte';
+	import { MAX_SECONDARIES } from '$lib/schemas/battle-report';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -70,7 +71,7 @@
 	}
 	function addSecondary(i: number) {
 		const secs = $form.combatants[i].secondaries ?? [];
-		if (secs.length >= 6) return;
+		if (secs.length >= MAX_SECONDARIES) return;
 		patchCombatant(i, { secondaries: [...secs, { name: '', victoryPoints: 0 }] });
 	}
 	function removeSecondary(i: number, j: number) {
@@ -143,10 +144,92 @@
 		return { rows, stalemate: o === 'stalemate' };
 	});
 
-	// Optional image → CV draft seam (ADR 0001): present but inert until the CV stack lands.
+	// Scoresheet photo → CV draft (ADR 0001): a Tabletop Battles export is OCR'd server-side to
+	// seed the form. The draft is never authoritative — the commander confirms every value, and
+	// the sheet carries no world, sides, or outcome, so those are always entered by hand.
+	type DraftSecondary = { name: string; victoryPoints: number };
+	type DraftCombatant = {
+		detectedName?: string;
+		detectedFaction?: string;
+		warbandId?: string;
+		primaryVp?: number;
+		secondaries: DraftSecondary[];
+		battleReadyVp?: number;
+	};
+	type ReportDraft = { combatants: DraftCombatant[]; confidence?: number };
+
 	let imageFile = $state<File | null>(null);
+	// Object URL for the on-screen preview, so the commander can cross-reference the image
+	// against the drafted fields. Revoked when replaced to avoid leaking blobs.
+	let imageUrl = $state<string | null>(null);
+	let analyzing = $state(false);
+	let analyzeError = $state<string | null>(null);
+	let draftNote = $state<string | null>(null);
+
 	function onImagePick(event: Event) {
-		imageFile = (event.currentTarget as HTMLInputElement).files?.[0] ?? null;
+		const next = (event.currentTarget as HTMLInputElement).files?.[0] ?? null;
+		if (imageUrl) URL.revokeObjectURL(imageUrl);
+		imageFile = next;
+		imageUrl = next ? URL.createObjectURL(next) : null;
+		analyzeError = null;
+	}
+
+	async function autofillFromPhoto() {
+		if (!imageFile || analyzing) return;
+		analyzing = true;
+		analyzeError = null;
+		draftNote = null;
+		try {
+			const body = new FormData();
+			body.append('image', imageFile);
+			const res = await fetch(`${base}/report/analyze`, { method: 'POST', body });
+			if (!res.ok) {
+				const detail = await res.json().catch(() => null);
+				throw new Error(detail?.message ?? 'Could not read that scoresheet.');
+			}
+			applyDraft(await res.json());
+		} catch (e) {
+			analyzeError = e instanceof Error ? e.message : 'Could not read that scoresheet.';
+		} finally {
+			analyzing = false;
+		}
+	}
+
+	function applyDraft(draft: ReportDraft) {
+		const players = draft.combatants ?? [];
+		if (players.length < 2) {
+			analyzeError = 'Could not find two players on that scoresheet — enter the report by hand.';
+			return;
+		}
+		// The sheet has no notion of sides, so seat the first half as attackers, the rest as
+		// defenders; the commander flips sides if needed. Only each side's lead carries the score
+		// block (the form's 2v2 model shares one team score), matching setFormat()'s shape.
+		const half = Math.floor(players.length / 2);
+		$form.combatants = players.map((p, i) => {
+			const side: 'attacker' | 'defender' = i < half ? 'attacker' : 'defender';
+			const isLead = i === 0 || i === half;
+			return isLead
+				? {
+						side,
+						warbandId: p.warbandId ?? '',
+						primaryVp: p.primaryVp ?? null,
+						battleReadyVp: p.battleReadyVp ?? 10,
+						secondaries: (p.secondaries ?? [])
+							.slice(0, MAX_SECONDARIES)
+							.map((s) => ({ name: s.name, victoryPoints: s.victoryPoints }))
+					}
+				: { side, warbandId: p.warbandId ?? '', secondaries: [] };
+		});
+
+		const missing = players.filter((p) => !p.warbandId);
+		const names = missing.map((p) => p.detectedName).filter(Boolean);
+		draftNote =
+			'Drafted from the scoresheet — check every value, especially the secondary scores, then set the world, sides and outcome.' +
+			(missing.length
+				? ` Couldn't match ${missing.length} warband${missing.length > 1 ? 's' : ''}${
+						names.length ? ` (${names.join(', ')})` : ''
+					} — select ${missing.length > 1 ? 'them' : 'it'} above.`
+				: '');
 	}
 
 	// Shared utility recipes (composition in JS, not CSS).
@@ -234,6 +317,54 @@
 			class="mt-[26px] flex flex-col gap-[18px]"
 		>
 			<!-- ── Theatre ───────────────────────────────────────────── -->
+			<section class={panel}>
+				<h2 class={sec}>// Scoresheet</h2>
+				<p class="mb-3.5 max-w-[64ch] text-[12.5px] leading-[1.5] text-ink-dim">
+					Upload the Tabletop Battles photo to draft the report, then check every value against the
+					image — especially the secondary scores. The sheet doesn't record the world, sides, or
+					outcome, so set those yourself.
+				</p>
+				<div class="flex flex-wrap items-center gap-2.5">
+					<input
+						type="file"
+						accept="image/*"
+						onchange={onImagePick}
+						disabled={analyzing}
+						class="max-w-full font-body text-[12px] text-ink-dim file:mr-2.5 file:cursor-pointer file:border file:border-border file:bg-panel-2 file:px-[11px] file:py-[7px] file:font-display file:text-[10px] file:tracking-[0.08em] file:text-ink-dim file:uppercase disabled:opacity-60"
+					/>
+					<Button disabled={!imageFile || analyzing} onclick={autofillFromPhoto}>
+						{analyzing ? 'Reading…' : 'Auto-fill from photo'}
+					</Button>
+				</div>
+				{#if analyzeError}
+					<p role="alert" class="mt-2.5 font-body text-[12px] text-state-attacker">
+						{analyzeError}
+					</p>
+				{/if}
+				{#if draftNote}
+					<p
+						class="mt-2.5 border border-border-lum bg-accent-soft px-3 py-2.5 font-body text-[12px] leading-[1.5] text-accent-ink"
+						role="status"
+					>
+						{draftNote}
+					</p>
+				{/if}
+				{#if imageUrl}
+					<figure class="mt-3.5 border-t border-border pt-3.5">
+						<img
+							src={imageUrl}
+							alt="Uploaded scoresheet — cross-reference against the fields below"
+							class="mx-auto max-h-[60vh] w-auto max-w-full border border-border bg-void object-contain"
+						/>
+						{#if imageFile}
+							<figcaption class="mt-2 text-center font-body text-[11.5px] text-ink-faint">
+								{imageFile.name}
+							</figcaption>
+						{/if}
+					</figure>
+				{/if}
+			</section>
+
 			<section class={panel}>
 				<h2 class={sec}>// Theatre</h2>
 				<div class="flex flex-wrap items-stretch gap-3.5">
@@ -451,7 +582,7 @@
 								</button>
 							</div>
 						{/each}
-						{#if (c.secondaries?.length ?? 0) < 6}
+						{#if (c.secondaries?.length ?? 0) < MAX_SECONDARIES}
 							<button
 								type="button"
 								onclick={() => addSecondary(lead)}
@@ -568,25 +699,6 @@
 						bind:value={$form.narrative}
 					></textarea>
 				</label>
-
-				<div class="mt-3.5 flex flex-col gap-2.5 border-t border-border pt-3.5">
-					<span class={label}
-						>› Score sheet <span class="tracking-[0.06em] text-ink-faint">coming soon</span></span
-					>
-					<div class="flex flex-wrap items-center gap-2.5">
-						<input
-							type="file"
-							accept="image/*"
-							onchange={onImagePick}
-							class="max-w-full font-body text-[12px] text-ink-dim file:mr-2.5 file:cursor-pointer file:border file:border-border file:bg-panel-2 file:px-[11px] file:py-[7px] file:font-display file:text-[10px] file:tracking-[0.08em] file:text-ink-dim file:uppercase"
-						/>
-						<Button disabled>Auto-fill from photo</Button>
-					</div>
-					{#if imageFile}<p class="text-[12px] text-ink-dim">Selected: {imageFile.name}</p>{/if}
-					<p class="text-[11.5px] leading-[1.45] text-ink-faint">
-						A photo of the score sheet will draft the report for you to confirm.
-					</p>
-				</div>
 			</section>
 
 			<!-- ── Submit ────────────────────────────────────────────── -->

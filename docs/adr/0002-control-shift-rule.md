@@ -49,8 +49,9 @@ accepted
   uncontested = the pool remainder) sits on top of the folded percentages.
 - Storage records the per-(world, warband) percentage; replay reproduces it from the report
   log, so an arbiter reversal/rejection re-folds rather than patching a stored number.
-- The battle-report submit action (currently a no-op TODO) must apply the fold step on the
-  approved report and persist the new control snapshot.
+- The battle-report submit action applies the fold step on the approved report and persists the
+  new control snapshot, atomically (`submitBattleReport` → `recomputeWorldControl`); edits and
+  reversals re-fold the affected world(s) the same way.
 - The army-size ladder (<20→500, ≥20→1000, ≥30→1500, ≥40→2000 pts) is an **advisory table-talk
   rule the app does not enforce**: it caps how large an army a player may bring, set by the
   **larger control share among the combatants** (yours or your opponent's) on the contested

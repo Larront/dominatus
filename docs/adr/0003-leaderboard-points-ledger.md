@@ -67,9 +67,11 @@ fold-on-read computation, and the category definitions below otherwise stand.
 
 ## Consequences
 
-- A `painting_award` table records each grant (campaign, warband, cycle, kind, points snapshot,
-  optional note, granting arbiter). Points are snapshotted at grant time so a later rule change
-  does not silently re-score history.
+- A `painting_award` table records each grant (campaign, warband, cycle, kind, optional note,
+  granting arbiter). It logs only the **kind** — its point value is read live from the campaign's
+  Scoring Profile at compute time (per ADR 0004), so editing the profile re-scores past awards
+  alongside the derived points. (This reverses the snapshot-at-grant approach first considered
+  here.)
 - `$lib/domain/standings.ts` holds the pure fold (`computeStandings(reports, awards)`), tested in
   isolation like `control-fold.ts`. The server resolves reports/awards and the route renders the
   table; the arbiter award panel is gated to the `arbiter` role.
