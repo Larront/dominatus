@@ -3,7 +3,7 @@ import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { campaignDetailsSchema } from '$lib/schemas/campaign-details';
 import { scoringProfileSchema } from '$lib/domain/scoring-profile';
-import { worldEditSchema } from '$lib/schemas/campaign-founding';
+import { worldEditSchema, type WorldEditInput } from '$lib/schemas/campaign-founding';
 import { idActionSchema } from '$lib/schemas/id-action';
 import { effectSchema, effectEditSchema, worldEffectSchema } from '$lib/schemas/planetary-effect';
 import {
@@ -30,22 +30,69 @@ export const load: PageServerLoad = async ({ parent }) => {
 	// The admin panel is the arbiter's alone (CONTEXT.md — campaign authority).
 	if (role !== 'arbiter') error(403, 'Only the arbiter can manage this campaign');
 
-	const [detailsForm, profileForm, deleteForm, reports, effects, worlds] = await Promise.all([
-		superValidate(
-			{ name: campaign.name, subtitle: campaign.subtitle ?? '', currentCycle: campaign.currentCycle },
-			zod4(campaignDetailsSchema),
-			{ id: 'details' }
-		),
-		superValidate(campaign.scoringProfile ?? DEFAULT_PROFILE, zod4(scoringProfileSchema), {
-			id: 'profile'
-		}),
-		// Base form for the per-row reverse buttons; each row overrides the id client-side.
-		superValidate(zod4(idActionSchema)),
-		getCampaignReportsAdmin(campaign.id),
-		getEffectPool(campaign.id),
-		getWorldsWithControl(campaign.id)
-	]);
-	return { detailsForm, profileForm, deleteForm, reports, effects, worlds };
+	const [detailsForm, profileForm, deleteForm, createForm, reports, effects, worlds] =
+		await Promise.all([
+			superValidate(
+				{ name: campaign.name, subtitle: campaign.subtitle ?? '', currentCycle: campaign.currentCycle },
+				zod4(campaignDetailsSchema),
+				{ id: 'details' }
+			),
+			superValidate(campaign.scoringProfile ?? DEFAULT_PROFILE, zod4(scoringProfileSchema), {
+				id: 'profile'
+			}),
+			// Base form for the per-row id-only destructive buttons (reverse a report, remove an effect);
+			// each DestructiveForm overrides the id client-side.
+			superValidate(zod4(idActionSchema)),
+			// The "add effect" form is a single form; the edit forms below are one per row.
+			superValidate(zod4(effectSchema), { id: 'effect-create' }),
+			getCampaignReportsAdmin(campaign.id),
+			getEffectPool(campaign.id),
+			getWorldsWithControl(campaign.id)
+		]);
+
+	// One validated, pre-filled form per editable row, keyed by record id. Each gets a unique form id
+	// so a save response routes back to the row it came from (a shared id would update every row).
+	const effectForms = Object.fromEntries(
+		await Promise.all(
+			effects.map(
+				async (e) =>
+					[
+						e.id,
+						await superValidate(
+							{ id: e.id, title: e.title, description: e.description ?? '' },
+							zod4(effectEditSchema),
+							{ id: `effect-${e.id}` }
+						)
+					] as const
+			)
+		)
+	);
+	const worldForms = Object.fromEntries(
+		await Promise.all(
+			worlds.map(
+				async (w) =>
+					[
+						w.id,
+						await superValidate(
+							{
+								worldId: w.id,
+								name: w.name,
+								type: w.type,
+								render: w.render as WorldEditInput['render'],
+								value: w.value ?? '',
+								garrison: w.garrison ?? '',
+								supply: w.supply ?? '',
+								description: w.description ?? ''
+							},
+							zod4(worldEditSchema),
+							{ id: `world-${w.id}` }
+						)
+					] as const
+			)
+		)
+	);
+
+	return { detailsForm, profileForm, deleteForm, createForm, reports, effects, worlds, effectForms, worldForms };
 };
 
 export const actions: Actions = {
@@ -81,29 +128,32 @@ export const actions: Actions = {
 
 	createEffect: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		const parsed = effectSchema.safeParse(Object.fromEntries(await request.formData()));
-		if (!parsed.success) return fail(400, { effectError: parsed.error.issues[0]?.message ?? 'Check the effect.' });
-		await createEffect(campaign.id, parsed.data);
-		return { effect: 'created' };
+		const form = await superValidate(request, zod4(effectSchema), { id: 'effect-create' });
+		if (!form.valid) return fail(400, { form });
+		await createEffect(campaign.id, form.data);
+		return message(form, 'Effect added.');
 	},
 
 	editEffect: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		const parsed = effectEditSchema.safeParse(Object.fromEntries(await request.formData()));
-		if (!parsed.success) return fail(400, { effectError: parsed.error.issues[0]?.message ?? 'Check the effect.' });
-		const { id, ...fields } = parsed.data;
+		// The form id (effect-<id>) is read from the POST, so the response routes back to its row.
+		const form = await superValidate(request, zod4(effectEditSchema));
+		if (!form.valid) return fail(400, { form });
+		const { id, ...fields } = form.data;
 		await updateEffect(id, campaign.id, fields);
-		return { effect: 'edited' };
+		return message(form, 'Saved.');
 	},
 
 	deleteEffect: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		const parsed = idActionSchema.safeParse(Object.fromEntries(await request.formData()));
-		if (!parsed.success) return fail(400, { effectError: 'Missing record.' });
-		await deleteEffect(parsed.data.id, campaign.id);
-		return { effect: 'deleted' };
+		const form = await superValidate(request, zod4(idActionSchema));
+		if (!form.valid) return fail(400, { form });
+		await deleteEffect(form.data.id, campaign.id);
+		return message(form, 'Removed from pool.');
 	},
 
+	// Attach/detach are plain command toggles — two server-rendered ids, no user input to validate —
+	// so they post directly and the ids are re-checked against the campaign server-side.
 	attachEffect: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
 		const parsed = worldEffectSchema.safeParse(Object.fromEntries(await request.formData()));
@@ -122,11 +172,12 @@ export const actions: Actions = {
 
 	saveWorld: async ({ request, params, locals }) => {
 		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		const parsed = worldEditSchema.safeParse(Object.fromEntries(await request.formData()));
-		if (!parsed.success) return fail(400, { worldError: parsed.error.issues[0]?.message ?? 'Check the world fields.' });
-		const { worldId, ...fields } = parsed.data;
+		// The form id (world-<id>) is read from the POST, so the response routes back to its row.
+		const form = await superValidate(request, zod4(worldEditSchema));
+		if (!form.valid) return fail(400, { form });
+		const { worldId, ...fields } = form.data;
 		await updateWorld(worldId, campaign.id, fields);
-		return { world: 'saved' };
+		return message(form, 'World saved.');
 	},
 
 	deleteReport: async ({ request, params, locals }) => {

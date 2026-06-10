@@ -5,7 +5,8 @@
 	import { page } from '$app/state';
 	import Button from '$lib/components/ui/Button.svelte';
 	import DestructiveForm from '$lib/components/ui/DestructiveForm.svelte';
-	import Planet from '$lib/components/Planet.svelte';
+	import EffectRow from '$lib/components/admin/EffectRow.svelte';
+	import WorldRow from '$lib/components/admin/WorldRow.svelte';
 	import { SCORING_GROUPS } from '$lib/domain/scoring-profile';
 	import { ARCHETYPES } from '$lib/domain/archetypes';
 	import type { PageData } from './$types';
@@ -46,6 +47,15 @@
 		submitting: detailsSubmitting,
 		enhance: detailsEnhance
 	} = untrack(() => superForm(data.detailsForm, { id: 'details', resetForm: false }));
+
+	// Add-effect (single form). The per-row edit/delete forms live in EffectRow; worlds in WorldRow.
+	const {
+		form: newEffect,
+		errors: newEffectErrors,
+		message: newEffectMessage,
+		submitting: newEffectSubmitting,
+		enhance: newEffectEnhance
+	} = untrack(() => superForm(data.createForm, { id: 'effect-create', resetForm: true }));
 
 	const outcomeMeta = {
 		attacker: {
@@ -225,32 +235,28 @@
 			{#if data.effects.length}
 				<ul class="mb-4 flex flex-col gap-2.5">
 					{#each data.effects as e (e.id)}
-						<li class="border border-border bg-panel-2/50 p-2.5">
-							<form method="POST" action="?/editEffect" class="flex items-start gap-2.5" use:enhance>
-								<input type="hidden" name="id" value={e.id} />
-								<div class="flex min-w-0 flex-1 flex-col gap-2">
-									<input name="title" value={e.title} maxlength="60" class="{control} py-2 font-display text-[13px] font-semibold" />
-									<textarea name="description" rows="2" maxlength="400" class="{control} resize-none py-2 leading-[1.45]">{e.description ?? ''}</textarea>
-								</div>
-								<Button type="submit" class="px-2.5 py-1.5">Save</Button>
-							</form>
-							<form method="POST" action="?/deleteEffect" use:enhance class="mt-1.5 flex justify-end">
-								<input type="hidden" name="id" value={e.id} />
-								<button type="submit" class="font-display text-[10px] tracking-[0.08em] text-ink-faint uppercase transition-colors hover:text-state-attacker focus-visible:outline-none">
-									Remove from pool
-								</button>
-							</form>
-						</li>
+						<EffectRow editForm={data.effectForms[e.id]} deleteForm={data.deleteForm} {control} />
 					{/each}
 				</ul>
 			{/if}
 
-			<form method="POST" action="?/createEffect" class="flex items-start gap-2.5 border-t border-border pt-4" use:enhance>
+			<form method="POST" action="?/createEffect" class="flex items-start gap-2.5 border-t border-border pt-4" use:newEffectEnhance>
 				<div class="flex min-w-0 flex-1 flex-col gap-2">
-					<input name="title" placeholder="New effect — e.g. Warp Storm" maxlength="60" class="{control} py-2" />
-					<textarea name="description" rows="2" maxlength="400" placeholder="What it does, in your words. The app shows it; it never enforces it." class="{control} resize-none py-2 leading-[1.45]"></textarea>
+					<input
+						name="title"
+						bind:value={$newEffect.title}
+						placeholder="New effect — e.g. Warp Storm"
+						maxlength="60"
+						class="{control} py-2"
+						aria-invalid={$newEffectErrors.title ? 'true' : undefined}
+					/>
+					{#if $newEffectErrors.title}<span class="font-body text-[12px] text-state-attacker">{$newEffectErrors.title}</span>{/if}
+					<textarea name="description" bind:value={$newEffect.description} rows="2" maxlength="400" placeholder="What it does, in your words. The app shows it; it never enforces it." class="{control} resize-none py-2 leading-[1.45]"></textarea>
 				</div>
-				<Button type="submit" variant="primary" class="px-3 py-2">+ Add</Button>
+				<div class="flex flex-col items-end gap-1.5">
+					<Button type="submit" variant="primary" class="px-3 py-2" disabled={$newEffectSubmitting}>+ Add</Button>
+					{#if $newEffectMessage}<span class="font-body text-[11px] text-accent">{$newEffectMessage}</span>{/if}
+				</div>
 			</form>
 		</section>
 
@@ -263,81 +269,14 @@
 
 			<div class="flex flex-col gap-4">
 				{#each data.worlds as w (w.id)}
-					{@const attached = new Set(w.effects.map((e) => e.id))}
-					<article class="border border-border bg-panel-2/40 p-3.5">
-						<form method="POST" action="?/saveWorld" class="flex flex-col gap-3" use:enhance>
-							<input type="hidden" name="worldId" value={w.id} />
-							<div class="flex items-center gap-3">
-								<span class="shrink-0 leading-[0]">
-									<Planet render={w.render} size={44} resolution={64} name={w.name} />
-								</span>
-								<input name="name" value={w.name} maxlength="60" class="{control} py-2 font-display text-[14px] font-semibold" aria-label="World name" />
-							</div>
-							<div class="grid grid-cols-2 gap-2 max-[560px]:grid-cols-1">
-								<label class="flex flex-col gap-1">
-									<span class="{label} text-[9px]">› Type</span>
-									<input name="type" value={w.type} maxlength="60" class="{control} py-2" />
-								</label>
-								<label class="flex flex-col gap-1">
-									<span class="{label} text-[9px]">› Archetype</span>
-									<select name="render" class="{control} py-2">
-										{#each archetypes as a (a.value)}
-											<option value={a.value} selected={a.value === w.render}>{a.label}</option>
-										{/each}
-									</select>
-								</label>
-							</div>
-							<div class="grid grid-cols-3 gap-2 max-[560px]:grid-cols-1">
-								<label class="flex flex-col gap-1">
-									<span class="{label} text-[9px]">› Value</span>
-									<input name="value" value={w.value ?? ''} maxlength="40" class="{control} py-2" />
-								</label>
-								<label class="flex flex-col gap-1">
-									<span class="{label} text-[9px]">› Garrison</span>
-									<input name="garrison" value={w.garrison ?? ''} maxlength="40" class="{control} py-2" />
-								</label>
-								<label class="flex flex-col gap-1">
-									<span class="{label} text-[9px]">› Supply</span>
-									<input name="supply" value={w.supply ?? ''} maxlength="40" class="{control} py-2" />
-								</label>
-							</div>
-							<label class="flex flex-col gap-1">
-								<span class="{label} text-[9px]">› Lore</span>
-								<textarea name="description" rows="2" maxlength="400" class="{control} resize-none py-2 leading-[1.45]">{w.description ?? ''}</textarea>
-							</label>
-							<div class="flex justify-end">
-								<Button type="submit" class="px-3 py-1.5">Save world</Button>
-							</div>
-						</form>
-
-						<div class="mt-3 border-t border-border pt-3">
-							<span class="{label} text-[9px]">› Effects in play</span>
-							{#if data.effects.length === 0}
-								<p class="mt-1.5 font-body text-[11.5px] text-ink-faint">
-									No effects in the pool — add some above to assign them here.
-								</p>
-							{:else}
-								<div class="mt-2 flex flex-wrap gap-1.5">
-									{#each data.effects as e (e.id)}
-										{@const on = attached.has(e.id)}
-										<form method="POST" action="?/{on ? 'detachEffect' : 'attachEffect'}" use:enhance>
-											<input type="hidden" name="worldId" value={w.id} />
-											<input type="hidden" name="effectId" value={e.id} />
-											<button
-												type="submit"
-												title={e.description ?? ''}
-												class="border px-2 py-1 font-display text-[10.5px] font-medium tracking-[0.04em] transition-colors focus-visible:outline-none {on
-													? 'border-accent-mid bg-accent-soft text-accent'
-													: 'border-border bg-panel text-ink-dim hover:border-border-lum hover:text-ink'}"
-											>
-												{on ? '✓' : '+'} {e.title}
-											</button>
-										</form>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					</article>
+					<WorldRow
+						world={w}
+						editForm={data.worldForms[w.id]}
+						effects={data.effects}
+						{archetypes}
+						{control}
+						{label}
+					/>
 				{/each}
 			</div>
 		</section>
