@@ -27,7 +27,7 @@ Target: Docker container behind a Cloudflare Tunnel, SQLite on a mounted volume.
 - [x] `.dockerignore`
 - [x] Entrypoint runs migrations against the volume DB before boot (`scripts/migrate.js`, programmatic migrator — no `drizzle-kit` at runtime)
 - [x] Health check endpoint (`GET /healthz`, pings DB) + Docker `HEALTHCHECK`
-- [ ] Structured request/error logging
+- [x] Structured request/error logging — pino; one JSON line per request with a per-request `requestId` (child logger on `locals.log`), `handleError` logs 500s with the `err` serializer; `pino-pretty` in dev; `LOG_LEVEL` env-driven. See `docs/OPERATIONS.md`.
 
 ## Configuration
 
@@ -120,12 +120,12 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 
 - [ ] Error tracking / alerting (e.g. Sentry) — structured logs alone won't page you
 - [ ] External uptime monitoring hitting `/healthz`
-- [ ] Log destination/retention — `docker logs` is ephemeral; decide whether to ship or rotate
+- [x] Log destination/retention — Docker `json-file` rotation (`max-size: 10m`, `max-file: 5`, ~50 MB/service) in `docker-compose.yml`. No external shipper yet, but the JSON format is parse-ready for one.
 
 ## Ops
 
-- [ ] Backups — periodic copy/snapshot of the SQLite volume (use `sqlite3 .backup`, not a raw file copy, because of WAL)
-- [ ] Test the restore path, not just the backup
+- [x] Backups — `scripts/backup.js` takes a WAL-safe snapshot via `bun:sqlite`'s `VACUUM INTO` (no `sqlite3` binary needed, no raw file copy), integrity-checks it, and rotates to the newest `BACKUP_KEEP` (default 14) on the dedicated `dominatus-backups` volume. **Manual only for now** (`db:backup` / `docker compose exec`) — scheduling (sidecar/cron) and an offsite copy are still deferred. See `docs/OPERATIONS.md`.
+- [x] Test the restore path, not just the backup — `scripts/restore.js` (integrity-check → save `.pre-restore` → atomic swap → drop stale `-wal`/`-shm`); round-trip verified locally.
 - [ ] Resource limits + restart policy in compose (restart policy set; mem/cpu limits not)
 - [ ] CI — build the image, run `check` + `test` on PRs (note: vitest browser tests need Playwright browsers installed in CI)
 - [ ] CD — push image to a registry + trigger redeploy on the host (and how the host pulls/restarts)
