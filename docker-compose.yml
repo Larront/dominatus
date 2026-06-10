@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Override the local default with the volume path inside the container.
+      DATABASE_URL: /data/local.db
+    volumes:
+      - dominatus-data:/data
+    ports:
+      - '3000:3000'
+
+volumes:
+  dominatus-data:

@@ -1,0 +1,20 @@
+node_modules
+/.svelte-kit
+/build
+.output
+.git
+.gitignore
+
+# Env — never bake secrets into the image
+.env
+.env.*
+!.env.example
+
+# Local SQLite databases
+*.db
+*.db-*
+
+# Logs / OS cruft
+dev-server.log
+.DS_Store
+Thumbs.db

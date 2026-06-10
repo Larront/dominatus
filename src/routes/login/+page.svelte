@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { signIn } from '$lib/auth-client';
 	import Button from '$lib/components/ui/Button.svelte';
+	import SocialSignIn from '$lib/components/SocialSignIn.svelte';
 
 	let email = $state('');
 	let password = $state('');
@@ -47,6 +48,10 @@
 			{loading ? 'Signing in…' : 'Sign in'}
 		</Button>
 	</form>
+
+	<div class="mt-4">
+		<SocialSignIn />
+	</div>
 
 	<p class="mt-4 font-body text-[13px] text-ink-dim">
 		No account? <a href="/signup" class="text-accent hover:underline">Enlist</a>
