@@ -32,11 +32,14 @@ COPY --from=build /app/build ./build
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/scripts/migrate.js ./scripts/migrate.js
+COPY --from=build /app/scripts/backup.js ./scripts/backup.js
+COPY --from=build /app/scripts/restore.js ./scripts/restore.js
 COPY --from=build /app/package.json ./package.json
 
-# Mount point for the SQLite volume; owned by the non-root runtime user.
+# Mount points for the SQLite volume and backup snapshots; owned by the non-root runtime
+# user so the empty named volumes mount writable on first run.
 USER root
-RUN mkdir -p /data && chown bun:bun /data
+RUN mkdir -p /data /backups && chown bun:bun /data /backups
 USER bun
 
 EXPOSE 3000

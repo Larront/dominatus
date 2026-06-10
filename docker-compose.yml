@@ -8,6 +8,9 @@ services:
       DATABASE_URL: /data/local.db
     volumes:
       - dominatus-data:/data
+      # Snapshots written by `bun scripts/backup.js`. Separate volume so a botched
+      # `docker compose down -v` on data doesn't take the backups with it by accident.
+      - dominatus-backups:/backups
     ports:
       - '3000:3000'
     # Cap log growth: the json-file driver is unbounded by default and the structured
@@ -20,3 +23,4 @@ services:
 
 volumes:
   dominatus-data:
+  dominatus-backups:

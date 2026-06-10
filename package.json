@@ -19,6 +19,8 @@
 		"db:migrate": "drizzle-kit migrate",
 		"db:seed": "bun run scripts/seed.ts",
 		"db:studio": "drizzle-kit studio",
+		"db:backup": "bun run scripts/backup.js",
+		"db:restore": "bun run scripts/restore.js",
 		"auth:schema": "better-auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes"
 	},
 	"devDependencies": {

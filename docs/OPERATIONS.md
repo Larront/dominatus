@@ -1,6 +1,6 @@
 # Operations
 
-Logging for the Dominatus container.
+Logging and backups for the Dominatus container.
 
 ## Logging
 
@@ -43,3 +43,52 @@ docker compose logs app | grep '"level":50'        # just errors
 **Rotation** is configured in `docker-compose.yml` (`max-size: 10m`, `max-file: 5`), so
 logs are capped at ~50 MB per service. No external log shipper is wired up; the JSON
 format is parse-ready if one is added later.
+
+## Backups
+
+The SQLite database (WAL mode) is snapshotted with `VACUUM INTO`, which is safe to run
+against the live app. Snapshots land on the `dominatus-backups` volume (`/backups`) and
+are rotated to the newest `BACKUP_KEEP` (default 14). Runs are manual.
+
+### Take a backup
+
+```sh
+docker compose exec app bun scripts/backup.js
+```
+
+It writes the snapshot, runs `PRAGMA integrity_check` on it (deleting it if it fails), and
+rotates to the newest `BACKUP_KEEP` snapshots (default **14**).
+
+Tunable via env: `BACKUP_DIR` (default `/backups`), `BACKUP_KEEP` (default `14`).
+
+### Copy a snapshot off the host
+
+```sh
+docker compose cp app:/backups ./backups-export      # whole dir
+# or a single file:
+docker compose cp app:/backups/local-2026-06-11T14-32-05-123Z.db ./
+```
+
+> The backups volume survives `docker compose down` but **not** `docker compose down -v`.
+> Copy critical snapshots off-host until an offsite target is added.
+
+### Restore a snapshot (DESTRUCTIVE)
+
+Stop the app so nothing writes during the swap. The restore saves the current DB to
+`local.db.pre-restore` first, verifies the snapshot, swaps it in, and drops stale
+`-wal`/`-shm` sidecars.
+
+```sh
+docker compose exec app bun scripts/restore.js          # lists available snapshots
+docker compose stop app
+docker compose run --rm app bun scripts/restore.js local-2026-06-11T14-32-05-123Z.db
+docker compose start app
+```
+
+## Local dev
+
+The same scripts work locally (they default to `/data` and `/backups`; override paths):
+
+```sh
+DATABASE_URL=local.db BACKUP_DIR=./backups bun run db:backup
+```
