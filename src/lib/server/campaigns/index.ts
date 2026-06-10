@@ -228,7 +228,7 @@ export async function requireCampaignAccess(slug: string, userId: string) {
  * with their own conditional check.
  */
 export async function requireArbiter(slug: string, userId: string | undefined) {
-	if (!userId) throw redirect(302, '/login');
+	if (!userId) throw redirect(302, '/');
 	const access = await requireCampaignAccess(slug, userId);
 	if (access.role !== 'arbiter') throw error(403, 'Only the arbiter can manage this campaign.');
 	// `userId` is proven present here — return it so actions don't re-narrow `locals.user`.

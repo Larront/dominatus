@@ -9,7 +9,7 @@ import type { PageServerLoad, Actions } from './$types';
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { campaign } = await parent();
 	// `parent()` (the layout load) already redirected an anonymous visitor; this is belt-and-braces.
-	if (!locals.user) redirect(302, '/login');
+	if (!locals.user) redirect(302, '/');
 
 	const [form, warbands] = await Promise.all([
 		superValidate(zod4(warbandSchema)),
@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 export const actions: Actions = {
 	createWarband: async ({ request, params, locals }) => {
 		// A warband is mustered by the logged-in member who will command it.
-		if (!locals.user) redirect(302, '/login');
+		if (!locals.user) redirect(302, '/');
 		const { campaign } = await requireCampaignAccess(params.slug, locals.user.id);
 
 		const form = await superValidate(request, zod4(warbandSchema));

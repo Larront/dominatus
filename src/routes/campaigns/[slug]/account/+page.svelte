@@ -16,7 +16,7 @@
 
 	async function logout() {
 		await signOut();
-		await goto('/login');
+		await goto('/', { invalidateAll: true });
 	}
 
 	const panel =

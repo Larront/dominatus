@@ -28,26 +28,56 @@ Target: Docker container behind a Cloudflare Tunnel, SQLite on a mounted volume.
 - [ ] `ORIGIN` — public Cloudflare URL in prod (drives SvelteKit CSRF + Better Auth `baseURL`)
 - [ ] `DATABASE_URL` — path on the mounted volume
 
+## Required keys & secrets — future setup log
+
+Everything the app reads from the environment, and the external account work needed to obtain
+each. **None of these block local dev** — with no Resend key the verification/reset links print
+to the server console, and the social buttons simply error until their credentials exist. Full
+template lives in `.env.example`.
+
+| Env var | Used by | How to obtain | Status |
+|---|---|---|---|
+| `BETTER_AUTH_SECRET` | Better Auth session signing | `openssl rand -base64 32`; host-injected in prod, never committed | ⬜ prod value |
+| `ORIGIN` | SvelteKit CSRF + Better Auth `baseURL` | Local `http://localhost:5173`; prod = Cloudflare Tunnel hostname | ⬜ prod value |
+| `DATABASE_URL` | SQLite path | Local `local.db`; prod = mounted volume path | ⬜ prod value |
+| `RESEND_API_KEY` | `src/lib/server/email.ts` | Resend → API Keys → create (`re_…`) | ⬜ not set |
+| `EMAIL_FROM` | Sender address | Must be on a Resend-verified domain; falls back to sandbox `onboarding@resend.dev` | ⬜ not set |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `socialProviders.google` | Google Cloud Console → OAuth 2.0 client; redirect URI `https://<domain>/api/auth/callback/google` | ⬜ not set |
+| `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | `socialProviders.facebook` | Meta for Developers → app + Facebook Login; redirect URI `https://<domain>/api/auth/callback/facebook` | ⬜ not set |
+
+**Resend tiers:**
+- **Tier 0 (now, no key):** links log to the dev console — full flow testable with zero setup.
+- **Tier 1 (key only):** real emails, but the sandbox sender delivers *only* to your Resend signup address.
+- **Tier 2 (verified domain):** add SPF + DKIM + DMARC DNS records, set `EMAIL_FROM` to an address on that domain → send to anyone.
+
+**Social providers:** both also require the redirect URI above registered in the provider's
+console; the `https://<domain>` must match the production `ORIGIN`. Local OAuth testing needs the
+`http://localhost:5173/...` callback added too.
+
 ## Email (Resend)
 
 - [x] Add Resend SDK + `RESEND_API_KEY` (`src/lib/server/email.ts`; logs the link in dev when no key)
 - [x] Better Auth `sendVerificationEmail` + `requireEmailVerification` + `sendOnSignUp` (signup shows a "check your inbox" state)
 - [x] Better Auth `sendResetPassword` (password reset flow)
-- [ ] Password-reset UI page (consume the `/reset-password?token=` link) — not built yet
+- [x] Password-reset UI page (consume the `/reset-password?token=` link)
+- [x] Verified end-to-end in dev (link logged to console with no `RESEND_API_KEY`)
 
 ## Social sign-in
 
 - [x] Google provider (`socialProviders.google`) — needs `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 - [x] Facebook provider (`socialProviders.facebook`) — needs `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET`
-- [x] Social buttons on login + signup (`src/lib/components/SocialSignIn.svelte`)
+- [x] Social buttons with monochrome brand marks (`src/lib/components/SocialSignIn.svelte`), shown in the AccessGate terminal
 
-## Auth UX gaps (not yet discussed — incomplete flows)
+## Auth UX gaps — DONE (2026-06-11, via `/impeccable craft`)
 
-- [ ] `/reset-password` page to consume the reset token link (the email sends, but the link 404s)
-- [ ] "Forgot password?" request form on the login page (calls `forgetPassword`, separate from the reset page)
-- [ ] "Resend verification email" affordance for users who didn't click in time
-- [ ] Sign-out control + an authenticated landing/account area (confirm where verified users land)
-- [ ] Custom `+error.svelte` page (default SvelteKit error page is bare)
+All five flows built in the "Campaign Cogitator" design system; `bun run check` + `bun run build` pass.
+
+- [x] `/reset-password` page consuming the `?token=` link — new+confirm password, min-8, invalid/expired-token state, success → `/`
+- [x] `/forgot-password` — dedicated route calling `requestPasswordReset` (note: Better Auth 1.4.x renamed `forgetPassword` → `requestPasswordReset`); neutral success (no account enumeration)
+- [x] "Resend verification email" — folded into AccessGate's verify phase with a 30s cooldown; fires after enlist *and* on an unverified sign-in (403)
+- [x] Sign-out control — already present in the `CampaignHub` header; logout now lands on `/` (was `/login`)
+- [x] Custom `+error.svelte` — `// SIGNAL LOST` (404) / `// COGITATOR FAULT` (5xx), plain recovery
+- [x] **Consolidation:** AccessGate at `/` is the single canonical anonymous terminal (social + forgot folded in). `/login` and `/signup` routes were **purged**; all 8 `redirect(302, '/login')` repointed to `/`. New shared `AuthTerminal.svelte` shell backs AccessGate, forgot-password, and reset-password.
 
 ## Ingress
 
