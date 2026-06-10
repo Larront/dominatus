@@ -116,10 +116,10 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 - [ ] `BODY_SIZE_LIMIT` for adapter-node (defaults are generous)
 - [ ] Decide secret-injection mechanism on the host (Docker secrets vs root-owned `.env` vs env from orchestrator)
 
-## Observability (not yet discussed)
+## Observability
 
-- [ ] Error tracking / alerting (e.g. Sentry) — structured logs alone won't page you
-- [ ] External uptime monitoring hitting `/healthz`
+- [~] Error tracking / alerting (e.g. Sentry) — **deliberately deferred** (decided 2026-06-11). JSON logs to `docker logs` are an acceptable floor at this scale; the tradeoff accepted is no *push* alerting (you have to go look). `handleError` in `hooks.server.ts` is the single wiring point if a tracker (Sentry/GlitchTip) is added later.
+- [ ] External uptime monitoring hitting `/healthz` — **decided: Uptime Kuma** as a separate compose stack on the same box (deploy-time). Same-box is acceptable here: host-down is covered by physical presence, and Kuma probing the *public* `https://<domain>/healthz` (through the tunnel) still catches tunnel/DNS/TLS/networking failures. Run as its own compose project with its own volume so an app `down -v` can't touch it; alert to Discord/Telegram/ntfy.
 - [x] Log destination/retention — Docker `json-file` rotation (`max-size: 10m`, `max-file: 5`, ~50 MB/service) in `docker-compose.yml`. No external shipper yet, but the JSON format is parse-ready for one.
 
 ## Ops
