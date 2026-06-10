@@ -1,20 +1,25 @@
 # syntax=docker/dockerfile:1
 
-# --- Build stage: install all deps, compile the app + native addons ---
+# --- Build stage: install all deps and build the app ---
+# No native toolchain needed: the app uses bun:sqlite (built into the Bun runtime), not a
+# compiled addon, so there is nothing to apt-get install here.
 FROM oven/bun:1 AS build
 WORKDIR /app
 
-# Toolchain for compiling better-sqlite3's native addon.
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends python3 make g++ \
-	&& rm -rf /var/lib/apt/lists/*
-
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+# --ignore-scripts: the dev-only @better-auth/cli pulls in better-sqlite3 (a native addon) as a
+# hard dep. We never compile or load it — the app uses bun:sqlite — so skip postinstall builds
+# and avoid needing a C toolchain. The production reinstall below excludes @better-auth/cli (and
+# thus better-sqlite3) entirely.
+RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY . .
+# `bun run build` evaluates server modules (incl. src/lib/server/db) during SSR/prerender, and
+# that module requires DATABASE_URL at import. Provide a throwaway build-time path — no DB is
+# touched during the build; the runtime stage sets the real volume path below.
+ENV DATABASE_URL=/tmp/build.db
 RUN bun run build
-# Reinstall only production deps; keeps better-sqlite3's compiled binary.
+# Reinstall only production deps to slim the node_modules carried into the runtime image.
 RUN bun install --production --frozen-lockfile
 
 # --- Runtime stage: slim image with only what the server needs ---

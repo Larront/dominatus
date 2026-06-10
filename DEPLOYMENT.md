@@ -5,8 +5,15 @@ Target: Docker container behind a Cloudflare Tunnel, SQLite on a mounted volume.
 ## Decisions
 
 - **Adapter:** `@sveltejs/adapter-node` (standalone server in the container)
-- **Database:** SQLite (`better-sqlite3`) on a mounted Docker volume
-- **Migrations:** `drizzle-kit migrate` on startup — `db:push` is dev-only, kept out of the deploy path
+- **Runtime:** **Bun.** The app uses `bun:sqlite` (a Bun built-in), so it must run on the Bun
+  runtime. The container (`oven/bun`) runs under Bun by default. **Local dev/build on Windows must
+  force the Bun runtime:** `bun --bun run dev` / `bun --bun run build` — plain `bun run` executes
+  via Node on Windows, and `bun:sqlite` then fails with `ERR_UNSUPPORTED_ESM_URL_SCHEME`.
+- **Database:** SQLite via `bun:sqlite` + drizzle's `bun-sqlite` driver, on a mounted volume.
+  (Switched from `better-sqlite3`: the Bun runtime refuses to load that native addon. `bun:sqlite`
+  needs no native compile — drops the C toolchain from the image and the corporate-proxy TLS issue.)
+- **Migrations:** programmatic `drizzle-orm/bun-sqlite/migrator` via `scripts/migrate.js` on
+  container startup — `drizzle-kit` is dev-only, kept out of the deploy path
 - **Ingress:** Cloudflare Tunnel (`cloudflared`) terminates TLS at the edge; app serves plain HTTP on a local port. No in-container reverse proxy.
 - **Email:** Resend (transactional)
 - **Auth methods (v1):** email + password with verification, Google, Facebook
@@ -14,7 +21,9 @@ Target: Docker container behind a Cloudflare Tunnel, SQLite on a mounted volume.
 ## App changes
 
 - [x] Swap `adapter-auto` → `adapter-node` (`svelte.config.js`, `package.json`)
-- [x] `Dockerfile` — multi-stage bun build; compile `better-sqlite3` native module; run as non-root `bun` user; entrypoint runs migrations then starts the server
+- [x] DB driver: `better-sqlite3` → `bun:sqlite` (`src/lib/server/db`, `scripts/migrate.js`) so the app runs on the Bun runtime; `@types/bun` added + referenced in `app.d.ts` for `bun run check`
+- [x] `Dockerfile` — multi-stage bun build (no native toolchain needed); `--ignore-scripts` on the dev install so the dev-only `@better-auth/cli`'s `better-sqlite3` dep doesn't try to compile; run as non-root `bun` user; entrypoint runs migrations then starts the server
+- [x] **Container build verified end-to-end** (Podman, 2026-06-11): build → migrate → serve → `/healthz` 200 → sign-up DB write → verification-email dispatch all green. (Note: Podman ignores `HEALTHCHECK` unless built with `--format docker`; Docker honours it.)
 - [x] `.dockerignore`
 - [x] Entrypoint runs migrations against the volume DB before boot (`scripts/migrate.js`, programmatic migrator — no `drizzle-kit` at runtime)
 - [x] Health check endpoint (`GET /healthz`, pings DB) + Docker `HEALTHCHECK`
@@ -81,11 +90,26 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 
 ## Ingress
 
+> **Deferred to deploy time** (decided 2026-06-11). Hosting only happens at the end of
+> development, and none of this can be *verified* until the container is actually running behind
+> the tunnel (secure-cookie flag landing, headers forwarding). The config itself is production-only
+> and has **no localhost-dev impact**: `PROTOCOL_HEADER`/`HOST_HEADER` are read by adapter-node in
+> the built container (Vite dev never touches them); `trustedOrigins` derives from `ORIGIN` (=
+> `localhost:5173` in dev); `useSecureCookies` must be **gated to prod** (`Secure` cookies aren't
+> stored over `http://localhost`, so an ungated flag is the one thing that would break dev). The
+> host already has a Cloudflare tunnel set up — point it at `http://localhost:3000` (the compose
+> port). Pick this up as the first deploy-time task.
+
 - [ ] `cloudflared` config / compose service pointed at the app port
 - [ ] `trustedOrigins` set to the public URL (Better Auth rejects cross-origin requests otherwise)
 - [ ] Confirm secure cookies behind the tunnel — cloudflared forwards plain HTTP to the app, so verify Better Auth marks cookies `Secure`/`SameSite` correctly (driven by the `https://` `ORIGIN`); set adapter-node `PROTOCOL_HEADER`/`HOST_HEADER` if request URLs come through as `http`
 
-## Security & hardening (not yet discussed)
+## Security & hardening
+
+> **Deferred to deploy time** (decided 2026-06-11), alongside Ingress. Rate limiting is testable
+> on localhost and protects the auth flows we shipped, so it's the natural *first* item to revisit
+> when hardening resumes. CSP is the fiddly one — Vite's HMR injects inline scripts, so it needs
+> separate dev/prod handling or it breaks the dev loop. `BODY_SIZE_LIMIT` is a prod env tweak.
 
 - [ ] Auth rate limiting / brute-force protection on sign-in, sign-up, and reset endpoints (Better Auth `rateLimit` config)
 - [ ] Security headers — CSP, `X-Frame-Options`/frame-ancestors, HSTS (via `hooks.server` or SvelteKit `csp`); some may be set at the Cloudflare edge instead
