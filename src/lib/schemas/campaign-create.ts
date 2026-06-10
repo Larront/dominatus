@@ -5,7 +5,11 @@ import { z } from 'zod';
  * The slug is derived server-side from the name (links stay stable), so it is not entered here.
  */
 export const foundCampaignSchema = z.object({
-	name: z.string().trim().min(1, 'Name the campaign.').max(80, 'Keep the name under 80 characters.'),
+	name: z
+		.string()
+		.trim()
+		.min(1, 'Name the campaign.')
+		.max(80, 'Keep the name under 80 characters.'),
 	subtitle: z.string().trim().max(120, 'Keep the subtitle under 120 characters.').default('')
 });
 

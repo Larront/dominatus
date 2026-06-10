@@ -524,7 +524,11 @@ const RECIPES: Record<string, RecipeBuilder> = {
 			scale: 0.84,
 			u: base({ color1: c(224, 238, 246), color2: c(160, 196, 214), color3: c(108, 146, 176) })
 		},
-		{ kind: 'crater', scale: 0.84, u: base({ color1: c(198, 220, 232), color2: c(140, 174, 196) }) },
+		{
+			kind: 'crater',
+			scale: 0.84,
+			u: base({ color1: c(198, 220, 232), color2: c(140, 174, 196) })
+		},
 		{
 			kind: 'atmo',
 			scale: 1.0,
@@ -808,7 +812,11 @@ export class PixelPlanet {
 	private layers: Layer[] = [];
 	private timeOffset: number;
 
-	constructor(canvas: HTMLCanvasElement, type: PlanetType | string, opts?: { resolution?: number }) {
+	constructor(
+		canvas: HTMLCanvasElement,
+		type: PlanetType | string,
+		opts?: { resolution?: number }
+	) {
 		opts = opts || {};
 		this.canvas = canvas;
 		const res = opts.resolution || 200;

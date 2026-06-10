@@ -62,10 +62,7 @@ function total(control: Map<string, number>): number {
  * mutated, so the client can preview a prospective report against live shares safely).
  * This is the one fold step; `replay` threads it across a world's reports in order.
  */
-export function applyReport(
-	control: Map<string, number>,
-	report: FoldStep
-): Map<string, number> {
+export function applyReport(control: Map<string, number>, report: FoldStep): Map<string, number> {
 	const next = new Map(control);
 	if (report.outcome === 'stalemate') return next;
 

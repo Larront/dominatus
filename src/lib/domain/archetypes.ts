@@ -219,14 +219,61 @@ export function archetypeFor(render: string): Archetype {
 // Names are composed from an evocative core plus an optional epithet or numeral, so the
 // pool of distinct results is far larger than the word list itself.
 const NAME_CORES = [
-	'Cindermaw', 'Veska', 'Coralis', 'Vorhast', 'Tessaron', 'Khoramun', 'Belasco', 'Ardent',
-	'Halgaunt', 'Myrrek', 'Solenne', 'Drûl', 'Castellan', 'Verdis', 'Oran', 'Thelm', 'Khaldea',
-	'Penumbra', 'Sabaoth', 'Ynnek', 'Morvath', 'Quill', 'Hesper', 'Talax', 'Ferrum', 'Galahad',
-	'Numera', 'Ostara', 'Velkan', 'Dûrn', 'Maelis', 'Carrick', 'Vashti', 'Loren', 'Aphelion'
+	'Cindermaw',
+	'Veska',
+	'Coralis',
+	'Vorhast',
+	'Tessaron',
+	'Khoramun',
+	'Belasco',
+	'Ardent',
+	'Halgaunt',
+	'Myrrek',
+	'Solenne',
+	'Drûl',
+	'Castellan',
+	'Verdis',
+	'Oran',
+	'Thelm',
+	'Khaldea',
+	'Penumbra',
+	'Sabaoth',
+	'Ynnek',
+	'Morvath',
+	'Quill',
+	'Hesper',
+	'Talax',
+	'Ferrum',
+	'Galahad',
+	'Numera',
+	'Ostara',
+	'Velkan',
+	'Dûrn',
+	'Maelis',
+	'Carrick',
+	'Vashti',
+	'Loren',
+	'Aphelion'
 ];
 const NAME_SUFFIXES = [
-	'Prime', 'Secundus', 'Tertius', 'Quartus', 'Majoris', 'Minoris', 'Ultima', 'Reach', 'Gate',
-	'Anchorage', 'Extremis', 'Hold', 'Spire', 'Deep', 'Crossing', 'Veil', 'Rest', "'s End"
+	'Prime',
+	'Secundus',
+	'Tertius',
+	'Quartus',
+	'Majoris',
+	'Minoris',
+	'Ultima',
+	'Reach',
+	'Gate',
+	'Anchorage',
+	'Extremis',
+	'Hold',
+	'Spire',
+	'Deep',
+	'Crossing',
+	'Veil',
+	'Rest',
+	"'s End"
 ];
 const ROMAN = ['II', 'III', 'IV', 'V', 'VI', 'VII', 'IX', 'XII'];
 
@@ -251,7 +298,11 @@ function rollName(rng: () => number, taken: Set<string>): string {
 		const core = pick(rng, NAME_CORES);
 		const r = rng();
 		const name =
-			r < 0.4 ? core : r < 0.72 ? `${core} ${pick(rng, NAME_SUFFIXES)}` : `${core} ${pick(rng, ROMAN)}`;
+			r < 0.4
+				? core
+				: r < 0.72
+					? `${core} ${pick(rng, NAME_SUFFIXES)}`
+					: `${core} ${pick(rng, ROMAN)}`;
 		if (!taken.has(name)) {
 			taken.add(name);
 			return name;

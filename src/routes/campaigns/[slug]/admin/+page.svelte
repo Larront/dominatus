@@ -85,7 +85,9 @@
 
 <main class="mx-auto max-w-[880px] px-6 pt-[30px] pb-20 max-[680px]:px-4">
 	<header class="mb-7">
-		<p class="mb-2.5 font-display text-[10px] font-semibold tracking-[0.14em] text-accent uppercase">
+		<p
+			class="mb-2.5 font-display text-[10px] font-semibold tracking-[0.14em] text-accent uppercase"
+		>
 			// Arbiter Console
 		</p>
 		<h1 class="font-display text-[30px] leading-none font-bold tracking-[0.01em] text-ink">
@@ -143,7 +145,8 @@
 							>{/if}
 					</label>
 					<div class="flex items-center gap-3">
-						{#if $detailsMessage}<span class="font-body text-[12px] text-accent">{$detailsMessage}</span
+						{#if $detailsMessage}<span class="font-body text-[12px] text-accent"
+								>{$detailsMessage}</span
 							>{/if}
 						<Button type="submit" variant="primary" disabled={$detailsSubmitting}>
 							{$detailsSubmitting ? 'Saving…' : 'Save details'}
@@ -177,38 +180,68 @@
 		<section class={panel}>
 			<h2 class={sec}>// Scoring</h2>
 			<p class="mb-4 font-body text-[12.5px] leading-[1.5] text-ink-dim">
-				Tune what each deed is worth. A category at <b class="text-ink">0</b> is switched off —
-				commanders won't see it. Saving re-scores the standings, since points are folded from the log
-				on read.
+				Tune what each deed is worth. A category at <b class="text-ink">0</b> is switched off — commanders
+				won't see it. Saving re-scores the standings, since points are folded from the log on read.
 			</p>
 			<form method="POST" action="?/saveProfile" class="flex flex-col gap-5" use:profileEnhance>
 				{#each SCORING_GROUPS as group (group.title)}
 					<div>
-						<p class="mb-2 font-display text-[10px] font-semibold tracking-[0.12em] text-accent uppercase">
+						<p
+							class="mb-2 font-display text-[10px] font-semibold tracking-[0.12em] text-accent uppercase"
+						>
 							{group.title}
-							<span class="ml-1 font-body text-[10.5px] tracking-normal text-ink-faint normal-case">— {group.blurb}</span>
+							<span class="ml-1 font-body text-[10.5px] tracking-normal text-ink-faint normal-case"
+								>— {group.blurb}</span
+							>
 						</p>
 						<div class="flex flex-col">
 							{#each group.categories as cat (cat.key)}
 								{@const off = $profile[cat.key] === 0}
-								<div class="flex items-center gap-3 border-t border-border py-2.5 first:border-t-0 {off ? 'opacity-45' : ''}">
+								<div
+									class="flex items-center gap-3 border-t border-border py-2.5 first:border-t-0 {off
+										? 'opacity-45'
+										: ''}"
+								>
 									<span class="flex min-w-0 flex-1 flex-col">
 										<span class="flex items-center gap-2 font-body text-[13px] text-ink">
 											{cat.label}
-											{#if off}<span class="border border-border px-1 py-px font-display text-[8px] font-semibold tracking-[0.1em] text-ink-faint uppercase">Off</span>{/if}
+											{#if off}<span
+													class="border border-border px-1 py-px font-display text-[8px] font-semibold tracking-[0.1em] text-ink-faint uppercase"
+													>Off</span
+												>{/if}
 										</span>
-										<span class="font-body text-[11px] leading-[1.4] text-ink-faint">{cat.hint}</span>
+										<span class="font-body text-[11px] leading-[1.4] text-ink-faint"
+											>{cat.hint}</span
+										>
 									</span>
 									{#if cat.threshold}
 										<span class="flex items-center gap-1.5 font-body text-[11px] text-ink-dim">
 											{cat.threshold.prefix}
-											<input type="number" min="1" step="1" inputmode="numeric" aria-label="{cat.label} threshold" bind:value={$profile[cat.threshold.key]} class="{num} w-[52px]" />
+											<input
+												type="number"
+												min="1"
+												step="1"
+												inputmode="numeric"
+												aria-label="{cat.label} threshold"
+												bind:value={$profile[cat.threshold.key]}
+												class="{num} w-[52px]"
+											/>
 											{cat.threshold.suffix}
 										</span>
 									{/if}
 									<label class="flex items-center gap-1.5">
-										<span class="font-display text-[9px] tracking-[0.1em] text-ink-faint uppercase">pts</span>
-										<input type="number" min="0" step="1" inputmode="numeric" aria-label="{cat.label} points" bind:value={$profile[cat.key]} class={num} />
+										<span class="font-display text-[9px] tracking-[0.1em] text-ink-faint uppercase"
+											>pts</span
+										>
+										<input
+											type="number"
+											min="0"
+											step="1"
+											inputmode="numeric"
+											aria-label="{cat.label} points"
+											bind:value={$profile[cat.key]}
+											class={num}
+										/>
 									</label>
 								</div>
 							{/each}
@@ -216,7 +249,9 @@
 					</div>
 				{/each}
 				<div class="flex items-center justify-end gap-3">
-					{#if $profileMessage}<span class="font-body text-[12px] text-accent">{$profileMessage}</span>{/if}
+					{#if $profileMessage}<span class="font-body text-[12px] text-accent"
+							>{$profileMessage}</span
+						>{/if}
 					<Button type="submit" variant="primary" disabled={$profileSubmitting}>
 						{$profileSubmitting ? 'Saving…' : 'Save scoring'}
 					</Button>
@@ -240,7 +275,12 @@
 				</ul>
 			{/if}
 
-			<form method="POST" action="?/createEffect" class="flex items-start gap-2.5 border-t border-border pt-4" use:newEffectEnhance>
+			<form
+				method="POST"
+				action="?/createEffect"
+				class="flex items-start gap-2.5 border-t border-border pt-4"
+				use:newEffectEnhance
+			>
 				<div class="flex min-w-0 flex-1 flex-col gap-2">
 					<input
 						name="title"
@@ -250,12 +290,25 @@
 						class="{control} py-2"
 						aria-invalid={$newEffectErrors.title ? 'true' : undefined}
 					/>
-					{#if $newEffectErrors.title}<span class="font-body text-[12px] text-state-attacker">{$newEffectErrors.title}</span>{/if}
-					<textarea name="description" bind:value={$newEffect.description} rows="2" maxlength="400" placeholder="What it does, in your words. The app shows it; it never enforces it." class="{control} resize-none py-2 leading-[1.45]"></textarea>
+					{#if $newEffectErrors.title}<span class="font-body text-[12px] text-state-attacker"
+							>{$newEffectErrors.title}</span
+						>{/if}
+					<textarea
+						name="description"
+						bind:value={$newEffect.description}
+						rows="2"
+						maxlength="400"
+						placeholder="What it does, in your words. The app shows it; it never enforces it."
+						class="{control} resize-none py-2 leading-[1.45]"
+					></textarea>
 				</div>
 				<div class="flex flex-col items-end gap-1.5">
-					<Button type="submit" variant="primary" class="px-3 py-2" disabled={$newEffectSubmitting}>+ Add</Button>
-					{#if $newEffectMessage}<span class="font-body text-[11px] text-accent">{$newEffectMessage}</span>{/if}
+					<Button type="submit" variant="primary" class="px-3 py-2" disabled={$newEffectSubmitting}
+						>+ Add</Button
+					>
+					{#if $newEffectMessage}<span class="font-body text-[11px] text-accent"
+							>{$newEffectMessage}</span
+						>{/if}
 				</div>
 			</form>
 		</section>
@@ -297,20 +350,27 @@
 							class="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border py-3 first:border-t-0"
 						>
 							<span class="flex w-9 shrink-0 flex-col items-center" title="Cycle {r.cycle}">
-								<span class="font-body text-[16px] leading-none font-semibold text-accent">{r.cycle}</span
+								<span class="font-body text-[16px] leading-none font-semibold text-accent"
+									>{r.cycle}</span
 								>
-								<span class="font-display text-[8px] tracking-[0.1em] text-ink-faint uppercase">Cyc</span>
+								<span class="font-display text-[8px] tracking-[0.1em] text-ink-faint uppercase"
+									>Cyc</span
+								>
 							</span>
 
 							<span class="min-w-[110px] font-display text-[12px] font-semibold text-ink">
 								{r.worldName}
 							</span>
 
-							<span class="flex items-center gap-1.5 font-display text-[11px] font-semibold text-ink-dim">
+							<span
+								class="flex items-center gap-1.5 font-display text-[11px] font-semibold text-ink-dim"
+							>
 								{#each r.attackers as c, i (i)}
 									<span class="size-2 shrink-0" style="background: {c.color}"></span>{c.short}
 								{/each}
-								<span class="font-display text-[9px] tracking-[0.1em] text-ink-faint uppercase">vs</span>
+								<span class="font-display text-[9px] tracking-[0.1em] text-ink-faint uppercase"
+									>vs</span
+								>
 								{#each r.defenders as c, i (i)}
 									<span class="size-2 shrink-0" style="background: {c.color}"></span>{c.short}
 								{/each}
@@ -330,7 +390,7 @@
 									action="?/deleteReport"
 									recordId={r.id}
 									confirm="Reverse this report over {r.worldName}? Control will re-fold."
-									class="cursor-pointer border border-border bg-panel-2 px-2.5 py-1.5 font-display text-[11px] font-semibold tracking-[0.09em] text-ink-dim uppercase transition-[color,border-color,background-color] duration-[120ms] hover:border-state-attacker-line hover:bg-state-attacker-soft hover:text-state-attacker focus-visible:outline-none focus-visible:border-state-attacker-line"
+									class="cursor-pointer border border-border bg-panel-2 px-2.5 py-1.5 font-display text-[11px] font-semibold tracking-[0.09em] text-ink-dim uppercase transition-[color,border-color,background-color] duration-[120ms] hover:border-state-attacker-line hover:bg-state-attacker-soft hover:text-state-attacker focus-visible:border-state-attacker-line focus-visible:outline-none"
 								>
 									Reverse
 								</DestructiveForm>
@@ -338,7 +398,9 @@
 						</li>
 					{/each}
 				</ul>
-				<p class="mt-4 border-t border-border pt-3 font-body text-[11.5px] leading-[1.45] text-ink-faint">
+				<p
+					class="mt-4 border-t border-border pt-3 font-body text-[11.5px] leading-[1.45] text-ink-faint"
+				>
 					Reports are listed in fold order (oldest first) — the order control replays.
 				</p>
 			{/if}

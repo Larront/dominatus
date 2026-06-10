@@ -16,7 +16,15 @@
 			stroke-dasharray="2 3"
 			opacity="0.7"
 		/>
-		<ellipse cx="16" cy="16" rx="13" ry="5.5" fill="none" stroke="currentColor" stroke-width="1.2" />
+		<ellipse
+			cx="16"
+			cy="16"
+			rx="13"
+			ry="5.5"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="1.2"
+		/>
 		<circle cx="16" cy="16" r="3" fill="currentColor" />
 		<circle cx="29" cy="16" r="1.7" fill="currentColor" />
 	</svg>

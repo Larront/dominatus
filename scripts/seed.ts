@@ -190,13 +190,34 @@ async function main() {
 	// Chronological order; control reflects the *recent* games, so later wins stick.
 	const log: SeedReport[] = [
 		// Cindermaw — a Gilded Synod ascendancy (ends GS 60% owner, IW 20%).
-		win('Cindermaw', 'GS', 'AC', 1, 1000, 'Synod batteries break the first Ashen push at the slag-walls.'),
+		win(
+			'Cindermaw',
+			'GS',
+			'AC',
+			1,
+			1000,
+			'Synod batteries break the first Ashen push at the slag-walls.'
+		),
 		win('Cindermaw', 'GS', 'AC', 1, 1500, 'The magma-tap stations fall to the Synod.'),
 		win('Cindermaw', 'GS', 'IW', 2, 1500, 'Iron Wardens repulsed from the primary forge-gate.'),
 		win('Cindermaw', 'GS', 'AC', 2, 2000, 'Ashen supply lines to the southern hemisphere severed.'),
-		win('Cindermaw', 'GS', 'IW', 3, 2000, 'The Synod hold the foundry-spires against a Warden night-assault.'),
+		win(
+			'Cindermaw',
+			'GS',
+			'IW',
+			3,
+			2000,
+			'The Synod hold the foundry-spires against a Warden night-assault.'
+		),
 		win('Cindermaw', 'GS', 'AC', 3, 2000, 'Cindermaw all but cast in Synod gold.'),
-		win('Cindermaw', 'IW', 'AC', 4, 1500, 'Iron Wardens claw back the northern refineries from the Ashen.'),
+		win(
+			'Cindermaw',
+			'IW',
+			'AC',
+			4,
+			1500,
+			'Iron Wardens claw back the northern refineries from the Ashen.'
+		),
 		win('Cindermaw', 'IW', 'AC', 4, 2000, 'A second Warden gain along the cooling-canals.'),
 
 		// Veska Prime — a three-way grind that ends contested (IW 20 / VR 10 / AC 10).
@@ -204,16 +225,51 @@ async function main() {
 		win('Veska Prime', 'AC', 'VR', 1, 1500, 'Void Reavers driven from the relic-vaults.'),
 		win('Veska Prime', 'AC', 'IW', 2, 2000, 'The Covenant tighten their grip on Spire Primus.'),
 		win('Veska Prime', 'AC', 'VR', 2, 2000, 'Another Reaver boarding-party repelled.'),
-		draw('Veska Prime', 'IW', 'AC', 3, 2000, 'Brutal hab-block fighting; neither side claims the command pinnacle.'),
+		draw(
+			'Veska Prime',
+			'IW',
+			'AC',
+			3,
+			2000,
+			'Brutal hab-block fighting; neither side claims the command pinnacle.'
+		),
 		win('Veska Prime', 'IW', 'AC', 3, 2000, 'Iron Wardens storm forty levels of the spire.'),
 		win('Veska Prime', 'IW', 'AC', 4, 1500, 'The Wardens break the Ashen hold on the upper hives.'),
 		win('Veska Prime', 'VR', 'AC', 4, 1000, 'Void Reavers seize a foothold amid the collapse.'),
 
 		// Coralis Tertius — lightly fought, Verdant Scourge ahead but far from owning it.
-		win('Coralis Tertius', 'VS', 'VR', 2, 1500, 'Tide-Wardens swamp a Reaver landing at high tide.'),
-		win('Coralis Tertius', 'VS', 'VR', 3, 2000, 'Verdant counter-batteries sweep the floating rigs clean.'),
-		win('Coralis Tertius', 'VS', 'IW', 3, 2000, 'Iron Wardens fail to hold the promethium platforms.'),
-		win('Coralis Tertius', 'VR', 'IW', 4, 1500, 'Void Reavers raid the deep-derricks under cover of storm.')
+		win(
+			'Coralis Tertius',
+			'VS',
+			'VR',
+			2,
+			1500,
+			'Tide-Wardens swamp a Reaver landing at high tide.'
+		),
+		win(
+			'Coralis Tertius',
+			'VS',
+			'VR',
+			3,
+			2000,
+			'Verdant counter-batteries sweep the floating rigs clean.'
+		),
+		win(
+			'Coralis Tertius',
+			'VS',
+			'IW',
+			3,
+			2000,
+			'Iron Wardens fail to hold the promethium platforms.'
+		),
+		win(
+			'Coralis Tertius',
+			'VR',
+			'IW',
+			4,
+			1500,
+			'Void Reavers raid the deep-derricks under cover of storm.'
+		)
 	];
 
 	// Stamp each report into the past in array order so the DB's submit-time fold order

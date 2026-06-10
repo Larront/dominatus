@@ -41,8 +41,8 @@ Control milestones, derived during the same replay:
 
 ## Computation
 
-Because **underdog** needs each combatant's share *before* the battle and **milestones** need the
-*max share ever reached*, the leaderboard is not a stateless sum of results — it is a fold that
+Because **underdog** needs each combatant's share _before_ the battle and **milestones** need the
+_max share ever reached_, the leaderboard is not a stateless sum of results — it is a fold that
 runs the per-world control replay alongside the points tally, reusing `applyReport` from
 `control-fold.ts`. Painting awards are then added on top. Like control, the result is a pure
 function of the ordered report log plus the award set, so it is recomputed on read (no stored

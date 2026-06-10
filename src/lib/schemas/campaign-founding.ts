@@ -13,7 +13,11 @@ import { RENDER_KEYS, MIN_WORLDS, MAX_WORLDS } from '$lib/domain/archetypes';
 // after founding (one definition, no drift).
 export const foundingWorldSchema = z.object({
 	name: z.string().trim().min(1, 'Name the world.').max(60, 'Keep the name under 60 characters.'),
-	type: z.string().trim().min(1, 'Give the world a type.').max(60, 'Keep the type under 60 characters.'),
+	type: z
+		.string()
+		.trim()
+		.min(1, 'Give the world a type.')
+		.max(60, 'Keep the type under 60 characters.'),
 	render: z.enum(RENDER_KEYS),
 	value: z.string().trim().max(40, 'Keep it short.').default(''),
 	garrison: z.string().trim().max(40, 'Keep it short.').default(''),
@@ -22,7 +26,11 @@ export const foundingWorldSchema = z.object({
 });
 
 export const foundingEffectSchema = z.object({
-	title: z.string().trim().min(1, 'Name the effect.').max(60, 'Keep the title under 60 characters.'),
+	title: z
+		.string()
+		.trim()
+		.min(1, 'Name the effect.')
+		.max(60, 'Keep the title under 60 characters.'),
 	description: z.string().trim().max(400, 'Keep the description under 400 characters.').default('')
 });
 
@@ -32,7 +40,11 @@ export const worldEditSchema = foundingWorldSchema.extend({
 });
 
 export const foundingSchema = z.object({
-	name: z.string().trim().min(1, 'Name the campaign.').max(80, 'Keep the name under 80 characters.'),
+	name: z
+		.string()
+		.trim()
+		.min(1, 'Name the campaign.')
+		.max(80, 'Keep the name under 80 characters.'),
 	subtitle: z.string().trim().max(120, 'Keep the subtitle under 120 characters.').default(''),
 	worlds: z
 		.array(foundingWorldSchema)

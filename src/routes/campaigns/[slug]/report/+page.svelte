@@ -361,7 +361,9 @@
 								items={warbandItems}
 								value={$form.combatants[i].warbandId}
 								onValueChange={(v) => patchCombatant(i, { warbandId: v })}
-								leadColor={$form.combatants[i].warbandId ? wbColor($form.combatants[i].warbandId) : undefined}
+								leadColor={$form.combatants[i].warbandId
+									? wbColor($form.combatants[i].warbandId)
+									: undefined}
 								ariaLabel="{kind} warband{idxList.length > 1 ? ` ${pos + 1}` : ''}"
 								placeholder="Select a warband"
 							/>
@@ -370,7 +372,9 @@
 
 					<!-- one score block per side; in 2v2 the team shares it -->
 					{#if idxList.length > 1}
-						<p class="mb-2 font-display text-[9px] font-medium tracking-[0.1em] text-ink-faint uppercase">
+						<p
+							class="mb-2 font-display text-[9px] font-medium tracking-[0.1em] text-ink-faint uppercase"
+						>
 							Shared team score
 						</p>
 					{/if}
@@ -389,7 +393,9 @@
 						</label>
 						<div class="flex flex-col gap-1.5 pb-2.5 text-right">
 							<span class={label}>Total VP</span>
-							<span class="font-body text-[15px] leading-none font-semibold text-accent">{total ?? '—'}</span>
+							<span class="font-body text-[15px] leading-none font-semibold text-accent"
+								>{total ?? '—'}</span
+							>
 						</div>
 					</div>
 
@@ -435,7 +441,12 @@
 									class="inline-flex items-center justify-center border border-border bg-panel-2 text-ink-faint transition-[color,border-color] duration-[120ms] hover:border-state-attacker-line hover:text-state-attacker [&_svg]:size-3"
 								>
 									<svg viewBox="0 0 14 14" aria-hidden="true"
-										><path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.6" /></svg
+										><path
+											d="M3 3l8 8M11 3l-8 8"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="1.6"
+										/></svg
 									>
 								</button>
 							</div>
@@ -584,8 +595,8 @@
 			>
 				<p class="font-body text-[12px] text-ink-dim">
 					{#if editing}
-						{#if selectedWorld}Re-applies on save. Control of {selectedWorld.name} re-folds from the
-							log.{:else}Select a world.{/if}
+						{#if selectedWorld}Re-applies on save. Control of {selectedWorld.name} re-folds from the log.{:else}Select
+							a world.{/if}
 					{:else if selectedWorld}Applies immediately. Control of {selectedWorld.name} shifts on submit.{:else}Select
 						a world to file the report.{/if}
 				</p>

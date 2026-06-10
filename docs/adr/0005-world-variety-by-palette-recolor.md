@@ -2,7 +2,7 @@
 
 The world generator needs many world archetypes (ice, desert, death, verdant, barren, river-terran,
 and more) on top of the original ocean / lava / hive. The PixelPlanets port already proves these are
-not distinct shader programs: ocean, lava, and hive are the *same* six generic layer shaders
+not distinct shader programs: ocean, lava, and hive are the _same_ six generic layer shaders
 (`base`, `land`, `cloud`, `crater`, `river`, `atmo`) stacked in different combinations with
 different colour uniforms. So `recipe()` becomes a **data-driven archetype registry** — each
 archetype is a layer list plus a palette — and adding a world type is **data, not shader code**. An
@@ -14,14 +14,14 @@ editable on the world (the `type` text and `render` key remain separate columns)
 event both were achievable from the existing layers: the gas giant is the `cloud` layer with its
 `stretch` cranked up, which flattens the noise into horizontal storm bands over a banded `base`;
 the asteroid is a heavily-cratered, atmosphere-less `base`+`crater` body. Neither is a verbatim
-Deep-Fold port. The asteroid in particular reads as the *largest body* in a cluster, not a true
-many-rock *field* — that silhouette genuinely can't be faked with a single circular body, so a
+Deep-Fold port. The asteroid in particular reads as the _largest body_ in a cluster, not a true
+many-rock _field_ — that silhouette genuinely can't be faked with a single circular body, so a
 ported asteroid-field shader remains the one open improvement if the approximation isn't enough.
 The line still holds: recolour/recombine when the shared layers can carry it; reach for a new
 shader only when the silhouette can't be faked — we just found that line sits past the gas giant.
 
 Black hole, galaxy, and bare star are **deliberately excluded** as archetypes: a World is a body
-warbands *contend to control* (CONTEXT.md), which none of those are, and the star is already the
+warbands _contend to control_ (CONTEXT.md), which none of those are, and the star is already the
 fixed system centrepiece.
 
 ## Status
@@ -35,4 +35,4 @@ accepted
 - The DB still stores `type` (text) and `render` (key) as separate editable columns — generated
   together, drift-corrected by hand if the arbiter wants a label the visual doesn't imply.
 - Every current archetype, Gas Giant and Asteroid included, is a registry entry over the existing
-  layer shaders — no new GLSL was added. A true asteroid-*field* shader is deferred (see above).
+  layer shaders — no new GLSL was added. A true asteroid-_field_ shader is deferred (see above).

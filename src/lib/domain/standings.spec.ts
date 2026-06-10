@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeStandings, type StandingsReport, type StandingBreakdown, type StandingsAward } from './standings';
+import {
+	computeStandings,
+	type StandingsReport,
+	type StandingBreakdown,
+	type StandingsAward
+} from './standings';
 import { DEFAULT_PROFILE, type ScoringProfile } from './scoring-profile';
 
 /** Terse builders so the sequences read as a campaign, not object soup. World defaults to 'w'. */
@@ -75,7 +80,14 @@ describe('computeStandings', () => {
 	});
 
 	it('banks milestone points at +1 per 20% reached, even after losing ground', () => {
-		const log = [win('a', 'x'), win('a', 'x'), win('a', 'x'), win('a', 'x'), win('b', 'a'), win('b', 'a')];
+		const log = [
+			win('a', 'x'),
+			win('a', 'x'),
+			win('a', 'x'),
+			win('a', 'x'),
+			win('b', 'a'),
+			win('b', 'a')
+		];
 		expect(score(log).get('a')?.milestone).toBe(2);
 	});
 
@@ -90,11 +102,14 @@ describe('computeStandings', () => {
 	});
 
 	it('layers painting awards on top, scored live from the profile by kind', () => {
-		const m = score([win('a', 'b')], [
-			{ warbandId: 'a', kind: 'character' }, // 2
-			{ warbandId: 'a', kind: 'unit' }, // 1
-			{ warbandId: 'c', kind: 'terrain' } // 1 — c never fought, appears via its award
-		]);
+		const m = score(
+			[win('a', 'b')],
+			[
+				{ warbandId: 'a', kind: 'character' }, // 2
+				{ warbandId: 'a', kind: 'unit' }, // 1
+				{ warbandId: 'c', kind: 'terrain' } // 1 — c never fought, appears via its award
+			]
+		);
 		expect(m.get('a')).toMatchObject({ win: 3, painting: 3, total: 6 });
 		expect(m.get('c')).toMatchObject({ painting: 1, total: 1 });
 	});
@@ -141,7 +156,11 @@ describe('computeStandings', () => {
 	describe('kingkiller', () => {
 		// Build a's run on p1 (so control there doesn't touch the toppling world p2), threshold 3.
 		const p = profile({ kingkiller: 4, streakLength: 3, win: 3, underdog: 0 });
-		const buildKing = [win('a', 'x', { world: 'p1' }), win('a', 'x', { world: 'p1' }), win('a', 'x', { world: 'p1' })];
+		const buildKing = [
+			win('a', 'x', { world: 'p1' }),
+			win('a', 'x', { world: 'p1' }),
+			win('a', 'x', { world: 'p1' })
+		];
 
 		it('rewards beating a warband on a reigning run', () => {
 			const m = score([...buildKing, win('b', 'a', { world: 'p2' })], [], p);

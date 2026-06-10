@@ -25,23 +25,51 @@
 
 <div class="flex h-[100dvh] flex-col overflow-hidden bg-void">
 	<header
-		class="relative z-10 flex flex-shrink-0 items-center gap-4 border-b border-border bg-[linear-gradient(180deg,var(--color-panel)_0%,transparent_140%)] px-[22px] py-3 backdrop-blur-[6px] max-[720px]:gap-2.5 max-[720px]:px-3.5
-			after:absolute after:-bottom-px after:left-0 after:h-px after:w-full after:bg-[linear-gradient(90deg,transparent,var(--color-border-lum)_30%,var(--color-border-lum)_70%,transparent)] after:opacity-60 after:content-['']"
+		class="relative z-10 flex flex-shrink-0 items-center gap-4 border-b border-border bg-[linear-gradient(180deg,var(--color-panel)_0%,transparent_140%)] px-[22px] py-3 backdrop-blur-[6px] after:absolute after:-bottom-px
+			after:left-0 after:h-px after:w-full after:bg-[linear-gradient(90deg,transparent,var(--color-border-lum)_30%,var(--color-border-lum)_70%,transparent)] after:opacity-60 after:content-[''] max-[720px]:gap-2.5 max-[720px]:px-3.5"
 	>
-		<a class="flex items-center gap-[13px] no-underline" href={base} aria-label="{data.campaign.name} — system map">
-			<span class="size-9 shrink-0 text-accent drop-shadow-[0_0_6px_var(--color-accent-glow)]" aria-hidden="true">
+		<a
+			class="flex items-center gap-[13px] no-underline"
+			href={base}
+			aria-label="{data.campaign.name} — system map"
+		>
+			<span
+				class="size-9 shrink-0 text-accent drop-shadow-[0_0_6px_var(--color-accent-glow)]"
+				aria-hidden="true"
+			>
 				<svg viewBox="0 0 32 32" class="size-full">
-					<circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 3" opacity="0.7" />
-					<ellipse cx="16" cy="16" rx="13" ry="5.5" fill="none" stroke="currentColor" stroke-width="1.2" />
+					<circle
+						cx="16"
+						cy="16"
+						r="13"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1"
+						stroke-dasharray="2 3"
+						opacity="0.7"
+					/>
+					<ellipse
+						cx="16"
+						cy="16"
+						rx="13"
+						ry="5.5"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.2"
+					/>
 					<circle cx="16" cy="16" r="3" fill="currentColor" />
 					<circle cx="29" cy="16" r="1.7" fill="currentColor" />
 				</svg>
 			</span>
 			<span class="flex flex-col gap-1 leading-none">
-				<span class="font-display text-[19px] font-bold tracking-[0.02em] whitespace-nowrap text-ink max-[720px]:text-[17px]">
+				<span
+					class="font-display text-[19px] font-bold tracking-[0.02em] whitespace-nowrap text-ink max-[720px]:text-[17px]"
+				>
 					{data.campaign.name}
 				</span>
-				<span class="font-display text-[9.5px] font-medium tracking-[0.18em] whitespace-nowrap text-ink-dim uppercase max-[720px]:hidden">
+				<span
+					class="font-display text-[9.5px] font-medium tracking-[0.18em] whitespace-nowrap text-ink-dim uppercase max-[720px]:hidden"
+				>
 					{data.campaign.subtitle ?? 'Campaign Cogitator'} · {data.role}
 				</span>
 			</span>
@@ -63,14 +91,19 @@
 			class="flex items-center gap-2.5 border border-border bg-panel-2 px-[13px] py-[7px] font-display text-[10.5px] font-medium tracking-[0.1em] whitespace-nowrap text-ink-dim uppercase max-[1000px]:hidden"
 			aria-label="Current cycle {data.campaign.currentCycle}"
 		>
-			<span class="size-[7px] bg-accent shadow-[0_0_7px_var(--color-accent)] animate-blink motion-reduce:animate-none" aria-hidden="true"></span>
+			<span
+				class="size-[7px] animate-blink bg-accent shadow-[0_0_7px_var(--color-accent)] motion-reduce:animate-none"
+				aria-hidden="true"
+			></span>
 			Cycle <b class="font-bold text-accent">{data.campaign.currentCycle}</b>
 		</span>
 
 		<nav class="flex gap-0.5" aria-label="Campaign sections">
 			{#each nav as item (item.href)}
 				<a
-					class="{navLink} {isActive(item.href) ? 'border-border bg-accent-soft text-accent' : 'text-ink-dim hover:text-accent'}"
+					class="{navLink} {isActive(item.href)
+						? 'border-border bg-accent-soft text-accent'
+						: 'text-ink-dim hover:text-accent'}"
 					href={item.href}
 					aria-current={isActive(item.href) ? 'page' : undefined}
 				>

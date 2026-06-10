@@ -20,7 +20,9 @@
 	>
 		<span class="before:text-accent before:content-['▸_']">Warband Standings</span>
 		<svg
-			class="size-[13px] shrink-0 text-accent transition-transform duration-200 {open ? '' : '-rotate-90'}"
+			class="size-[13px] shrink-0 text-accent transition-transform duration-200 {open
+				? ''
+				: '-rotate-90'}"
 			viewBox="0 0 14 14"
 			aria-hidden="true"
 		>
@@ -41,11 +43,16 @@
 				class="grid grid-cols-[12px_1fr_auto] items-center gap-2.5 py-[7px] font-body text-[13px]
 					[&+&]:border-t [&+&]:border-border"
 			>
-				<span class="size-[11px] shadow-[0_0_8px_currentColor]" style="color: {wb.color}; background: {wb.color}"></span>
+				<span
+					class="size-[11px] shadow-[0_0_8px_currentColor]"
+					style="color: {wb.color}; background: {wb.color}"
+				></span>
 				<span class="flex min-w-0 items-center gap-1.5 leading-[1.2] text-ink">
 					{wb.name}
 					{#if wb.you}
-						<span class="border border-accent-mid px-1 py-0.5 font-display text-[8.5px] font-semibold tracking-[0.08em] text-accent uppercase">
+						<span
+							class="border border-accent-mid px-1 py-0.5 font-display text-[8.5px] font-semibold tracking-[0.08em] text-accent uppercase"
+						>
 							You
 						</span>
 					{/if}
@@ -53,7 +60,9 @@
 				<span class="font-body text-[15px] leading-none font-semibold text-accent">{wb.held}</span>
 			</div>
 		{:else}
-			<p class="font-body text-[12px] leading-normal text-ink-dim">No warbands have mustered yet.</p>
+			<p class="font-body text-[12px] leading-normal text-ink-dim">
+				No warbands have mustered yet.
+			</p>
 		{/each}
 	</Collapsible.Content>
 </Collapsible.Root>

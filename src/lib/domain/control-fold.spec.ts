@@ -88,11 +88,7 @@ describe('replay — multi-world bucketing', () => {
 
 	it('threads each world by its own history regardless of interleaving order', () => {
 		// p1: a wins twice (→20). p2: a wins once (→10). Interleaved across the log.
-		const r = replay([
-			v1('a', 'x', 'p1'),
-			v1('a', 'x', 'p2'),
-			v1('a', 'x', 'p1')
-		]);
+		const r = replay([v1('a', 'x', 'p1'), v1('a', 'x', 'p2'), v1('a', 'x', 'p1')]);
 		expect(r.final.get('p1')?.get('a')).toBe(20);
 		expect(r.final.get('p2')?.get('a')).toBe(10);
 	});

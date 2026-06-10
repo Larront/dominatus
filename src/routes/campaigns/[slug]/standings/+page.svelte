@@ -55,11 +55,36 @@
 				{ key: 'win', label: 'Win', on: p.win > 0, title: `+${p.win} per win` },
 				{ key: 'draw', label: 'Draw', on: p.draw > 0, title: `+${p.draw} per draw` },
 				{ key: 'loss', label: 'Loss', on: p.loss > 0, title: `+${p.loss} per loss` },
-				{ key: 'underdog', label: 'Under', on: p.underdog > 0, title: `+${p.underdog} beating a bigger holder` },
-				{ key: 'narrative', label: 'Narr', on: p.narrative > 0, title: `+${p.narrative} for a narrative log` },
-				{ key: 'streak', label: 'Streak', on: p.streakBonus > 0, title: `+${p.streakBonus} every ${p.streakLength} wins in a row` },
-				{ key: 'kingkiller', label: 'King', on: p.kingkiller > 0, title: `+${p.kingkiller} for ending a win streak` },
-				{ key: 'milestone', label: 'Ctrl', on: p.milestonePoints > 0, title: `+${p.milestonePoints} per ${p.milestoneStep}% control banked` },
+				{
+					key: 'underdog',
+					label: 'Under',
+					on: p.underdog > 0,
+					title: `+${p.underdog} beating a bigger holder`
+				},
+				{
+					key: 'narrative',
+					label: 'Narr',
+					on: p.narrative > 0,
+					title: `+${p.narrative} for a narrative log`
+				},
+				{
+					key: 'streak',
+					label: 'Streak',
+					on: p.streakBonus > 0,
+					title: `+${p.streakBonus} every ${p.streakLength} wins in a row`
+				},
+				{
+					key: 'kingkiller',
+					label: 'King',
+					on: p.kingkiller > 0,
+					title: `+${p.kingkiller} for ending a win streak`
+				},
+				{
+					key: 'milestone',
+					label: 'Ctrl',
+					on: p.milestonePoints > 0,
+					title: `+${p.milestonePoints} per ${p.milestoneStep}% control banked`
+				},
 				{
 					key: 'painting',
 					label: 'Paint',
@@ -82,10 +107,14 @@
 	</header>
 
 	<!-- Standings table -->
-	<div class="overflow-x-auto border border-border bg-[color-mix(in_srgb,var(--color-panel)_70%,transparent)]">
+	<div
+		class="overflow-x-auto border border-border bg-[color-mix(in_srgb,var(--color-panel)_70%,transparent)]"
+	>
 		<table class="w-full border-collapse font-body text-[13px]">
 			<thead>
-				<tr class="border-b border-border text-left font-display text-[9.5px] tracking-[0.12em] text-ink-faint uppercase">
+				<tr
+					class="border-b border-border text-left font-display text-[9.5px] tracking-[0.12em] text-ink-faint uppercase"
+				>
 					<th class="w-10 px-3 py-2.5 text-right font-medium">#</th>
 					<th class="px-3 py-2.5 font-medium">Warband</th>
 					{#each columns as col (col.key)}
@@ -103,7 +132,9 @@
 			</thead>
 			<tbody>
 				{#each data.standings as wb, i (wb.id)}
-					<tr class="border-t border-border first:border-t-0 transition-colors hover:bg-accent-soft/40">
+					<tr
+						class="border-t border-border transition-colors first:border-t-0 hover:bg-accent-soft/40"
+					>
 						<td class="px-3 py-2.5 text-right font-display text-[12px] text-ink-faint tabular-nums">
 							{i + 1}
 						</td>
@@ -115,24 +146,35 @@
 								></span>
 								<span class="truncate text-ink">{wb.name}</span>
 								{#if wb.you}
-									<span class="shrink-0 border border-accent-mid px-1 py-0.5 font-display text-[8.5px] font-semibold tracking-[0.08em] text-accent uppercase">
+									<span
+										class="shrink-0 border border-accent-mid px-1 py-0.5 font-display text-[8.5px] font-semibold tracking-[0.08em] text-accent uppercase"
+									>
 										You
 									</span>
 								{/if}
 							</span>
 						</td>
 						{#each columns as col (col.key)}
-							<td class="px-2 py-2.5 text-right tabular-nums max-[640px]:hidden {wb[col.key] ? 'text-ink-dim' : 'text-ink-faint/50'}">
+							<td
+								class="px-2 py-2.5 text-right tabular-nums max-[640px]:hidden {wb[col.key]
+									? 'text-ink-dim'
+									: 'text-ink-faint/50'}"
+							>
 								{wb[col.key] || '·'}
 							</td>
 						{/each}
-						<td class="px-3 py-2.5 text-right font-body text-[15px] font-semibold tabular-nums text-accent">
+						<td
+							class="px-3 py-2.5 text-right font-body text-[15px] font-semibold text-accent tabular-nums"
+						>
 							{wb.total}
 						</td>
 					</tr>
 				{:else}
 					<tr>
-						<td colspan={columns.length + 3} class="px-3 py-8 text-center font-body text-[13px] text-ink-dim">
+						<td
+							colspan={columns.length + 3}
+							class="px-3 py-8 text-center font-body text-[13px] text-ink-dim"
+						>
 							No warbands have mustered yet.
 						</td>
 					</tr>
@@ -175,14 +217,19 @@
 						name="note"
 						bind:value={$award.note}
 						placeholder="Note (optional) — e.g. Hierophant Bio-Titan"
-						class="border border-border bg-void px-3 py-2.5 font-body text-[13px] text-ink placeholder:text-ink-faint
-							transition-[border-color,box-shadow] duration-[120ms] focus-visible:border-accent
+						class="border border-border bg-void px-3 py-2.5 font-body text-[13px] text-ink transition-[border-color,box-shadow]
+							duration-[120ms] placeholder:text-ink-faint focus-visible:border-accent
 							focus-visible:shadow-[0_0_0_1px_var(--color-accent-mid)] focus-visible:outline-none"
 					/>
 				</div>
 
 				<div class="flex items-start max-[640px]:items-stretch">
-					<Button type="submit" variant="primary" disabled={!$award.warbandId || $granting} class="max-[640px]:w-full">
+					<Button
+						type="submit"
+						variant="primary"
+						disabled={!$award.warbandId || $granting}
+						class="max-[640px]:w-full"
+					>
 						{$granting ? 'Granting…' : 'Grant'}
 					</Button>
 				</div>
@@ -197,12 +244,16 @@
 			{#if data.awards.length}
 				<ul class="mt-5 flex flex-col">
 					{#each data.awards as a (a.id)}
-						<li class="flex items-center gap-3 border-t border-border py-2.5 first:border-t-0 font-body text-[13px]">
+						<li
+							class="flex items-center gap-3 border-t border-border py-2.5 font-body text-[13px] first:border-t-0"
+						>
 							<span class="size-2 shrink-0" style="background: {a.warbandColor}"></span>
 							<span class="text-ink">{a.warbandName}</span>
 							<span class="text-ink-dim">{kindLabel[a.kind] ?? a.kind}</span>
 							{#if a.note}<span class="truncate text-ink-faint">— {a.note}</span>{/if}
-							<span class="ml-auto shrink-0 font-semibold tabular-nums text-accent">+{a.points}</span>
+							<span class="ml-auto shrink-0 font-semibold text-accent tabular-nums"
+								>+{a.points}</span
+							>
 							<DestructiveForm
 								form={data.revokeForm}
 								formId="revoke-{a.id}"

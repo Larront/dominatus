@@ -28,7 +28,10 @@
 	// ── identity ──────────────────────────────────────────────────────────────
 	// Client mirror of the server's slugify, so the arbiter sees the link as they name it.
 	const slugify = (name: string) =>
-		name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'campaign';
+		name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-+|-+$/g, '') || 'campaign';
 	const slug = $derived(slugify($form.name));
 
 	// ── system generator ────────────────────────────────────────────────────────
@@ -44,7 +47,13 @@
 	}
 	function addWorld() {
 		if ($form.worlds.length >= MAX_WORLDS) return;
-		$form.worlds = [...$form.worlds, generateOne(seed(), $form.worlds.map((w) => w.name))];
+		$form.worlds = [
+			...$form.worlds,
+			generateOne(
+				seed(),
+				$form.worlds.map((w) => w.name)
+			)
+		];
 		systemNonce++;
 	}
 	function removeWorld(i: number) {
@@ -60,7 +69,10 @@
 			...w,
 			render,
 			type: a.typeLabels[Math.floor(Math.random() * a.typeLabels.length)],
-			description: a.blurbs[Math.floor(Math.random() * a.blurbs.length)].replaceAll('{name}', w.name)
+			description: a.blurbs[Math.floor(Math.random() * a.blurbs.length)].replaceAll(
+				'{name}',
+				w.name
+			)
 		};
 		$form.worlds = next;
 	}
@@ -103,7 +115,8 @@
 
 	// Live readouts for the rail.
 	const activeScored = $derived(
-		SCORING_GROUPS.flatMap((g) => g.categories).filter((c) => $form.scoringProfile[c.key] > 0).length
+		SCORING_GROUPS.flatMap((g) => g.categories).filter((c) => $form.scoringProfile[c.key] > 0)
+			.length
 	);
 	const status = $derived<Record<string, string>>({
 		identity: $form.name.trim() ? slug : 'unnamed',
@@ -135,12 +148,16 @@
 	</div>
 
 	<header
-		class="relative z-10 flex items-center gap-4 border-b border-border bg-[linear-gradient(180deg,var(--color-panel)_0%,transparent_140%)] px-[22px] py-3.5 backdrop-blur-[6px] max-[680px]:px-4
-			after:absolute after:-bottom-px after:left-0 after:h-px after:w-full after:bg-[linear-gradient(90deg,transparent,var(--color-border-lum)_30%,var(--color-border-lum)_70%,transparent)] after:opacity-60 after:content-['']"
+		class="relative z-10 flex items-center gap-4 border-b border-border bg-[linear-gradient(180deg,var(--color-panel)_0%,transparent_140%)] px-[22px] py-3.5 backdrop-blur-[6px] after:absolute
+			after:-bottom-px after:left-0 after:h-px after:w-full after:bg-[linear-gradient(90deg,transparent,var(--color-border-lum)_30%,var(--color-border-lum)_70%,transparent)] after:opacity-60 after:content-[''] max-[680px]:px-4"
 	>
 		<a href="/" class="flex items-center gap-[13px] no-underline">
-			<BrandMark class="size-9 shrink-0 text-accent drop-shadow-[0_0_6px_var(--color-accent-glow)]" />
-			<span class="font-display text-[19px] font-bold tracking-[0.03em] text-ink max-[680px]:text-[17px]">
+			<BrandMark
+				class="size-9 shrink-0 text-accent drop-shadow-[0_0_6px_var(--color-accent-glow)]"
+			/>
+			<span
+				class="font-display text-[19px] font-bold tracking-[0.03em] text-ink max-[680px]:text-[17px]"
+			>
 				DOMINATUS
 			</span>
 		</a>
@@ -155,7 +172,9 @@
 		<aside class="max-[920px]:hidden">
 			<div class="sticky top-[88px] flex flex-col gap-5">
 				<div>
-					<p class="mb-1 font-display text-[10px] font-semibold tracking-[0.16em] text-accent uppercase">
+					<p
+						class="mb-1 font-display text-[10px] font-semibold tracking-[0.16em] text-accent uppercase"
+					>
 						// Founding Rite
 					</p>
 					<h1 class="font-display text-[22px] leading-[1.05] font-bold tracking-[0.01em] text-ink">
@@ -188,18 +207,24 @@
 								>
 									{s.label}
 								</span>
-								<span class="truncate font-body text-[10.5px] lowercase text-ink-faint">
+								<span class="truncate font-body text-[10.5px] text-ink-faint lowercase">
 									{status[s.id]}
 								</span>
 							</span>
 							{#if active === s.id}
-								<span class="size-1.5 shrink-0 bg-accent shadow-[0_0_7px_var(--color-accent)]"></span>
+								<span class="size-1.5 shrink-0 bg-accent shadow-[0_0_7px_var(--color-accent)]"
+								></span>
 							{/if}
 						</button>
 					{/each}
 				</nav>
 
-				<Button type="submit" form="founding" variant="primary" disabled={$submitting || !$form.name.trim()}>
+				<Button
+					type="submit"
+					form="founding"
+					variant="primary"
+					disabled={$submitting || !$form.name.trim()}
+				>
 					{$submitting ? 'Forging…' : 'Found campaign'}
 				</Button>
 			</div>
@@ -228,7 +253,9 @@
 						{#if $errors.name}<span class={fieldError}>{$errors.name}</span>{/if}
 					</label>
 
-					<div class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3.5 max-[520px]:grid-cols-1">
+					<div
+						class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3.5 max-[520px]:grid-cols-1"
+					>
 						<label class="flex flex-col gap-1.5">
 							<span class={label}>› Subtitle <span class="text-ink-faint">(optional)</span></span>
 							<input
@@ -271,7 +298,9 @@
 							>
 								−
 							</button>
-							<span class="w-7 text-center font-display text-[14px] font-semibold tabular-nums text-ink">
+							<span
+								class="w-7 text-center font-display text-[14px] font-semibold text-ink tabular-nums"
+							>
 								{$form.worlds.length}
 							</span>
 							<button
@@ -323,7 +352,7 @@
 									onclick={() => removeWorld(i)}
 									disabled={$form.worlds.length <= MIN_WORLDS}
 									aria-label="Remove {world.name}"
-									class="shrink-0 px-1.5 py-1 font-display text-[14px] leading-none text-ink-faint transition-colors hover:text-state-attacker disabled:opacity-25 disabled:hover:text-ink-faint focus-visible:outline-none"
+									class="shrink-0 px-1.5 py-1 font-display text-[14px] leading-none text-ink-faint transition-colors hover:text-state-attacker focus-visible:outline-none disabled:opacity-25 disabled:hover:text-ink-faint"
 								>
 									✕
 								</button>
@@ -341,11 +370,19 @@
 								</label>
 								<label class="flex flex-col gap-1">
 									<span class="{label} text-[9px]">› Garrison</span>
-									<input bind:value={$form.worlds[i].garrison} maxlength="40" class="{control} py-2" />
+									<input
+										bind:value={$form.worlds[i].garrison}
+										maxlength="40"
+										class="{control} py-2"
+									/>
 								</label>
 								<label class="flex flex-col gap-1">
 									<span class="{label} text-[9px]">› Supply</span>
-									<input bind:value={$form.worlds[i].supply} maxlength="40" class="{control} py-2" />
+									<input
+										bind:value={$form.worlds[i].supply}
+										maxlength="40"
+										class="{control} py-2"
+									/>
 								</label>
 							</div>
 
@@ -374,9 +411,11 @@
 				<div class="flex flex-col gap-5">
 					{#each SCORING_GROUPS as group (group.title)}
 						<div>
-							<p class="mb-2.5 font-display text-[10px] font-semibold tracking-[0.12em] text-accent uppercase">
+							<p
+								class="mb-2.5 font-display text-[10px] font-semibold tracking-[0.12em] text-accent uppercase"
+							>
 								{group.title}
-								<span class="ml-1 font-body text-[10.5px] tracking-normal lowercase text-ink-faint"
+								<span class="ml-1 font-body text-[10.5px] tracking-normal text-ink-faint lowercase"
 									>— {group.blurb}</span
 								>
 							</p>
@@ -384,7 +423,7 @@
 								{#each group.categories as cat (cat.key)}
 									{@const off = $form.scoringProfile[cat.key] === 0}
 									<div
-										class="flex items-center gap-3 border-t border-border py-2.5 first:border-t-0 transition-opacity {off
+										class="flex items-center gap-3 border-t border-border py-2.5 transition-opacity first:border-t-0 {off
 											? 'opacity-45'
 											: ''}"
 									>
@@ -398,7 +437,9 @@
 													>
 												{/if}
 											</span>
-											<span class="font-body text-[11px] leading-[1.4] text-ink-faint">{cat.hint}</span>
+											<span class="font-body text-[11px] leading-[1.4] text-ink-faint"
+												>{cat.hint}</span
+											>
 										</span>
 
 										{#if cat.threshold}
@@ -418,7 +459,10 @@
 										{/if}
 
 										<label class="flex items-center gap-1.5">
-											<span class="font-display text-[9px] tracking-[0.1em] text-ink-faint uppercase">pts</span>
+											<span
+												class="font-display text-[9px] tracking-[0.1em] text-ink-faint uppercase"
+												>pts</span
+											>
 											<input
 												type="number"
 												min="0"
@@ -462,7 +506,7 @@
 						{#each $form.effects as effect, i (i)}
 							<div class="flex items-start gap-2.5 border border-border bg-panel-2/50 p-2.5">
 								<span
-									class="mt-2.5 font-display text-[10px] font-semibold tabular-nums text-ink-faint"
+									class="mt-2.5 font-display text-[10px] font-semibold text-ink-faint tabular-nums"
 									aria-hidden="true">{String(i + 1).padStart(2, '0')}</span
 								>
 								<div class="flex min-w-0 flex-1 flex-col gap-2">

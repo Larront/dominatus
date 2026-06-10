@@ -47,7 +47,9 @@
 					aria-label="World name"
 					aria-invalid={$errors.name ? 'true' : undefined}
 				/>
-				{#if $errors.name}<span class="font-body text-[12px] text-state-attacker">{$errors.name}</span>{/if}
+				{#if $errors.name}<span class="font-body text-[12px] text-state-attacker"
+						>{$errors.name}</span
+					>{/if}
 			</div>
 		</div>
 		<div class="grid grid-cols-2 gap-2 max-[560px]:grid-cols-1">
@@ -116,7 +118,8 @@
 								? 'border-accent-mid bg-accent-soft text-accent'
 								: 'border-border bg-panel text-ink-dim hover:border-border-lum hover:text-ink'}"
 						>
-							{on ? '✓' : '+'} {e.title}
+							{on ? '✓' : '+'}
+							{e.title}
 						</button>
 					</form>
 				{/each}

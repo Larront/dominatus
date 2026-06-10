@@ -116,7 +116,11 @@ export const SCORING_GROUPS: CategoryGroup[] = [
 			{ key: 'win', label: 'Win', hint: 'Each warband on the winning side.' },
 			{ key: 'draw', label: 'Draw', hint: 'Every combatant when a battle stalemates.' },
 			{ key: 'underdog', label: 'Underdog', hint: 'Beating a foe who held a bigger share here.' },
-			{ key: 'narrative', label: 'Narrative', hint: 'Every combatant in a report with a narrative.' },
+			{
+				key: 'narrative',
+				label: 'Narrative',
+				hint: 'Every combatant in a report with a narrative.'
+			},
 			{ key: 'loss', label: 'Loss', hint: 'Each warband on the losing side of a decisive game.' }
 		]
 	},
@@ -154,8 +158,16 @@ export const SCORING_GROUPS: CategoryGroup[] = [
 		blurb: 'Granted by hand by the arbiter; points read live from this profile.',
 		categories: [
 			{ key: 'paintUnit', label: 'A unit', hint: 'A painted infantry or vehicle squad.' },
-			{ key: 'paintCharacter', label: 'Character / monster / vehicle', hint: 'A painted single model.' },
-			{ key: 'paintTerrain', label: 'Terrain / display base', hint: 'A painted terrain or display piece.' }
+			{
+				key: 'paintCharacter',
+				label: 'Character / monster / vehicle',
+				hint: 'A painted single model.'
+			},
+			{
+				key: 'paintTerrain',
+				label: 'Terrain / display base',
+				hint: 'A painted terrain or display piece.'
+			}
 		]
 	}
 ];

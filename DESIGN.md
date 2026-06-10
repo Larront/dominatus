@@ -2,88 +2,88 @@
 name: Dominatus
 description: A grimdark campaign cogitator for tracking control of a 40k planetary war.
 colors:
-  void: "#07070a"
-  panel: "#0b0b10"
-  panel-2: "#101018"
-  panel-solid: "#0a0a0f"
-  border: "#2a2a33"
-  ink: "#ece5d2"
-  ink-dim: "#9b9276"
-  ink-faint: "#5e5847"
-  accent: "#46e08a"
-  star: "#cfc6ad"
-  state-contested: "#ffce54"
-  state-attacker: "#ff8a6a"
-  state-defender: "#6ad6ff"
+  void: '#07070a'
+  panel: '#0b0b10'
+  panel-2: '#101018'
+  panel-solid: '#0a0a0f'
+  border: '#2a2a33'
+  ink: '#ece5d2'
+  ink-dim: '#9b9276'
+  ink-faint: '#5e5847'
+  accent: '#46e08a'
+  star: '#cfc6ad'
+  state-contested: '#ffce54'
+  state-attacker: '#ff8a6a'
+  state-defender: '#6ad6ff'
 typography:
   display:
-    fontFamily: "Chakra Petch, sans-serif"
-    fontSize: "30px"
+    fontFamily: 'Chakra Petch, sans-serif'
+    fontSize: '30px'
     fontWeight: 700
     lineHeight: 1
-    letterSpacing: "0.01em"
+    letterSpacing: '0.01em'
   title:
-    fontFamily: "Chakra Petch, sans-serif"
-    fontSize: "16px"
+    fontFamily: 'Chakra Petch, sans-serif'
+    fontSize: '16px'
     fontWeight: 600
     lineHeight: 1.1
-    letterSpacing: "0.01em"
+    letterSpacing: '0.01em'
   label:
-    fontFamily: "Chakra Petch, sans-serif"
-    fontSize: "10px"
+    fontFamily: 'Chakra Petch, sans-serif'
+    fontSize: '10px'
     fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: "0.14em"
+    letterSpacing: '0.14em'
   body:
-    fontFamily: "IBM Plex Mono, monospace"
-    fontSize: "13px"
+    fontFamily: 'IBM Plex Mono, monospace'
+    fontSize: '13px'
     fontWeight: 400
     lineHeight: 1.5
-    letterSpacing: "normal"
+    letterSpacing: 'normal'
   prose:
-    fontFamily: "Spectral, Georgia, serif"
-    fontSize: "15px"
+    fontFamily: 'Spectral, Georgia, serif'
+    fontSize: '15px'
     fontWeight: 400
     lineHeight: 1.6
-    letterSpacing: "normal"
+    letterSpacing: 'normal'
 rounded:
-  none: "0"
+  none: '0'
 spacing:
-  xs: "4px"
-  sm: "8px"
-  md: "14px"
-  lg: "22px"
-  xl: "26px"
+  xs: '4px'
+  sm: '8px'
+  md: '14px'
+  lg: '22px'
+  xl: '26px'
 components:
   button-primary:
-    backgroundColor: "{colors.accent}"
-    textColor: "{colors.void}"
-    rounded: "{rounded.none}"
-    typography: "{typography.label}"
-    padding: "10px 14px"
+    backgroundColor: '{colors.accent}'
+    textColor: '{colors.void}'
+    rounded: '{rounded.none}'
+    typography: '{typography.label}'
+    padding: '10px 14px'
   button-ghost:
-    backgroundColor: "{colors.panel-2}"
-    textColor: "{colors.ink-dim}"
-    rounded: "{rounded.none}"
-    typography: "{typography.label}"
-    padding: "10px 14px"
+    backgroundColor: '{colors.panel-2}'
+    textColor: '{colors.ink-dim}'
+    rounded: '{rounded.none}'
+    typography: '{typography.label}'
+    padding: '10px 14px'
   input:
-    backgroundColor: "{colors.void}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.none}"
-    typography: "{typography.body}"
-    padding: "10px 12px"
+    backgroundColor: '{colors.void}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.none}'
+    typography: '{typography.body}'
+    padding: '10px 12px'
   chip:
-    backgroundColor: "{colors.panel-2}"
-    textColor: "{colors.ink-dim}"
-    rounded: "{rounded.none}"
-    typography: "{typography.label}"
-    padding: "9px 12px"
+    backgroundColor: '{colors.panel-2}'
+    textColor: '{colors.ink-dim}'
+    rounded: '{rounded.none}'
+    typography: '{typography.label}'
+    padding: '9px 12px'
   panel:
-    backgroundColor: "{colors.panel}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.none}"
-    padding: "20px 26px"
+    backgroundColor: '{colors.panel}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.none}'
+    padding: '20px 26px'
 ---
 
 # Design System: Dominatus
@@ -113,6 +113,7 @@ legally clean, the world is evoked not copied); and over-the-top costume grimdar
 restrained, carried by palette, type, and atmosphere.
 
 **Key Characteristics:**
+
 - Map-first: the orbital system is home; panels slide over it, standings sit at corners.
 - One dark surface, one fixed emphasis color (cogitator phosphor green). Not user-customizable.
 - Hard corners everywhere (`border-radius: 0`) — the console signature.
@@ -126,6 +127,7 @@ A near-black vacuum lit by exactly one cold emphasis hue, with a warm bone ink t
 darkness from tipping fully clinical.
 
 ### Primary
+
 - **Cogitator Phosphor** (#46e08a): The single, fixed emphasis color and the soul of the
   system. A cold signals-terminal green. Primary actions, live indicators, active rings,
   section glyphs, the controlling-state glow. Not user-customizable — its consistency is the
@@ -133,13 +135,16 @@ darkness from tipping fully clinical.
   it authority.
 
 ### Tertiary
+
 State colors for battle outcomes and control, used as small chips/dots, never as surfaces.
+
 - **Contested Gold** (#ffce54): A world no warband holds in majority; contested battle result.
 - **Attacker Ember** (#ff8a6a): Attacker-side outcome in the battle log.
 - **Defender Ice** (#6ad6ff): Defender-side outcome in the battle log.
 - **Star Bone** (#cfc6ad): The central star's light; also the twinkle of background stars.
 
 ### Neutral
+
 - **Void** (#07070a): The base background. The vacuum everything floats in.
 - **Panel** (#0b0b10) / **Panel-2** (#101018) / **Panel Solid** (#0a0a0f): Tonal surface
   layering for bars, drawers, modals, and stat cells. Depth is tonal, not shadowed.
@@ -149,6 +154,7 @@ State colors for battle outcomes and control, used as small chips/dots, never as
 - **Faint Ink** (#5e5847): Tertiary text, placeholders, column headers, disabled.
 
 ### Named Rules
+
 **The One Emphasis Rule.** Exactly one accent hue exists: cogitator phosphor (#46e08a). It is
 fixed and not user-customizable. It lights primary actions, active state, and live indicators
 — never body text, never a whole surface. Its scarcity against the void is the point.
@@ -169,6 +175,7 @@ nameplate and the label voice; IBM Plex Mono is the cogitator's console output; 
 the one concession to readable long-form, used sparingly so it never softens the terminal feel.
 
 ### Hierarchy
+
 - **Display** (Chakra Petch 700, 23–30px, 1.0): Drawer titles, modal titles, brand
   system name. The loudest type; still tightly tracked (0.01em), never above ~30px.
 - **Title** (Chakra Petch 600, 16–20px, 1.1): Sub-headings, owner names, rule chapter heads.
@@ -180,9 +187,10 @@ the one concession to readable long-form, used sparingly so it never softens the
   column headers, kickers, pills. The tracked-caps cogitator voice.
 
 ### Named Rules
+
 **The Mono-Is-Data Rule.** IBM Plex Mono carries readouts, forms, and the battle log — never
-paragraphs of lore. The moment text becomes prose to be *read* rather than data to be
-*scanned*, it switches to Spectral.
+paragraphs of lore. The moment text becomes prose to be _read_ rather than data to be
+_scanned_, it switches to Spectral.
 
 **The Caps-Are-Labels Rule.** Uppercase + tracking is reserved for labels ≤4 words, buttons,
 and eyebrows. Never set a sentence or body copy in all caps.
@@ -199,19 +207,22 @@ surface, not as a card shadow. It is allowed only on things that should appear t
 primary actions, live/active indicators, the star, focus rings — and always sparingly.
 
 ### Shadow Vocabulary
+
 - **Overlay lift** (`box-shadow: -30px 0 80px rgba(0,0,0,0.7)` drawer; `0 40px 120px rgba(0,0,0,0.8)` modal): Anchors floating overlays above the map.
 - **Planet grounding** (`drop-shadow(0 3px 8px rgba(0,0,0,0.6))`): Gives celestial bodies physical weight.
 - **Accent glow** (`box-shadow: 0 0 16px var(--accent-soft)` primary button; `drop-shadow(0 0 30px var(--sun-glow))` star): Emitted-light cue. Sparing, accent-tinted only.
 - **Focus glow** (`box-shadow: 0 0 0 1px var(--accent-mid), 0 0 14px var(--accent-soft)`): Input focus.
 
 ### Named Rules
+
 **The Glow-Is-Light Rule.** A box-shadow may be soft and wide ONLY when it is accent-tinted
-and reads as emitted light (buttons, indicators, the star). A soft *black* drop shadow paired
+and reads as emitted light (buttons, indicators, the star). A soft _black_ drop shadow paired
 with a 1px border on a resting card is forbidden — that is the ghost-card tell.
 
 ## 5. Components
 
 ### Buttons
+
 - **Shape:** Hard corners (`border-radius: 0`). Never rounded, never pill.
 - **Primary:** Solid accent fill, void text, label type (Chakra Petch 600/700 uppercase,
   0.09em), 10px 14px padding, a sparing accent glow (`0 0 16px var(--accent-soft)`).
@@ -221,12 +232,14 @@ with a 1px border on a resting card is forbidden — that is the ghost-card tell
 - **Icon:** Square 38px, centered glyph.
 
 ### Chips
+
 - **Style:** Panel-2 background, 1px hairline border, label type, hard corners. A small
   faction/state dot may lead the label.
 - **State:** Selected gets a colored border + inset ring + a 16% tint of its own color
   (`--chipcol`), text brightens to bone ink. Used for combatant/faction selection.
 
 ### Cards / Containers (Panels)
+
 - **Corner Style:** Hard corners (`border-radius: 0`).
 - **Background:** Panel over the void, often with `backdrop-filter: blur(6–8px)` where it
   overlaps the map.
@@ -238,6 +251,7 @@ with a 1px border on a resting card is forbidden — that is the ghost-card tell
 - **Internal Padding:** 20–26px (lg–xl).
 
 ### Inputs / Fields
+
 - **Style:** Void background, 1px hairline border, hard corners, IBM Plex Mono text. Field
   labels are uppercase Chakra Petch prefixed with a `›` glyph.
 - **Focus:** Border shifts to accent + a focus glow (1px accent ring + 14px accent-soft).
@@ -245,6 +259,7 @@ with a 1px border on a resting card is forbidden — that is the ghost-card tell
 - **Select:** Native chevron replaced with an inline SVG; no rounded corners.
 
 ### Navigation / Top Command Bar
+
 - **Style:** A horizontal command bar over the panel surface with `backdrop-filter: blur(6px)`
   and an accent-lit bottom hairline. Brand mark glows faintly in the accent.
 - **Live cycle pill:** Uppercase label type with a blinking accent dot indicating the active
@@ -252,6 +267,7 @@ with a 1px border on a resting card is forbidden — that is the ghost-card tell
 - **Mobile:** Cycle pill hides ≤1000px; button text labels hide ≤720px (icons remain).
 
 ### The Orbital Map (Signature Component)
+
 The home screen and the system's defining surface. A centered square stage holds the system on
 a **tilted 3D ecliptic plane** (`transform-style: preserve-3d` + `rotateX`), so the orbit rings
 read as **dashed ellipses** and the war has real depth. It carries: those orbit rings (the
@@ -276,6 +292,7 @@ evenly inner→outer with the innermost clearing the star; angles use golden-ang
 worlds never clump. (A future arbiter-placed layout can replace this single seam.)
 
 ### Standings Legend (Signature Component)
+
 A collapsible panel anchored bottom-left over the map: accent top-bar, a `▸`-prefixed title,
 column headers in faint tracked caps, and warband rows (color swatch + name + world count).
 The commanding user's own warband is marked with a `YOU` label chip, not only an accent color.
@@ -283,7 +300,8 @@ The commanding user's own warband is marked with a `YOU` label chip, not only an
 ## 6. Do's and Don'ts
 
 ### Do:
-- **Do** keep the orbital map the center of gravity. Panels slide *over* it; standings and
+
+- **Do** keep the orbital map the center of gravity. Panels slide _over_ it; standings and
   intel sit at its corners. Never bury the map behind navigation.
 - **Do** hold every panel, button, input, and chip at `border-radius: 0`. Hard corners are
   the console signature.
@@ -301,6 +319,7 @@ The commanding user's own warband is marked with a `YOU` label chip, not only an
   voice — they're cheap, consistent terminal chrome.
 
 ### Don't:
+
 - **Don't** use pixel fonts (Silkscreen, VT323) or CRT scanline / flicker overlays. Tried and
   rejected. Pixel art lives on planets and the star only; the chrome uses real type.
 - **Don't** build a generic light-mode SaaS card-grid dashboard, the hero-metric template, or
@@ -309,7 +328,7 @@ The commanding user's own warband is marked with a `YOU` label chip, not only an
   legally clean — the world is evoked, not copied.
 - **Don't** ship costume-grimdark kitsch: no blood-spatter textures, gothic blackletter, or
   skull-everything. Restrained militaristic grimdark only.
-- **Don't** pair a 1px border with a soft wide *black* drop shadow on a resting card (the
+- **Don't** pair a 1px border with a soft wide _black_ drop shadow on a resting card (the
   ghost-card tell). Glow is allowed only when accent-tinted and reads as light.
 - **Don't** reintroduce the `feTurbulence` paper-grain overlay from the prototype. The subtle
   edge vignette carries the atmosphere alone.

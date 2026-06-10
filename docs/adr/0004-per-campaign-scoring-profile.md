@@ -25,9 +25,9 @@ definitions — still stands.
   multiple of Y. Sequential state — the only categories (with kingkiller) whose value depends on
   the order of prior reports, not the report in hand.
 - **Kingkiller** — awarded for **ending** another warband's reigning streak (its run ≥ Y, read
-  **before** this report applies, the same pre-battle timing underdog uses), by beating them *or*
+  **before** this report applies, the same pre-battle timing underdog uses), by beating them _or_
   drawing them. A draw between two kings pays both sides.
-- **Milestone** — its point value *and* its control-% step are both profile knobs (0003 hard-coded
+- **Milestone** — its point value _and_ its control-% step are both profile knobs (0003 hard-coded
   the 20% step). The step governs scoring banding only; ADR 0002's ±10% control mechanic is
   unchanged.
 - **Painting** — the unit / character / terrain values join the profile (editing them re-scores

@@ -77,7 +77,11 @@ function blank(): StandingBreakdown {
 }
 
 const paintingValue = (profile: ScoringProfile, kind: PaintingKind): number =>
-	kind === 'unit' ? profile.paintUnit : kind === 'character' ? profile.paintCharacter : profile.paintTerrain;
+	kind === 'unit'
+		? profile.paintUnit
+		: kind === 'character'
+			? profile.paintCharacter
+			: profile.paintTerrain;
 
 /**
  * Fold a campaign's reports (chronological — the same order control uses) plus its awards into a
@@ -130,8 +134,10 @@ export function computeStandings(
 			// the king is the one that stopped it; two kings drawing pays both (read before the reset).
 			const attackerKing = attackers.some((c) => isKing(c.warbandId));
 			const defenderKing = defenders.some((c) => isKing(c.warbandId));
-			if (defenderKing) for (const c of attackers) add(c.warbandId, 'kingkiller', profile.kingkiller);
-			if (attackerKing) for (const c of defenders) add(c.warbandId, 'kingkiller', profile.kingkiller);
+			if (defenderKing)
+				for (const c of attackers) add(c.warbandId, 'kingkiller', profile.kingkiller);
+			if (attackerKing)
+				for (const c of defenders) add(c.warbandId, 'kingkiller', profile.kingkiller);
 
 			// A draw breaks the streak for everyone in it.
 			for (const c of r.combatants) streak.set(c.warbandId, 0);

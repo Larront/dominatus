@@ -64,8 +64,8 @@ when no warband holds a majority, and **unclaimed** when no warband holds any sh
 The ordered re-derivation of world control from the approved battle-report log: reports are
 folded oldest-first, one at a time, each moving control by ±10% (ADR 0002). It is never a
 stateless sum — the 0% floor and the 100% pool make order matter — so it is a pure function of
-the ordered log. Both readers sit on the *same* replay: world **Control** takes the final
-per-world shares, and the points **Standings** read each report's shares *before* and *after*
+the ordered log. Both readers sit on the _same_ replay: world **Control** takes the final
+per-world shares, and the points **Standings** read each report's shares _before_ and _after_
 it applies (to score underdog and milestones). Streak and kingkiller are scored on top of the
 replay, not part of it — they are points state, not control.
 _Avoid_: Recompute (too generic — a replay is specifically the ordered fold over the log).
@@ -128,7 +128,7 @@ human grants (painting kinds). Each category has a point value; some carry a thr
 (milestone its control step, win streak its run length). **Win streak** is a repeatable bounty
 every Yth consecutive decisive win — a draw or loss resets the run. **Kingkiller** rewards
 ending another warband's reigning streak (run ≥ the streak length, read before the battle), by
-beating them *or* drawing them; a draw between two kings pays both. Win streak and kingkiller
+beating them _or_ drawing them; a draw between two kings pays both. Win streak and kingkiller
 are the only categories whose value depends on the sequence of prior reports, not just the
 report in hand.
 _Avoid_: Task (reads as a 40k mission objective — collides with the in-game layer not modelled).

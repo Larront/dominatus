@@ -2,16 +2,11 @@
 	"files.associations": {
 		"*.css": "tailwindcss"
 	},
-	"workbench.editor.customLabels.patterns": {  
-	"**/routes/{+server,+layout,+page,+error}.{svelte,ts,server.ts,js,server.js}":  
-	"/ (${filename}.${extname})",  
-	"**/routes/*/{+server,+layout,+page,+error}.{svelte,ts,server.ts,js,server.js}":  
-	"/${dirname} (${filename}.${extname})",  
-	"**/routes/*/*/{+server,+layout,+page,+error}.{svelte,ts,server.ts,js,server.js}":  
-	"/${dirname(1)}/${dirname} (${filename}.${extname})",  
-	"**/routes/*/*/*/{+server,+layout,+page,+error}.{svelte,ts,server.ts,js,server.js}":  
-	"/${dirname(2)}/${dirname(1)}/${dirname} (${filename}.${extname})",  
-	"**/routes/**/*/*/*/*/{+server,+layout,+page,+error}.{svelte,ts,server.ts,js,server.js}":  
-	"…/${dirname(2)}/${dirname(1)}/${dirname} (${filename}.${extname})",  
-	},  
+	"workbench.editor.customLabels.patterns": {
+		"**/routes/{+server,+layout,+page,+error}.{svelte,ts,server.ts,js,server.js}": "/ (${filename}.${extname})",
+		"**/routes/*/{+server,+layout,+page,+error}.{svelte,ts,server.ts,js,server.js}": "/${dirname} (${filename}.${extname})",
+		"**/routes/*/*/{+server,+layout,+page,+error}.{svelte,ts,server.ts,js,server.js}": "/${dirname(1)}/${dirname} (${filename}.${extname})",
+		"**/routes/*/*/*/{+server,+layout,+page,+error}.{svelte,ts,server.ts,js,server.js}": "/${dirname(2)}/${dirname(1)}/${dirname} (${filename}.${extname})",
+		"**/routes/**/*/*/*/*/{+server,+layout,+page,+error}.{svelte,ts,server.ts,js,server.js}": "…/${dirname(2)}/${dirname(1)}/${dirname} (${filename}.${extname})"
+	}
 }

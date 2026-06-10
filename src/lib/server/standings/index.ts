@@ -35,7 +35,11 @@ const ZERO: StandingBreakdown = {
 };
 
 const paintingValue = (profile: ScoringProfile, kind: PaintingKind): number =>
-	kind === 'unit' ? profile.paintUnit : kind === 'character' ? profile.paintCharacter : profile.paintTerrain;
+	kind === 'unit'
+		? profile.paintUnit
+		: kind === 'character'
+			? profile.paintCharacter
+			: profile.paintTerrain;
 
 /**
  * The campaign leaderboard (ADR 0003/0004): every warband with its point breakdown, strongest
@@ -91,7 +95,10 @@ export async function getStandings(
  * Painting awards for a campaign, newest first — for the arbiter's grant/revoke panel. Each award's
  * points are read live from the profile by kind (ADR 0004), so the panel reflects the live rules.
  */
-export async function getPaintingAwards(campaignId: string, profile: ScoringProfile = DEFAULT_PROFILE) {
+export async function getPaintingAwards(
+	campaignId: string,
+	profile: ScoringProfile = DEFAULT_PROFILE
+) {
 	const rows = await db.query.paintingAward.findMany({
 		where: eq(paintingAward.campaignId, campaignId),
 		orderBy: (a, { desc }) => [desc(a.createdAt)],

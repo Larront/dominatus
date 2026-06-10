@@ -123,7 +123,11 @@
 			{#each worlds as world (world.id)}
 				{@const g = geo.get(world.id)}
 				{#if g}
-					<div class="orbit-ring" class:active={selectedId === world.id} style="--orbit:{g.orbit}"></div>
+					<div
+						class="orbit-ring"
+						class:active={selectedId === world.id}
+						style="--orbit:{g.orbit}"
+					></div>
 				{/if}
 			{/each}
 
@@ -132,7 +136,12 @@
 			<!-- central star -->
 			<div class="sun">
 				<div class="sun-facer">
-					<Planet render="star" size="clamp(38px, 9vmin, 96px)" resolution={200} name="{campaignName} primary star" />
+					<Planet
+						render="star"
+						size="clamp(38px, 9vmin, 96px)"
+						resolution={200}
+						name="{campaignName} primary star"
+					/>
 				</div>
 			</div>
 
@@ -140,9 +149,17 @@
 			{#each worlds as world (world.id)}
 				{@const g = geo.get(world.id)}
 				{#if g}
-					<div class="orbit" style="--orbit:{g.orbit}; --dur:{g.duration}s; --delay:{startDelay(g)}s; --angle:{g.angle}deg">
+					<div
+						class="orbit"
+						style="--orbit:{g.orbit}; --dur:{g.duration}s; --delay:{startDelay(
+							g
+						)}s; --angle:{g.angle}deg"
+					>
 						<div class="anchor">
-							<div class="billboard" style="--dur:{g.duration}s; --delay:{startDelay(g)}s; --angle:{g.angle}deg">
+							<div
+								class="billboard"
+								style="--dur:{g.duration}s; --delay:{startDelay(g)}s; --angle:{g.angle}deg"
+							>
 								<div class="facer">
 									<a
 										class="world"
@@ -152,16 +169,24 @@
 										style="--fcol:{ownerColor(world)}; --size:{g.size}px"
 									>
 										<span class="world-canvas">
-											<Planet render={world.render} size={planetSize(g)} resolution={110} name={world.name} />
+											<Planet
+												render={world.render}
+												size={planetSize(g)}
+												resolution={110}
+												name={world.name}
+											/>
 										</span>
 										<span class="world-tag">
 											<span class="world-name">{world.name}</span>
 											{#if world.derived.contested}
 												<span class="world-flag">◈ Contested</span>
 											{:else if world.derived.unclaimed}
-												<span class="world-owner unclaimed"><span class="dot"></span>Unclaimed</span>
+												<span class="world-owner unclaimed"><span class="dot"></span>Unclaimed</span
+												>
 											{:else}
-												<span class="world-owner"><span class="dot"></span>{shortOf(world.derived.owner)}</span>
+												<span class="world-owner"
+													><span class="dot"></span>{shortOf(world.derived.owner)}</span
+												>
 											{/if}
 										</span>
 									</a>
@@ -181,7 +206,9 @@
 	</p>
 
 	{#if worlds.length === 0}
-		<div class="absolute top-1/2 left-1/2 z-[2] max-w-[360px] -translate-x-1/2 -translate-y-1/2 text-center">
+		<div
+			class="absolute top-1/2 left-1/2 z-[2] max-w-[360px] -translate-x-1/2 -translate-y-1/2 text-center"
+		>
 			<p class="mb-2 font-display text-[18px] font-bold text-ink">No worlds charted</p>
 			<p class="font-body text-[13px] leading-[1.55] text-ink-dim">
 				This system has no worlds yet. Once the arbiter charts them, they will appear here in orbit.
@@ -196,11 +223,23 @@
 		role="group"
 		aria-label="Map projection"
 	>
-		<button class="{vtBtn} {view === 'tilt' ? 'bg-accent text-void' : 'bg-transparent text-ink-dim hover:text-accent focus-visible:text-accent'}" onclick={() => setView('tilt')}>3D</button>
-		<button class="{vtBtn} {view === 'flat' ? 'bg-accent text-void' : 'bg-transparent text-ink-dim hover:text-accent focus-visible:text-accent'}" onclick={() => setView('flat')}>Top-down</button>
+		<button
+			class="{vtBtn} {view === 'tilt'
+				? 'bg-accent text-void'
+				: 'bg-transparent text-ink-dim hover:text-accent focus-visible:text-accent'}"
+			onclick={() => setView('tilt')}>3D</button
+		>
+		<button
+			class="{vtBtn} {view === 'flat'
+				? 'bg-accent text-void'
+				: 'bg-transparent text-ink-dim hover:text-accent focus-visible:text-accent'}"
+			onclick={() => setView('flat')}>Top-down</button
+		>
 	</div>
 
-	<p class="absolute right-5 bottom-5 z-[6] flex items-center gap-2 font-display text-[9.5px] font-medium tracking-[0.12em] text-ink-faint uppercase max-[720px]:hidden">
+	<p
+		class="absolute right-5 bottom-5 z-[6] flex items-center gap-2 font-display text-[9.5px] font-medium tracking-[0.12em] text-ink-faint uppercase max-[720px]:hidden"
+	>
 		<svg viewBox="0 0 14 14" class="size-[13px]" aria-hidden="true">
 			<circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.2" />
 			<path d="M7 0v3M7 11v3M0 7h3M11 7h3" stroke="currentColor" stroke-width="1.2" />
@@ -222,7 +261,12 @@
 		position: absolute;
 		inset: 0;
 		z-index: 0;
-		background: radial-gradient(120% 92% at 50% 42%, hsl(150 40% 9% / 0.5) 0%, var(--bg-1) 46%, var(--bg-0) 100%);
+		background: radial-gradient(
+			120% 92% at 50% 42%,
+			hsl(150 40% 9% / 0.5) 0%,
+			var(--bg-1) 46%,
+			var(--bg-0) 100%
+		);
 	}
 	.space-bg::before {
 		content: '';
@@ -317,7 +361,12 @@
 		border-radius: 50%;
 		pointer-events: none;
 		opacity: 0.45;
-		background: conic-gradient(from 0deg, transparent 0deg, var(--accent-soft) 16deg, transparent 38deg);
+		background: conic-gradient(
+			from 0deg,
+			transparent 0deg,
+			var(--accent-soft) 16deg,
+			transparent 38deg
+		);
 		mask: radial-gradient(circle, transparent 12%, #000 12.5%, #000 49%, transparent 50%);
 		-webkit-mask: radial-gradient(circle, transparent 12%, #000 12.5%, #000 49%, transparent 50%);
 		animation: revolve 30s linear infinite;

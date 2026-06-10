@@ -33,7 +33,11 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const [detailsForm, profileForm, deleteForm, createForm, reports, effects, worlds] =
 		await Promise.all([
 			superValidate(
-				{ name: campaign.name, subtitle: campaign.subtitle ?? '', currentCycle: campaign.currentCycle },
+				{
+					name: campaign.name,
+					subtitle: campaign.subtitle ?? '',
+					currentCycle: campaign.currentCycle
+				},
 				zod4(campaignDetailsSchema),
 				{ id: 'details' }
 			),
@@ -92,7 +96,17 @@ export const load: PageServerLoad = async ({ parent }) => {
 		)
 	);
 
-	return { detailsForm, profileForm, deleteForm, createForm, reports, effects, worlds, effectForms, worldForms };
+	return {
+		detailsForm,
+		profileForm,
+		deleteForm,
+		createForm,
+		reports,
+		effects,
+		worlds,
+		effectForms,
+		worldForms
+	};
 };
 
 export const actions: Actions = {

@@ -34,7 +34,9 @@
 				class="{control} py-2 font-display text-[13px] font-semibold"
 				aria-invalid={$errors.title ? 'true' : undefined}
 			/>
-			{#if $errors.title}<span class="font-body text-[12px] text-state-attacker">{$errors.title}</span>{/if}
+			{#if $errors.title}<span class="font-body text-[12px] text-state-attacker"
+					>{$errors.title}</span
+				>{/if}
 			<textarea
 				name="description"
 				bind:value={$form.description}

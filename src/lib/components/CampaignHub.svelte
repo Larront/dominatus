@@ -50,12 +50,14 @@
 </script>
 
 <header
-	class="relative z-10 flex items-center gap-4 border-b border-border bg-[linear-gradient(180deg,var(--color-panel)_0%,transparent_140%)] px-[22px] py-3.5 backdrop-blur-[6px] max-[680px]:px-4
-		after:absolute after:-bottom-px after:left-0 after:h-px after:w-full after:bg-[linear-gradient(90deg,transparent,var(--color-border-lum)_30%,var(--color-border-lum)_70%,transparent)] after:opacity-60 after:content-['']"
+	class="relative z-10 flex items-center gap-4 border-b border-border bg-[linear-gradient(180deg,var(--color-panel)_0%,transparent_140%)] px-[22px] py-3.5 backdrop-blur-[6px] after:absolute
+		after:-bottom-px after:left-0 after:h-px after:w-full after:bg-[linear-gradient(90deg,transparent,var(--color-border-lum)_30%,var(--color-border-lum)_70%,transparent)] after:opacity-60 after:content-[''] max-[680px]:px-4"
 >
 	<span class="flex items-center gap-[13px]">
 		<BrandMark class="size-9 shrink-0 text-accent drop-shadow-[0_0_6px_var(--color-accent-glow)]" />
-		<span class="font-display text-[19px] font-bold tracking-[0.03em] text-ink max-[680px]:text-[17px]">
+		<span
+			class="font-display text-[19px] font-bold tracking-[0.03em] text-ink max-[680px]:text-[17px]"
+		>
 			DOMINATUS
 		</span>
 	</span>
@@ -70,15 +72,17 @@
 
 <main class="mx-auto max-w-[940px] px-6 pt-9 pb-20 max-[680px]:px-4">
 	<header class="mb-7">
-		<p class="mb-2.5 font-display text-[10px] font-semibold tracking-[0.14em] text-accent uppercase">
+		<p
+			class="mb-2.5 font-display text-[10px] font-semibold tracking-[0.14em] text-accent uppercase"
+		>
 			// Command Roster
 		</p>
 		<h1 class="font-display text-[30px] leading-none font-bold tracking-[0.01em] text-ink">
 			Your Campaigns
 		</h1>
 		<p class="mt-3 max-w-[64ch] font-body text-[13px] leading-[1.55] text-ink-dim">
-			Every war you command or contend in. Open one to survey its system, found a new theatre to
-			run as its arbiter, or join an existing one with a code.
+			Every war you command or contend in. Open one to survey its system, found a new theatre to run
+			as its arbiter, or join an existing one with a code.
 		</p>
 	</header>
 
@@ -108,10 +112,12 @@
 							>
 								{c.name}
 							</span>
-							<span class="truncate font-display text-[10px] tracking-[0.12em] text-ink-dim uppercase">
+							<span
+								class="truncate font-display text-[10px] tracking-[0.12em] text-ink-dim uppercase"
+							>
 								{c.subtitle || 'Campaign Cogitator'}
 								<span class="text-ink-faint">·</span>
-								<span class="font-body tracking-normal lowercase text-ink-faint">{c.slug}</span>
+								<span class="font-body tracking-normal text-ink-faint lowercase">{c.slug}</span>
 							</span>
 						</span>
 

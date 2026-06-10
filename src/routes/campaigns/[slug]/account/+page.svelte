@@ -31,7 +31,9 @@
 
 <main class="mx-auto max-w-[880px] px-6 pt-[30px] pb-20 max-[680px]:px-4">
 	<header class="mb-7">
-		<p class="mb-2.5 font-display text-[10px] font-semibold tracking-[0.14em] text-accent uppercase">
+		<p
+			class="mb-2.5 font-display text-[10px] font-semibold tracking-[0.14em] text-accent uppercase"
+		>
 			// Commander Dossier
 		</p>
 		<h1 class="font-display text-[30px] leading-none font-bold tracking-[0.01em] text-ink">

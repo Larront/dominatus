@@ -46,7 +46,11 @@ function totalVp(c: {
 	battleReadyVp: number | null;
 	secondaries: { victoryPoints: number }[] | null;
 }): number | null {
-	const parts = [c.primaryVp, c.battleReadyVp, ...(c.secondaries ?? []).map((s) => s.victoryPoints)];
+	const parts = [
+		c.primaryVp,
+		c.battleReadyVp,
+		...(c.secondaries ?? []).map((s) => s.victoryPoints)
+	];
 	const recorded = parts.filter((p): p is number => p != null);
 	return recorded.length ? recorded.reduce((a, b) => a + b, 0) : null;
 }
@@ -161,7 +165,10 @@ export async function getCampaignReportsAdmin(campaignId: string): Promise<Admin
 		columns: { id: true, cycle: true, worldId: true, outcome: true },
 		with: {
 			world: { columns: { name: true } },
-			combatants: { columns: { side: true }, with: { warband: { columns: { short: true, color: true } } } }
+			combatants: {
+				columns: { side: true },
+				with: { warband: { columns: { short: true, color: true } } }
+			}
 		}
 	});
 
@@ -269,7 +276,10 @@ export function updateBattleReport(
  * Reverse (delete) a report and re-fold its world's control. Scoped to the campaign. Returns the
  * affected world id (null if the report wasn't found here). Caller has asserted the arbiter role.
  */
-export function deleteBattleReport(reportId: string, campaignId: string): { worldId: string | null } {
+export function deleteBattleReport(
+	reportId: string,
+	campaignId: string
+): { worldId: string | null } {
 	return db.transaction((tx) => {
 		const existing = tx
 			.select({ worldId: battleReport.worldId })

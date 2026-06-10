@@ -140,7 +140,9 @@ export async function joinCampaign(input: {
 	const existing = await getMembership(found.id, input.userId);
 	if (existing) return { ok: false, reason: 'already-member' };
 
-	await db.insert(membership).values({ campaignId: found.id, userId: input.userId, role: 'commander' });
+	await db
+		.insert(membership)
+		.values({ campaignId: found.id, userId: input.userId, role: 'commander' });
 	return { ok: true, slug: found.slug };
 }
 

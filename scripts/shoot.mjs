@@ -11,7 +11,9 @@ await pg.goto(`${BASE}/login`);
 await pg.fill('input[type=email]', 'castellan@vorhast.dev');
 await pg.fill('input[type=password]', 'cogitator');
 await Promise.all([
-	pg.waitForResponse((r) => r.url().includes('/api/auth') && r.request().method() === 'POST').catch(() => null),
+	pg
+		.waitForResponse((r) => r.url().includes('/api/auth') && r.request().method() === 'POST')
+		.catch(() => null),
 	pg.click('button[type=submit]')
 ]);
 await pg.waitForTimeout(1500);
