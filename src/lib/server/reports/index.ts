@@ -7,6 +7,15 @@ import type { BattleReportInput } from '$lib/schemas/battle-report';
 /** The exact transaction-client type drizzle hands the `db.transaction` callback. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/**
+ * The fold order over the battle-report log: submit order (`createdAt`), with `id` breaking any
+ * same-millisecond tie. This is the precondition `replay()` requires (CONTEXT: Replay) — declared
+ * once and shared by every fold reader (here and in standings) so world control and the points
+ * standings can never order the log differently. Display orderings (e.g. the battle log, newest
+ * first) are deliberately *not* the fold order and don't use this.
+ */
+export const FOLD_ORDER = [asc(battleReport.createdAt), asc(battleReport.id)];
+
 /** One combatant in the log, with its score breakdown and a derived total. */
 export interface BattleLogCombatant {
 	warbandId: string;
@@ -87,8 +96,7 @@ export function recomputeWorldControl(tx: Tx, worldId: string): void {
 		.select({ id: battleReport.id, outcome: battleReport.outcome })
 		.from(battleReport)
 		.where(eq(battleReport.worldId, worldId))
-		// Submit-time order is the fold order; id breaks any same-millisecond tie.
-		.orderBy(asc(battleReport.createdAt), asc(battleReport.id))
+		.orderBy(...FOLD_ORDER)
 		.all();
 
 	const combatants = reports.length
@@ -149,7 +157,7 @@ export interface AdminReportEntry {
 export async function getCampaignReportsAdmin(campaignId: string): Promise<AdminReportEntry[]> {
 	const rows = await db.query.battleReport.findMany({
 		where: eq(battleReport.campaignId, campaignId),
-		orderBy: (r, { asc }) => [asc(r.createdAt), asc(r.id)],
+		orderBy: FOLD_ORDER,
 		columns: { id: true, cycle: true, worldId: true, outcome: true },
 		with: {
 			world: { columns: { name: true } },

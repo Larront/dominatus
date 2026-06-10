@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { battleReport, paintingAward, warband } from '$lib/server/db/schema';
+import { FOLD_ORDER } from '$lib/server/reports';
 import {
 	computeStandings,
 	type StandingsReport,
@@ -54,8 +55,8 @@ export async function getStandings(
 		}),
 		db.query.battleReport.findMany({
 			where: eq(battleReport.campaignId, campaignId),
-			// Submit-time order is the fold order; id breaks any same-millisecond tie (matches control).
-			orderBy: (r, { asc }) => [asc(r.createdAt), asc(r.id)],
+			// The one shared fold order, so standings replay the log exactly as control does.
+			orderBy: FOLD_ORDER,
 			columns: { worldId: true, outcome: true, narrative: true },
 			with: { combatants: { columns: { warbandId: true, side: true } } }
 		}),
