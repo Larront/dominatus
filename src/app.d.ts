@@ -3,6 +3,7 @@
 // (incl. the `bun:sqlite` module) for svelte-check. Run dev/build with the Bun runtime:
 // `bun --bun run dev` / `bun --bun run build` — plain `bun run` uses Node on Windows and 500s.
 import type { User, Session } from 'better-auth';
+import type { Logger } from 'pino';
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
@@ -11,6 +12,8 @@ declare global {
 		interface Locals {
 			user?: User;
 			session?: Session;
+			// Request-scoped logger (carries a per-request `requestId`); set in hooks.server.ts.
+			log: Logger;
 		}
 
 		// interface Error {}

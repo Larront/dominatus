@@ -10,6 +10,13 @@ services:
       - dominatus-data:/data
     ports:
       - '3000:3000'
+    # Cap log growth: the json-file driver is unbounded by default and the structured
+    # request log will fill a disk over time. 10MB x 5 files = ~50MB retained per service.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
 
 volumes:
   dominatus-data:
