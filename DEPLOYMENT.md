@@ -106,7 +106,7 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 > ```yaml
 > ingress:
 >   - hostname: dominatus.larront.com
->     service: http://localhost:3000   # the compose-published app port
+>     service: http://localhost:3001   # compose publishes 127.0.0.1:3001 (3000 was taken on the box)
 >   - service: http_status:404         # existing catch-all stays last
 > ```
 

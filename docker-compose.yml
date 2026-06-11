@@ -28,7 +28,11 @@ services:
       # `docker compose down -v` on data doesn't take the backups with it by accident.
       - dominatus-backups:/backups
     ports:
-      - '3000:3000'
+      # Host port 3000 was already taken on the box, so publish on a free port bound to localhost
+      # only — the host-level cloudflared is the sole thing that needs to reach it (no need to
+      # expose it on all interfaces). If 3001 also collides, pick another and match it in the
+      # cloudflared ingress rule (service: http://localhost:3001).
+      - '127.0.0.1:3001:3000'
     # Cap log growth: the json-file driver is unbounded by default and the structured
     # request log will fill a disk over time. 10MB x 5 files = ~50MB retained per service.
     logging:
