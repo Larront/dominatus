@@ -36,6 +36,8 @@ export interface BattleLogEntry {
 	pointsSize: number | null;
 	planetaryEffect: string | null;
 	narrative: string | null;
+	/** Stored scoresheet filename, served via /report/image/[file]; null if none was uploaded. */
+	imagePath: string | null;
 	attackers: BattleLogCombatant[];
 	defenders: BattleLogCombatant[];
 }
@@ -84,6 +86,7 @@ export async function getBattleLog(campaignId: string): Promise<BattleLogEntry[]
 		pointsSize: r.pointsSize,
 		planetaryEffect: r.planetaryEffect,
 		narrative: r.narrative,
+		imagePath: r.imagePath,
 		attackers: r.combatants.filter((c) => c.side === 'attacker').map(toCombatant),
 		defenders: r.combatants.filter((c) => c.side === 'defender').map(toCombatant)
 	}));
@@ -143,6 +146,18 @@ export function recomputeWorldControl(tx: Tx, worldId: string): void {
 	if (rows.length) tx.insert(worldControl).values(rows).run();
 }
 
+/**
+ * Does this stored scoresheet belong to a report in this campaign? Gates the image-serving
+ * route so a member of one campaign can't read another's scoresheet by filename.
+ */
+export async function imageInCampaign(campaignId: string, name: string): Promise<boolean> {
+	const row = await db.query.battleReport.findFirst({
+		where: and(eq(battleReport.campaignId, campaignId), eq(battleReport.imagePath, name)),
+		columns: { id: true }
+	});
+	return !!row;
+}
+
 /** A report row shaped for the arbiter's admin list — enough to identify and act on it. */
 export interface AdminReportEntry {
 	id: string;
@@ -190,33 +205,38 @@ export async function getCampaignReportsAdmin(campaignId: string): Promise<Admin
 }
 
 /**
- * One report shaped as the battle-report form's input, for the arbiter to amend. Scoped to the
- * campaign so a stray id can't reach across campaigns. Returns null if it isn't found here.
+ * One report shaped as the battle-report form's input, for the arbiter to amend, plus the stored
+ * scoresheet filename so the edit form can show what's already attached (the image isn't part of
+ * the form schema). Scoped to the campaign so a stray id can't reach across campaigns. Returns
+ * null if it isn't found here.
  */
 export async function getReportForEdit(
 	reportId: string,
 	campaignId: string
-): Promise<BattleReportInput | null> {
+): Promise<{ data: BattleReportInput; imagePath: string | null } | null> {
 	const r = await db.query.battleReport.findFirst({
 		where: and(eq(battleReport.id, reportId), eq(battleReport.campaignId, campaignId)),
 		with: { combatants: true }
 	});
 	if (!r) return null;
 	return {
-		worldId: r.worldId,
-		cycle: r.cycle,
-		outcome: r.outcome,
-		wentFirst: r.wentFirst,
-		pointsSize: r.pointsSize,
-		planetaryEffect: r.planetaryEffect ?? undefined,
-		narrative: r.narrative ?? undefined,
-		combatants: r.combatants.map((c) => ({
-			warbandId: c.warbandId,
-			side: c.side,
-			primaryVp: c.primaryVp,
-			battleReadyVp: c.battleReadyVp,
-			secondaries: c.secondaries ?? []
-		}))
+		imagePath: r.imagePath,
+		data: {
+			worldId: r.worldId,
+			cycle: r.cycle,
+			outcome: r.outcome,
+			wentFirst: r.wentFirst,
+			pointsSize: r.pointsSize,
+			planetaryEffect: r.planetaryEffect ?? undefined,
+			narrative: r.narrative ?? undefined,
+			combatants: r.combatants.map((c) => ({
+				warbandId: c.warbandId,
+				side: c.side,
+				primaryVp: c.primaryVp,
+				battleReadyVp: c.battleReadyVp,
+				secondaries: c.secondaries ?? []
+			}))
+		}
 	};
 }
 
@@ -227,11 +247,11 @@ export async function getReportForEdit(
  */
 export function updateBattleReport(
 	reportId: string,
-	input: BattleReportInput & { campaignId: string }
-): { worldIds: string[] } {
+	input: BattleReportInput & { campaignId: string; imagePath?: string }
+): { worldIds: string[]; previousImagePath: string | null } {
 	return db.transaction((tx) => {
 		const existing = tx
-			.select({ worldId: battleReport.worldId })
+			.select({ worldId: battleReport.worldId, imagePath: battleReport.imagePath })
 			.from(battleReport)
 			.where(and(eq(battleReport.id, reportId), eq(battleReport.campaignId, input.campaignId)))
 			.all();
@@ -246,7 +266,10 @@ export function updateBattleReport(
 				wentFirst: input.wentFirst ?? null,
 				pointsSize: input.pointsSize ?? null,
 				planetaryEffect: input.planetaryEffect?.trim() || null,
-				narrative: input.narrative?.trim() || null
+				narrative: input.narrative?.trim() || null,
+				// Only touch the scoresheet when the arbiter uploaded a replacement; an edit
+				// without a new image keeps the existing one.
+				...(input.imagePath !== undefined ? { imagePath: input.imagePath } : {})
 			})
 			.where(eq(battleReport.id, reportId))
 			.run();
@@ -268,7 +291,7 @@ export function updateBattleReport(
 		// Re-fold the new world, and the old one too if the report moved between worlds.
 		const worldIds = oldWorldId === input.worldId ? [input.worldId] : [oldWorldId, input.worldId];
 		for (const worldId of worldIds) recomputeWorldControl(tx, worldId);
-		return { worldIds };
+		return { worldIds, previousImagePath: existing[0].imagePath };
 	});
 }
 
@@ -279,20 +302,21 @@ export function updateBattleReport(
 export function deleteBattleReport(
 	reportId: string,
 	campaignId: string
-): { worldId: string | null } {
+): { worldId: string | null; imagePath: string | null } {
 	return db.transaction((tx) => {
 		const existing = tx
-			.select({ worldId: battleReport.worldId })
+			.select({ worldId: battleReport.worldId, imagePath: battleReport.imagePath })
 			.from(battleReport)
 			.where(and(eq(battleReport.id, reportId), eq(battleReport.campaignId, campaignId)))
 			.all();
-		if (!existing.length) return { worldId: null };
-		const { worldId } = existing[0];
+		if (!existing.length) return { worldId: null, imagePath: null };
+		const { worldId, imagePath } = existing[0];
 
 		// Combatants cascade on the FK; recompute the world from the now-shorter log.
 		tx.delete(battleReport).where(eq(battleReport.id, reportId)).run();
 		recomputeWorldControl(tx, worldId);
-		return { worldId };
+		// The caller unlinks the scoresheet file after the row is gone.
+		return { worldId, imagePath };
 	});
 }
 
@@ -301,7 +325,11 @@ export function deleteBattleReport(
  * The caller has already validated the form and the submitter's campaign membership.
  */
 export function submitBattleReport(
-	input: BattleReportInput & { campaignId: string; submittedByUserId: string }
+	input: BattleReportInput & {
+		campaignId: string;
+		submittedByUserId: string;
+		imagePath?: string | null;
+	}
 ): void {
 	db.transaction((tx) => {
 		const [report] = tx
@@ -315,6 +343,7 @@ export function submitBattleReport(
 				pointsSize: input.pointsSize ?? null,
 				planetaryEffect: input.planetaryEffect?.trim() || null,
 				narrative: input.narrative?.trim() || null,
+				imagePath: input.imagePath ?? null,
 				submittedByUserId: input.submittedByUserId
 			})
 			.returning({ id: battleReport.id })

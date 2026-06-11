@@ -286,6 +286,22 @@
 										{report.pointsSize} pts engagement
 									</p>
 								{/if}
+								{#if report.imagePath}
+									<a
+										href="{reportHref}/image/{report.imagePath}"
+										target="_blank"
+										rel="noopener"
+										class="mt-2 inline-block border border-border bg-void transition-colors hover:border-accent"
+										aria-label="View the scoresheet for this battle"
+									>
+										<img
+											src="{reportHref}/image/{report.imagePath}"
+											alt="Scoresheet for this battle"
+											loading="lazy"
+											class="block max-h-[110px] w-auto max-w-full object-contain"
+										/>
+									</a>
+								{/if}
 							</div>
 						</article>
 					{/each}

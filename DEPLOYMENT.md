@@ -124,8 +124,9 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 
 ## Ops
 
-- [x] Backups — `scripts/backup.js` takes a WAL-safe snapshot via `bun:sqlite`'s `VACUUM INTO` (no `sqlite3` binary needed, no raw file copy), integrity-checks it, and rotates to the newest `BACKUP_KEEP` (default 14) on the dedicated `dominatus-backups` volume. **Manual only for now** (`db:backup` / `docker compose exec`) — scheduling (sidecar/cron) and an offsite copy are still deferred. See `docs/OPERATIONS.md`.
-- [x] Test the restore path, not just the backup — `scripts/restore.js` (integrity-check → save `.pre-restore` → atomic swap → drop stale `-wal`/`-shm`); round-trip verified locally.
+- [x] Backups — `scripts/backup.js` takes a WAL-safe snapshot via `bun:sqlite`'s `VACUUM INTO` (no `sqlite3` binary needed, no raw file copy), integrity-checks it, and rotates to the newest `BACKUP_KEEP` (default 14) on the dedicated `dominatus-backups` volume. Also mirrors the scoresheet images dir (`<DATABASE_URL dir>/images`) into `/backups/images` — write-once files, copied only when new, so a restore brings back scoresheets too. **Manual only for now** (`db:backup` / `docker compose exec`) — scheduling (sidecar/cron) and an offsite copy are still deferred. See `docs/OPERATIONS.md`.
+- [x] Test the restore path, not just the backup — `scripts/restore.js` (integrity-check → save `.pre-restore` → atomic swap → drop stale `-wal`/`-shm`, then copy the image mirror back); round-trip verified locally.
+- [x] **Uploaded scoresheets persist on the data volume** — battle-report images are written to `<DATABASE_URL dir>/images` (i.e. `/data/images`), so the existing `dominatus-data` mount covers them; no new volume needed. Stored on submit as evidence for the confirmed report (ADR 0001), served via the campaign-gated `/campaigns/[slug]/report/image/[file]`. Cleaned up on report delete/replace. `BODY_SIZE_LIMIT` (below) must stay above the 12 MB image cap.
 - [ ] Resource limits + restart policy in compose (restart policy set; mem/cpu limits not)
 - [ ] CI — build the image, run `check` + `test` on PRs (note: vitest browser tests need Playwright browsers installed in CI)
 - [ ] CD — push image to a registry + trigger redeploy on the host (and how the host pulls/restarts)

@@ -31,7 +31,11 @@ export const battleReport = sqliteTable(
 		/** The weekly planetary effect in play, if the players used one. Display-only. */
 		planetaryEffect: text('planetary_effect'),
 		narrative: text('narrative'),
-		/** Path to the uploaded image on the local volume, if any. */
+		/**
+		 * Stored scoresheet filename (a UUID + extension) under the data volume's images dir, if
+		 * one was uploaded. Written on submit as evidence for the confirmed report (ADR 0001);
+		 * served via /campaigns/[slug]/report/image/[file]. See src/lib/server/report-images.ts.
+		 */
 		imagePath: text('image_path'),
 		submittedByUserId: text('submitted_by_user_id')
 			.notNull()

@@ -13,7 +13,14 @@
 	let { data }: { data: PageData } = $props();
 
 	const { form, errors, enhance, message, submitting } = untrack(() =>
-		superForm(data.form, { dataType: 'json' })
+		superForm(data.form, {
+			dataType: 'json',
+			// The form posts JSON (nested combatants), so the scoresheet can't ride the schema —
+			// append it to the multipart body here; the action reads it off `formData` directly.
+			onSubmit({ formData }) {
+				if (imageFile) formData.set('image', imageFile);
+			}
+		})
 	);
 
 	const base = $derived(`/campaigns/${page.params.slug}`);
@@ -310,6 +317,15 @@
 			</div>
 		{/if}
 
+		{#if $errors._errors}
+			<p
+				role="alert"
+				class="mt-[22px] border border-state-attacker-line bg-state-attacker-soft px-4 py-3 font-body text-[12.5px] text-state-attacker"
+			>
+				{$errors._errors.join(' ')}
+			</p>
+		{/if}
+
 		<form
 			method="POST"
 			action={editing ? `?edit=${editing}` : undefined}
@@ -361,6 +377,21 @@
 								{imageFile.name}
 							</figcaption>
 						{/if}
+					</figure>
+				{:else if editing && data.editingImage}
+					<!-- Amend mode: show the scoresheet already on file. Picking a new image above
+					     replaces it on save; leaving it keeps this one. -->
+					<figure class="mt-3.5 border-t border-border pt-3.5">
+						<figcaption
+							class="mb-2 text-center font-display text-[9.5px] font-semibold tracking-[0.1em] text-ink-faint uppercase"
+						>
+							Current scoresheet
+						</figcaption>
+						<img
+							src="{base}/report/image/{data.editingImage}"
+							alt="Scoresheet currently attached to this report"
+							class="mx-auto max-h-[60vh] w-auto max-w-full border border-border bg-void object-contain"
+						/>
 					</figure>
 				{/if}
 			</section>

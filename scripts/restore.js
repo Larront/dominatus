@@ -13,8 +13,8 @@
 //
 // Env: DATABASE_URL (default /data/local.db), BACKUP_DIR (default /backups)
 import { Database } from 'bun:sqlite';
-import { readdir, copyFile, rename, rm, stat } from 'node:fs/promises';
-import { join, isAbsolute } from 'node:path';
+import { readdir, copyFile, rename, rm, stat, mkdir } from 'node:fs/promises';
+import { join, isAbsolute, dirname } from 'node:path';
 
 const dest = process.env.DATABASE_URL || '/data/local.db';
 const dir = process.env.BACKUP_DIR || '/backups';
@@ -54,4 +54,24 @@ await rm(dest + '-wal', { force: true });
 await rm(dest + '-shm', { force: true });
 
 console.log(JSON.stringify({ level: 'info', msg: 'restore complete', from: source, to: dest }));
+
+// Bring back the scoresheet images the restored DB rows reference. Images are write-once, so we
+// only copy ones the live dir is missing; existing files (and any orphans) are left untouched.
+const imagesSrc = join(dir, 'images');
+const imagesDest = join(dirname(dest), 'images');
+try {
+	const files = await readdir(imagesSrc);
+	await mkdir(imagesDest, { recursive: true });
+	const have = new Set(await readdir(imagesDest).catch(() => []));
+	let restored = 0;
+	for (const f of files) {
+		if (have.has(f)) continue;
+		await copyFile(join(imagesSrc, f), join(imagesDest, f));
+		restored++;
+	}
+	console.log(JSON.stringify({ level: 'info', msg: 'images restored', restored, to: imagesDest }));
+} catch (e) {
+	if (e?.code !== 'ENOENT') throw e; // no image mirror in this backup — nothing to restore
+}
+
 console.log('Start the app again, e.g. `docker compose start app`.');

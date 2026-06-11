@@ -24,6 +24,9 @@ vite.config.ts.timestamp-*
 # SQLite
 *.db
 
+# Uploaded scoresheet images — written next to the dev DB (repo root in dev, /data in prod)
+/images
+
 # Dev server output
 dev-server.log
 

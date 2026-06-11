@@ -6,6 +6,7 @@ import { requireCampaignAccess } from '$lib/server/campaigns';
 import { getWorldsWithControl } from '$lib/server/worlds';
 import { getWarbandsForCampaign } from '$lib/server/warbands';
 import { submitBattleReport, updateBattleReport, getReportForEdit } from '$lib/server/reports';
+import { checkImageUpload, saveReportImage, deleteReportImage } from '$lib/server/report-images';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ parent, locals, url }) => {
@@ -19,7 +20,7 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 
 	const [form, worlds, warbands] = await Promise.all([
 		existing
-			? superValidate(existing, zod4(battleReportSchema))
+			? superValidate(existing.data, zod4(battleReportSchema))
 			: superValidate(zod4(battleReportSchema)),
 		getWorldsWithControl(campaign.id),
 		getWarbandsForCampaign(campaign.id)
@@ -45,7 +46,10 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 		warbands,
 		currentCycle: campaign.currentCycle,
 		userId: locals.user?.id ?? null,
-		editing
+		editing,
+		// The scoresheet already attached to the report being amended, if any — shown so the
+		// arbiter can see (and choose whether to replace) it. Not part of the form schema.
+		editingImage: existing?.imagePath ?? null
 	};
 };
 
@@ -55,8 +59,14 @@ export const actions: Actions = {
 		if (!locals.user) redirect(302, '/');
 		const { campaign, role } = await requireCampaignAccess(params.slug, locals.user.id);
 
-		const form = await superValidate(request, zod4(battleReportSchema));
+		// Read the body once: the scoresheet rides along as an `image` field next to the
+		// Superforms JSON (the form is dataType: 'json', so files are appended client-side).
+		const formData = await request.formData();
+		const form = await superValidate(formData, zod4(battleReportSchema));
 		if (!form.valid) return fail(400, { form });
+
+		const imageCheck = checkImageUpload(formData.get('image'));
+		if (imageCheck.kind === 'error') return setError(form, imageCheck.message);
 
 		// Trust the server's view, not the client: the world and every combatant warband
 		// must belong to this campaign.
@@ -76,17 +86,38 @@ export const actions: Actions = {
 		const editId = url.searchParams.get('edit');
 		if (editId) {
 			if (role !== 'arbiter') return fail(403, { form });
-			updateBattleReport(editId, { ...form.data, campaignId: campaign.id });
+			const newImage = imageCheck.kind === 'ok' ? await saveReportImage(imageCheck.file) : undefined;
+			let previousImagePath: string | null = null;
+			try {
+				({ previousImagePath } = updateBattleReport(editId, {
+					...form.data,
+					campaignId: campaign.id,
+					...(newImage !== undefined ? { imagePath: newImage } : {})
+				}));
+			} catch (e) {
+				// The update never landed — don't leave the just-written file orphaned.
+				if (newImage) await deleteReportImage(newImage);
+				throw e;
+			}
+			// A replacement supersedes the old scoresheet; drop it from the volume.
+			if (newImage && previousImagePath) await deleteReportImage(previousImagePath);
 			redirect(303, `/campaigns/${params.slug}/admin`);
 		}
 
 		// Create path: a new report is stamped with the campaign's current cycle and applied at once.
-		submitBattleReport({
-			...form.data,
-			cycle: campaign.currentCycle,
-			campaignId: campaign.id,
-			submittedByUserId: locals.user.id
-		});
+		const imagePath = imageCheck.kind === 'ok' ? await saveReportImage(imageCheck.file) : null;
+		try {
+			submitBattleReport({
+				...form.data,
+				cycle: campaign.currentCycle,
+				campaignId: campaign.id,
+				submittedByUserId: locals.user.id,
+				imagePath
+			});
+		} catch (e) {
+			if (imagePath) await deleteReportImage(imagePath); // no orphan if the insert fails
+			throw e;
+		}
 
 		return message(form, 'Battle report logged. Control updated.');
 	}

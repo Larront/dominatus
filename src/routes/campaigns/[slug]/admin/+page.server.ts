@@ -13,6 +13,7 @@ import {
 	updateScoringProfile
 } from '$lib/server/campaigns';
 import { getCampaignReportsAdmin, deleteBattleReport } from '$lib/server/reports';
+import { deleteReportImage } from '$lib/server/report-images';
 import { getWorldsWithControl, updateWorld } from '$lib/server/worlds';
 import { DEFAULT_PROFILE } from '$lib/domain/scoring-profile';
 import {
@@ -199,7 +200,8 @@ export const actions: Actions = {
 		// The form id is read from the POST so the response routes back to the right row's form.
 		const form = await superValidate(request, zod4(idActionSchema));
 		if (!form.valid) return fail(400, { form });
-		deleteBattleReport(form.data.id, campaign.id);
+		const { imagePath } = deleteBattleReport(form.data.id, campaign.id);
+		await deleteReportImage(imagePath); // drop the scoresheet now the report is gone
 		return message(form, 'Report reversed.');
 	}
 };
