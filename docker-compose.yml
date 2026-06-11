@@ -1,5 +1,9 @@
 services:
   app:
+    # Host deploy pulls the published image (`docker compose pull && docker compose up -d`); pin a
+    # release with IMAGE_TAG=0.1.0 in the env, else it tracks :latest. `build: .` is kept so local
+    # `docker compose build` still works from source — compose tags the build as this image name.
+    image: ghcr.io/larront/dominatus:${IMAGE_TAG:-latest}
     build: .
     restart: unless-stopped
     # The server's .env must set ORIGIN=https://dominatus.larront.com (the public tunnel hostname) —
