@@ -21,9 +21,9 @@ jobs:
           # Track the Dockerfile's rolling `oven/bun:1` so CI runs on the same runtime as prod.
           bun-version: latest
       - run: bun install --frozen-lockfile
-      # The `client` vitest project runs Svelte component tests under Playwright chromium
-      # (see vite.config.ts), so the browser + its OS deps must be present in CI.
-      - run: bunx playwright install --with-deps chromium
+      # NB: the `client` vitest project (vite.config.ts) runs Svelte component tests under
+      # Playwright chromium. There are none yet, so the browser install is omitted to keep CI
+      # fast — add `bunx playwright install --with-deps chromium` here when the first one lands.
       - run: bun run check
       - run: bun run test
 
