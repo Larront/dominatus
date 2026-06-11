@@ -1,10 +1,11 @@
 services:
   app:
-    # Host deploy pulls the published image (`docker compose pull && docker compose up -d`); pin a
-    # release with IMAGE_TAG=0.1.0 in the env, else it tracks :latest. `build: .` is kept so local
-    # `docker compose build` still works from source — compose tags the build as this image name.
+    # Pull-based deploy: the host (Dockge) runs the published image — no source checkout needed.
+    # `docker compose pull && docker compose up -d`, or Dockge's Deploy button. Pin a release with
+    # IMAGE_TAG=0.1.0 in the stack .env, else it tracks :latest. The image is built + pushed by CI
+    # (.github/workflows/publish.yml), not from here — there is deliberately no `build:` so a
+    # source-less box never tries to build on `up`. To build locally instead: `docker build .`.
     image: ghcr.io/larront/dominatus:${IMAGE_TAG:-latest}
-    build: .
     restart: unless-stopped
     # The server's .env must set ORIGIN=https://dominatus.larront.com (the public tunnel hostname) —
     # it drives Secure cookies, CSRF, Better Auth, and adapter-node URL building. Not overridden
