@@ -47,7 +47,7 @@ template lives in `.env.example`.
 | Env var | Used by | How to obtain | Status |
 |---|---|---|---|
 | `BETTER_AUTH_SECRET` | Better Auth session signing | `openssl rand -base64 32`; host-injected in prod, never committed | ⬜ prod value |
-| `ORIGIN` | SvelteKit CSRF + Better Auth `baseURL` | Local `http://localhost:5173`; prod = Cloudflare Tunnel hostname | ⬜ prod value |
+| `ORIGIN` | SvelteKit CSRF + Better Auth `baseURL`/`trustedOrigins` + secure-cookie gating + adapter-node URLs | Local `http://localhost:5173`; **prod = `https://dominatus.larront.com`** | ✅ value chosen, set in server `.env` |
 | `DATABASE_URL` | SQLite path | Local `local.db`; prod = mounted volume path | ⬜ prod value |
 | `RESEND_API_KEY` | `src/lib/server/email.ts` | Resend → API Keys → create (`re_…`) | ⬜ not set |
 | `EMAIL_FROM` | Sender address | Must be on a Resend-verified domain; falls back to sandbox `onboarding@resend.dev` | ⬜ not set |
@@ -100,21 +100,33 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 > host already has a Cloudflare tunnel set up — point it at `http://localhost:3000` (the compose
 > port). Pick this up as the first deploy-time task.
 
-- [ ] `cloudflared` config / compose service pointed at the app port
-- [ ] `trustedOrigins` set to the public URL (Better Auth rejects cross-origin requests otherwise)
-- [ ] Confirm secure cookies behind the tunnel — cloudflared forwards plain HTTP to the app, so verify Better Auth marks cookies `Secure`/`SameSite` correctly (driven by the `https://` `ORIGIN`); set adapter-node `PROTOCOL_HEADER`/`HOST_HEADER` if request URLs come through as `http`
+> **Hostname chosen (2026-06-11): `https://dominatus.larront.com`.** Routed via the **existing
+> host-level `cloudflared`** (not a compose service). Add this ingress rule to the server's tunnel
+> config, ahead of the catch-all, then `cloudflared tunnel route dns <tunnel> dominatus.larront.com`:
+> ```yaml
+> ingress:
+>   - hostname: dominatus.larront.com
+>     service: http://localhost:3000   # the compose-published app port
+>   - service: http_status:404         # existing catch-all stays last
+> ```
+
+- [x] `trustedOrigins` set to the public URL — `auth.ts` sets `trustedOrigins: [ORIGIN]` (dev = `localhost:5173`, prod = `dominatus.larront.com`)
+- [x] Secure-cookie + URL config done on the app side — `useSecureCookies` gated on `ORIGIN.startsWith('https://')` (off for localhost dev, on in prod). `PROTOCOL_HEADER`/`HOST_HEADER` **not needed**: adapter-node uses `ORIGIN` to build request URLs, so they resolve as `https` behind the tunnel without proxy-header config.
+- [ ] **Server-side:** add the cloudflared ingress rule above + DNS route (only you can do this on the server)
+- [ ] **Verify behind the live tunnel:** sign in over `https://dominatus.larront.com`, confirm the session cookie lands with `Secure`+`SameSite` and that no mixed-content/`http` URLs leak (the one thing not testable from localhost)
 
 ## Security & hardening
 
-> **Deferred to deploy time** (decided 2026-06-11), alongside Ingress. Rate limiting is testable
-> on localhost and protects the auth flows we shipped, so it's the natural *first* item to revisit
-> when hardening resumes. CSP is the fiddly one — Vite's HMR injects inline scripts, so it needs
-> separate dev/prod handling or it breaks the dev loop. `BODY_SIZE_LIMIT` is a prod env tweak.
+> **Mostly done (2026-06-11).** Rate limiting, security response headers, and `BODY_SIZE_LIMIT`
+> are shipped and verified (details below). Remaining: CSP (deferred — fiddly with the app's
+> Google Fonts + SvelteKit's nonce mode, best done live or at the Cloudflare edge) and the host
+> secret-injection decision. All shipped items are gated so localhost dev is unaffected.
 
-- [ ] Auth rate limiting / brute-force protection on sign-in, sign-up, and reset endpoints (Better Auth `rateLimit` config)
-- [ ] Security headers — CSP, `X-Frame-Options`/frame-ancestors, HSTS (via `hooks.server` or SvelteKit `csp`); some may be set at the Cloudflare edge instead
-- [ ] `BODY_SIZE_LIMIT` for adapter-node (defaults are generous)
-- [ ] Decide secret-injection mechanism on the host (Docker secrets vs root-owned `.env` vs env from orchestrator)
+- [x] Auth rate limiting / brute-force protection — Better Auth `rateLimit` in `auth.ts`, per-IP `customRules` on `/sign-in/email` + `/sign-up/email` (5/60s), `/request-password-reset` + `/forget-password` + `/send-verification-email` (3/60s), `/reset-password` (5/60s). `enabled` left to Better Auth's default (on when `NODE_ENV=production`, which the container sets and `bun run dev`/vitest do not — dev loop and tests untouched); `RATE_LIMIT_ENABLED` env overrides ('true' = force on for a localhost test, 'false' = prod kill-switch). Memory-backed (single container; counters reset on restart). **Smoke-tested on localhost** (2026-06-11): 6th sign-in in the window returned `429`.
+- [x] Security response headers — `handleSecurityHeaders` in `hooks.server.ts` sets `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera/mic/geo off) on every response; `Strict-Transport-Security` is gated on the https `ORIGIN` (on in prod, off on localhost dev). **Verified on the prod build** (2026-06-11): all five present with https `ORIGIN`, HSTS correctly absent with http.
+- [~] **CSP — deliberately deferred** (decided 2026-06-11). Not shipped blind: the app loads Google Fonts (`fonts.googleapis.com` CSS + `fonts.gstatic.com` files) so those hosts need allowlisting, and SvelteKit's nonce/hash CSP mode conflicts with SSR'd inline `style=` attributes — getting it right needs a per-route browser check (incl. the OAuth redirect) against the live app. Do it at deploy time (or set a baseline CSP at the Cloudflare edge). `hooks.server.ts` carries a note pointing here.
+- [x] `BODY_SIZE_LIMIT` — set to `16M` in `docker-compose.yml` (adapter-node defaults to **512K**, which would silently reject uploads). Sits above the 12 MiB image cap (`MAX_IMAGE_BYTES`) plus multipart overhead. This was a latent prod bug — scoresheet uploads would have failed in the container.
+- [ ] Decide secret-injection mechanism on the host — **recommendation: a root-owned `.env` (mode 600) referenced by compose's `env_file`** (simplest fit for single-box compose; Docker secrets are aimed at swarm). Your call to confirm; this is the only open security item that needs a host decision.
 
 ## Observability
 
@@ -127,9 +139,9 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 - [x] Backups — `scripts/backup.js` takes a WAL-safe snapshot via `bun:sqlite`'s `VACUUM INTO` (no `sqlite3` binary needed, no raw file copy), integrity-checks it, and rotates to the newest `BACKUP_KEEP` (default 14) on the dedicated `dominatus-backups` volume. Also mirrors the scoresheet images dir (`<DATABASE_URL dir>/images`) into `/backups/images` — write-once files, copied only when new, so a restore brings back scoresheets too. **Manual only for now** (`db:backup` / `docker compose exec`) — scheduling (sidecar/cron) and an offsite copy are still deferred. See `docs/OPERATIONS.md`.
 - [x] Test the restore path, not just the backup — `scripts/restore.js` (integrity-check → save `.pre-restore` → atomic swap → drop stale `-wal`/`-shm`, then copy the image mirror back); round-trip verified locally.
 - [x] **Uploaded scoresheets persist on the data volume** — battle-report images are written to `<DATABASE_URL dir>/images` (i.e. `/data/images`), so the existing `dominatus-data` mount covers them; no new volume needed. Stored on submit as evidence for the confirmed report (ADR 0001), served via the campaign-gated `/campaigns/[slug]/report/image/[file]`. Cleaned up on report delete/replace. `BODY_SIZE_LIMIT` (below) must stay above the 12 MB image cap.
-- [ ] Resource limits + restart policy in compose (restart policy set; mem/cpu limits not)
-- [ ] CI — build the image, run `check` + `test` on PRs (note: vitest browser tests need Playwright browsers installed in CI)
-- [ ] CD — push image to a registry + trigger redeploy on the host (and how the host pulls/restarts)
+- [x] Resource limits + restart policy in compose — `restart: unless-stopped` (already set) plus `mem_limit: 1g` / `cpus: 2.0` in `docker-compose.yml`. **Starting points, not measured** — Tesseract OCR on `/analyze` is the memory driver, so don't lower `mem_limit` without checking OCR doesn't OOM; tune to the box after watching real usage.
+- [x] CI — `.github/workflows/ci.yml`: two jobs on PR + push to `main`. `verify` runs `bun run check` + `bun run test` (installs Playwright chromium for the `client` vitest project per `vite.config.ts`); `image` builds the Docker image (no push) with GHA layer cache. Bun tracks the Dockerfile's rolling `oven/bun:1`. *Not yet exercised on GitHub — first PR will be the real test.*
+- [ ] CD — push image to a registry + trigger redeploy on the host (and how the host pulls/restarts) — **deploy-time** (needs the server + registry choice)
 
 ## Action items for you (external accounts — I can't do these)
 
