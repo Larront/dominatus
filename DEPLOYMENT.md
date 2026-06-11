@@ -100,20 +100,15 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 > host already has a Cloudflare tunnel set up — point it at `http://localhost:3000` (the compose
 > port). Pick this up as the first deploy-time task.
 
-> **Hostname chosen (2026-06-11): `https://dominatus.larront.com`.** Routed via the **existing
-> host-level `cloudflared`** (not a compose service). Add this ingress rule to the server's tunnel
-> config, ahead of the catch-all, then `cloudflared tunnel route dns <tunnel> dominatus.larront.com`:
-> ```yaml
-> ingress:
->   - hostname: dominatus.larront.com
->     service: http://localhost:3000   # the compose-published app port
->   - service: http_status:404         # existing catch-all stays last
-> ```
+> **LIVE (2026-06-11): `https://dominatus.larront.com`.** Routed via the existing host-level
+> `cloudflared`, configured through the **Cloudflare GUI** (Zero Trust → Tunnels → public hostname)
+> rather than a config file — Service points at the app's host port (deployed via Dockge). The
+> deploy runs the published GHCR image (CD part 1); the host port is set in Dockge, not committed.
 
 - [x] `trustedOrigins` set to the public URL — `auth.ts` sets `trustedOrigins: [ORIGIN]` (dev = `localhost:5173`, prod = `dominatus.larront.com`)
 - [x] Secure-cookie + URL config done on the app side — `useSecureCookies` gated on `ORIGIN.startsWith('https://')` (off for localhost dev, on in prod). `PROTOCOL_HEADER`/`HOST_HEADER` **not needed**: adapter-node uses `ORIGIN` to build request URLs, so they resolve as `https` behind the tunnel without proxy-header config.
-- [ ] **Server-side:** add the cloudflared ingress rule above + DNS route (only you can do this on the server)
-- [ ] **Verify behind the live tunnel:** sign in over `https://dominatus.larront.com`, confirm the session cookie lands with `Secure`+`SameSite` and that no mixed-content/`http` URLs leak (the one thing not testable from localhost)
+- [x] cloudflared ingress rule + DNS route — done via the Cloudflare GUI; public DNS resolves to the edge and the tunnel reaches the app.
+- [x] **Verified behind the live tunnel** (2026-06-11): `GET /healthz` → 200 through the edge, and `/` returns the app's own headers incl. `Strict-Transport-Security` — proving HSTS + `useSecureCookies` are active under the prod https `ORIGIN`. *(LAN note: a split-horizon DNS entry resolves the hostname to a local IP `192.168.50.103` from inside the network, so test from off-LAN or fix the local override; the public path is correct.)*
 
 ## Security & hardening
 
