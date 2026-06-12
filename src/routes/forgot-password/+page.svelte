@@ -31,7 +31,7 @@
 
 {#snippet backLink()}
 	Remembered it?
-	<a href="/" class="text-accent transition-colors duration-150 hover:underline">Sign in</a>
+	<a href="/enter" class="text-accent transition-colors duration-150 hover:underline">Sign in</a>
 {/snippet}
 
 <AuthTerminal kicker="// Recover Access" footer={backLink}>

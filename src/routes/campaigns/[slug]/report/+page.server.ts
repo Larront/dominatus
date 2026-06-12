@@ -56,7 +56,7 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 export const actions: Actions = {
 	default: async ({ request, params, locals, url }) => {
 		// Submission is gated to a logged-in member of this campaign.
-		if (!locals.user) redirect(302, '/');
+		if (!locals.user) redirect(302, '/enter');
 		const { campaign, role } = await requireCampaignAccess(params.slug, locals.user.id);
 
 		// Read the body once: the scoresheet rides along as an `image` field next to the

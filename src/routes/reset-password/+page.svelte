@@ -37,7 +37,7 @@
 </script>
 
 {#snippet backLink()}
-	<a href="/" class="text-accent transition-colors duration-150 hover:underline">Back to sign in</a>
+	<a href="/enter" class="text-accent transition-colors duration-150 hover:underline">Back to sign in</a>
 {/snippet}
 
 <AuthTerminal kicker="// Reset Cipher" footer={backLink}>

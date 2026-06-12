@@ -22,7 +22,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	join: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/');
+		if (!locals.user) redirect(302, '/enter');
 
 		const form = await superValidate(request, zod4(joinCampaignSchema), { id: 'join' });
 		if (!form.valid) return fail(400, { joinForm: form });

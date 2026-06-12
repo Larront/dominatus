@@ -11,7 +11,7 @@ const INITIAL_WORLDS = 3;
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Founding is an arbiter act — you must be signed in to take it on.
-	if (!locals.user) redirect(302, '/');
+	if (!locals.user) redirect(302, '/enter');
 
 	// Seed the form with a rolled system so the page opens with a system to react to, not a blank
 	// slate. The client reshuffles from here; this is just the first roll.
@@ -32,7 +32,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	default: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, '/');
+		if (!locals.user) redirect(302, '/enter');
 
 		const form = await superValidate(request, zod4(foundingSchema));
 		if (!form.valid) return fail(400, { form });
