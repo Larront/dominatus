@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
 	<title>Dominatus</title>
-	<rect width="64" height="64" fill="#07070a" />
-	<!-- Simplified for tiny sizes: one bold bezel ring, a solid compass star, the orbit + its world.
+	<!-- Transparent background — the mark sits directly on the browser tab.
+	     Simplified for tiny sizes: one bold bezel ring, a solid compass star, the orbit + its world.
 	     The in-app BrandMark keeps the full detail (tick band + facets); only seen at 32px+. -->
 	<g stroke="#46e08a" fill="none">
 		<g transform="rotate(-10 32 32)">
