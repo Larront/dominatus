@@ -8,9 +8,10 @@
 		value: string;
 		label: string;
 		autocomplete?: HTMLInputAttributes['autocomplete'];
+		minlength?: number;
 	}
 
-	let { value = $bindable(), label, autocomplete }: Props = $props();
+	let { value = $bindable(), label, autocomplete, minlength }: Props = $props();
 	let show = $state(false);
 
 	const labelCls = 'font-display text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-dim';
@@ -22,7 +23,14 @@
 <label class="flex flex-col gap-1.5">
 	<span class={labelCls}>{label}</span>
 	<div class="relative">
-		<input type={show ? 'text' : 'password'} bind:value required {autocomplete} class={fieldCls} />
+		<input
+			type={show ? 'text' : 'password'}
+			bind:value
+			required
+			{autocomplete}
+			{minlength}
+			class={fieldCls}
+		/>
 		<button
 			type="button"
 			onclick={() => (show = !show)}
