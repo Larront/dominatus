@@ -50,7 +50,7 @@ template lives in `.env.example`.
 | `ORIGIN` | SvelteKit CSRF + Better Auth `baseURL`/`trustedOrigins` + secure-cookie gating + adapter-node URLs | Local `http://localhost:5173`; **prod = `https://dominatus.larront.com`** | ✅ set, verified live |
 | `DATABASE_URL` | SQLite path | Local `local.db`; prod = mounted volume path | ✅ `/data/local.db` (set by compose) |
 | `RESEND_API_KEY` | `src/lib/server/email.ts` | Resend → API Keys → create (`re_…`) | ✅ set in prod (2026-06-11); sending works |
-| `EMAIL_FROM` | Sender address | Must be on a Resend-verified domain; falls back to sandbox `onboarding@resend.dev` | ⬜ sandbox only — delivers solely to the Resend account email until a domain is verified (Stage 2) |
+| `EMAIL_FROM` | Sender address | Must be on a Resend-verified domain; falls back to sandbox `onboarding@resend.dev` | ✅ `noreply@send.larront.com` — domain verified (DKIM+SPF+MX), delivery to any address confirmed (2026-06-11) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `socialProviders.google` | Google Cloud Console → OAuth 2.0 client; redirect URI `https://<domain>/api/auth/callback/google` | ⬜ not set |
 | `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | `socialProviders.facebook` | Meta for Developers → app + Facebook Login; redirect URI `https://<domain>/api/auth/callback/facebook` | ⬜ not set |
 
@@ -140,7 +140,7 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 
 ## Action items for you (external accounts — I can't do these)
 
-- [~] **Resend:** account + `RESEND_API_KEY` done and **sending verified** (2026-06-11). **Remaining (Stage 2):** verify a sending domain (e.g. `send.larront.com`) with its DKIM/SPF/DMARC DNS records in Cloudflare, then set `EMAIL_FROM` — until then the sandbox sender only reaches the Resend account email, so other people can't register.
+- [x] **Resend:** account, `RESEND_API_KEY`, and verified sending domain `send.larront.com` (DKIM+SPF+MX, auto-configured into Cloudflare) all done. `EMAIL_FROM=noreply@send.larront.com`; delivery to arbitrary addresses confirmed (2026-06-11). Optional later: a `_dmarc` policy record for extra deliverability margin.
 - [ ] **Google Cloud Console:** OAuth 2.0 client; redirect URI `https://dominatus.larront.com/api/auth/callback/google`
 - [ ] **Meta for Developers:** app + Facebook Login; redirect URI `https://dominatus.larront.com/api/auth/callback/facebook`
 - [x] **Cloudflare:** tunnel live, hostname `dominatus.larront.com` mapped via the GUI
