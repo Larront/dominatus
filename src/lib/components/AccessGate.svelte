@@ -3,6 +3,7 @@
 	import { onDestroy } from 'svelte';
 	import { signIn, signUp, sendVerificationEmail } from '$lib/auth-client';
 	import Button from '$lib/components/ui/Button.svelte';
+	import PasswordField from '$lib/components/PasswordField.svelte';
 	import SocialSignIn from '$lib/components/SocialSignIn.svelte';
 	import AuthTerminal from '$lib/components/AuthTerminal.svelte';
 
@@ -17,6 +18,7 @@
 	let name = $state('');
 	let email = $state('');
 	let password = $state('');
+	let confirmPassword = $state('');
 	let loading = $state(false);
 	let errorMsg = $state<string | null>(null);
 
@@ -30,10 +32,16 @@
 		if (next === mode) return;
 		mode = next;
 		errorMsg = null;
+		confirmPassword = '';
 	}
 
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
+		// Enlistment requires the two password entries to agree before we hit the server.
+		if (mode === 'enlist' && password !== confirmPassword) {
+			errorMsg = 'Passwords do not match.';
+			return;
+		}
 		loading = true;
 		errorMsg = null;
 		const { error } =
@@ -75,6 +83,7 @@
 		mode = 'signin';
 		errorMsg = null;
 		password = '';
+		confirmPassword = '';
 	}
 
 	const label = 'font-display text-[10px] font-semibold tracking-[0.1em] uppercase text-ink-dim';
@@ -167,16 +176,19 @@
 				<input type="email" bind:value={email} required autocomplete="email" class={field} />
 			</label>
 
-			<label class="flex flex-col gap-1.5">
-				<span class={label}>› Password</span>
-				<input
-					type="password"
-					bind:value={password}
-					required
-					autocomplete={mode === 'signin' ? 'current-password' : 'new-password'}
-					class={field}
+			<PasswordField
+				bind:value={password}
+				label="› Password"
+				autocomplete={mode === 'signin' ? 'current-password' : 'new-password'}
+			/>
+
+			{#if mode === 'enlist'}
+				<PasswordField
+					bind:value={confirmPassword}
+					label="› Confirm password"
+					autocomplete="new-password"
 				/>
-			</label>
+			{/if}
 
 			{#if mode === 'signin'}
 				<div class="-mt-1 flex justify-end">
