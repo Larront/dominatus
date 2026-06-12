@@ -4,6 +4,7 @@ import { zod4 } from 'sveltekit-superforms/adapters';
 import { warbandSchema } from '$lib/schemas/warband';
 import { requireCampaignAccess } from '$lib/server/campaigns';
 import { getWarbandsForCommander, createWarband } from '$lib/server/warbands';
+import { arbiterCampaignsFor } from '$lib/server/account-deletion';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ parent, locals }) => {
@@ -11,14 +12,16 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	// `parent()` (the layout load) already redirected an anonymous visitor; this is belt-and-braces.
 	if (!locals.user) redirect(302, '/');
 
-	const [form, warbands] = await Promise.all([
+	const [form, warbands, arbiterCampaigns] = await Promise.all([
 		superValidate(zod4(warbandSchema)),
-		getWarbandsForCommander(campaign.id, locals.user.id)
+		getWarbandsForCommander(campaign.id, locals.user.id),
+		// Account deletion is blocked while the user arbiters any campaign — surfaced in the UI.
+		arbiterCampaignsFor(locals.user.id)
 	]);
 	// Seed the colour the commander confirms — an empty native picker would default to black.
 	form.data.color = '#5f93c4';
 
-	return { form, warbands };
+	return { form, warbands, arbiterCampaigns };
 };
 
 export const actions: Actions = {

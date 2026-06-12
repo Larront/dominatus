@@ -5,6 +5,7 @@ import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { sendEmail } from '$lib/server/email';
+import { anonymizeDepartingUser } from '$lib/server/account-deletion';
 
 // Secure cookies and trusted origins both derive from ORIGIN, so a single env var drives the
 // dev/prod split: dev runs http://localhost:5173 (no Secure flag — browsers won't store Secure
@@ -63,6 +64,24 @@ export const auth = betterAuth({
 		google: {
 			clientId: env.GOOGLE_CLIENT_ID ?? '',
 			clientSecret: env.GOOGLE_CLIENT_SECRET ?? ''
+		}
+	},
+	user: {
+		deleteUser: {
+			enabled: true,
+			// Email-confirm flow works uniformly for password and Google-only users (no password to
+			// re-enter). The link hits Better Auth's /delete-user/callback, which runs beforeDelete.
+			sendDeleteAccountVerification: async ({ user, url }) => {
+				await sendEmail({
+					to: user.email,
+					subject: 'Confirm account deletion — Dominatus',
+					html: `<p>You asked to delete your Dominatus account. This is permanent.</p><p>Your warbands and battle history stay on record under "Deleted Commander" so campaign standings hold; your login and memberships are removed.</p><p><a href="${url}">Confirm account deletion</a></p><p>If you didn't request this, ignore this email — nothing happens.</p>`
+				});
+			},
+			// Reassign the departing commander's data to the tombstone before the row is removed.
+			beforeDelete: async (u) => {
+				await anonymizeDepartingUser(u.id);
+			}
 		}
 	},
 	plugins: [
