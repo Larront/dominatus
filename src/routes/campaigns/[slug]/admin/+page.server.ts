@@ -1,4 +1,4 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { campaignDetailsSchema } from '$lib/schemas/campaign-details';
@@ -10,7 +10,9 @@ import {
 	requireArbiter,
 	updateCampaignDetails,
 	regenerateJoinCode,
-	updateScoringProfile
+	updateScoringProfile,
+	getCampaignMembers,
+	transferArbiterRole
 } from '$lib/server/campaigns';
 import { getCampaignReportsAdmin, deleteBattleReport } from '$lib/server/reports';
 import { deleteReportImage } from '$lib/server/report-images';
@@ -54,6 +56,9 @@ export const load: PageServerLoad = async ({ parent }) => {
 			getEffectPool(campaign.id),
 			getWorldsWithControl(campaign.id)
 		]);
+
+	// Members the arbiter can hand the role to (the role swap happens via the transferArbiter action).
+	const members = await getCampaignMembers(campaign.id);
 
 	// One validated, pre-filled form per editable row, keyed by record id. Each gets a unique form id
 	// so a save response routes back to the row it came from (a shared id would update every row).
@@ -106,7 +111,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 		effects,
 		worlds,
 		effectForms,
-		worldForms
+		worldForms,
+		members
 	};
 };
 
@@ -203,5 +209,23 @@ export const actions: Actions = {
 		const { imagePath } = deleteBattleReport(form.data.id, campaign.id);
 		await deleteReportImage(imagePath); // drop the scoresheet now the report is gone
 		return message(form, 'Report reversed.');
+	},
+
+	transferArbiter: async ({ request, params, locals }) => {
+		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
+		const toUserId = String((await request.formData()).get('toUserId') ?? '');
+		if (!toUserId) return fail(400, { transferError: 'Choose a commander to transfer to.' });
+
+		const result = transferArbiterRole(campaign.id, toUserId);
+		if (!result.ok) {
+			return fail(400, {
+				transferError:
+					result.reason === 'same'
+						? 'That commander already holds the arbiter role.'
+						: 'That commander is not a member of this campaign.'
+			});
+		}
+		// The caller is no longer the arbiter — drop them back to the campaign as a commander.
+		redirect(303, `/campaigns/${campaign.slug}`);
 	}
 };

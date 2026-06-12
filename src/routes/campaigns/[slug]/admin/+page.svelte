@@ -16,6 +16,14 @@
 	const base = $derived(`/campaigns/${page.params.slug}`);
 	const archetypes = ARCHETYPES.map((a) => ({ value: a.render, label: a.tag }));
 
+	// Transfer the arbiter role to another commander; the action redirects the demoted arbiter away.
+	const commanders = $derived(data.members.filter((m) => m.role === 'commander'));
+	const transferErrorMsg = $derived(
+		(page.form as { transferError?: string } | null)?.transferError ?? null
+	);
+	let transferTo = $state('');
+	let confirmingTransfer = $state(false);
+
 	// Scoring profile edit (ADR 0004). Same flat-superform + direct-bind pattern as the founding
 	// page's grid, so a zeroed category reads as "off" and saving re-scores the campaign on read.
 	const {
@@ -174,6 +182,54 @@
 					</form>
 				</div>
 			</div>
+		</section>
+
+		<!-- ── Transfer arbiter role ─────────────────────────────── -->
+		<section class={panel}>
+			<h2 class={sec}>// Transfer Arbiter Role</h2>
+			{#if commanders.length === 0}
+				<p class="font-body text-[13px] leading-[1.55] text-ink-dim">
+					No other commanders have enlisted yet. Once one joins, you can hand off the arbiter role.
+				</p>
+			{:else}
+				<p class="mb-4 max-w-[64ch] font-body text-[13px] leading-[1.55] text-ink-dim">
+					Hand the arbiter's authority to another commander. You'll be demoted to commander and lose
+					access to this console — only the new arbiter can hand it back.
+				</p>
+				<form
+					method="POST"
+					action="?/transferArbiter"
+					class="flex flex-wrap items-end gap-3.5"
+					use:enhance
+				>
+					<label class="flex min-w-[220px] flex-1 flex-col gap-1.5">
+						<span class={label}>› New arbiter</span>
+						<select name="toUserId" bind:value={transferTo} class={control}>
+							<option value="" disabled>Select a commander…</option>
+							{#each commanders as m (m.userId)}
+								<option value={m.userId}>{m.name}</option>
+							{/each}
+						</select>
+					</label>
+					{#if confirmingTransfer}
+						<div class="flex items-center gap-3">
+							<Button type="submit" variant="primary" disabled={!transferTo}>Confirm transfer</Button>
+							<Button type="button" onclick={() => (confirmingTransfer = false)}>Cancel</Button>
+						</div>
+					{:else}
+						<Button
+							type="button"
+							onclick={() => (confirmingTransfer = true)}
+							disabled={!transferTo}
+						>
+							Transfer role
+						</Button>
+					{/if}
+				</form>
+				{#if transferErrorMsg}
+					<p class="mt-3 font-body text-[12px] text-state-attacker">{transferErrorMsg}</p>
+				{/if}
+			{/if}
 		</section>
 
 		<!-- ── Scoring profile ───────────────────────────────────── -->

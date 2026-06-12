@@ -234,3 +234,43 @@ export async function requireArbiter(slug: string, userId: string | undefined) {
 	// `userId` is proven present here — return it so actions don't re-narrow `locals.user`.
 	return { ...access, userId };
 }
+
+/** Members of a campaign with display name + role, for the arbiter's management UI. */
+export async function getCampaignMembers(campaignId: string) {
+	const rows = await db.query.membership.findMany({
+		where: eq(membership.campaignId, campaignId),
+		with: { user: { columns: { id: true, name: true } } }
+	});
+	return rows.map((m) => ({ userId: m.userId, name: m.user.name, role: m.role as CampaignRole }));
+}
+
+/**
+ * Hand the arbiter role to another member. The current arbiter is demoted to commander first so the
+ * one-arbiter-per-campaign unique index never sees two arbiters mid-swap, then the target is
+ * promoted. Synchronous transaction (bun:sqlite), mirroring createCampaign. The caller has already
+ * asserted it is the arbiter via requireArbiter.
+ */
+export function transferArbiterRole(
+	campaignId: string,
+	toUserId: string
+): { ok: true } | { ok: false; reason: 'same' | 'not-member' } {
+	return db.transaction((tx) => {
+		const target = tx
+			.select({ role: membership.role })
+			.from(membership)
+			.where(and(eq(membership.campaignId, campaignId), eq(membership.userId, toUserId)))
+			.get();
+		if (!target) return { ok: false, reason: 'not-member' };
+		if (target.role === 'arbiter') return { ok: false, reason: 'same' };
+
+		tx.update(membership)
+			.set({ role: 'commander' })
+			.where(and(eq(membership.campaignId, campaignId), eq(membership.role, 'arbiter')))
+			.run();
+		tx.update(membership)
+			.set({ role: 'arbiter' })
+			.where(and(eq(membership.campaignId, campaignId), eq(membership.userId, toUserId)))
+			.run();
+		return { ok: true };
+	});
+}
