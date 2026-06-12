@@ -46,11 +46,11 @@ template lives in `.env.example`.
 
 | Env var | Used by | How to obtain | Status |
 |---|---|---|---|
-| `BETTER_AUTH_SECRET` | Better Auth session signing | `openssl rand -base64 32`; host-injected in prod, never committed | ⬜ prod value |
-| `ORIGIN` | SvelteKit CSRF + Better Auth `baseURL`/`trustedOrigins` + secure-cookie gating + adapter-node URLs | Local `http://localhost:5173`; **prod = `https://dominatus.larront.com`** | ✅ value chosen, set in server `.env` |
-| `DATABASE_URL` | SQLite path | Local `local.db`; prod = mounted volume path | ⬜ prod value |
-| `RESEND_API_KEY` | `src/lib/server/email.ts` | Resend → API Keys → create (`re_…`) | ⬜ not set |
-| `EMAIL_FROM` | Sender address | Must be on a Resend-verified domain; falls back to sandbox `onboarding@resend.dev` | ⬜ not set |
+| `BETTER_AUTH_SECRET` | Better Auth session signing | `openssl rand -base64 32`; host-injected in prod, never committed | ✅ set in Dockge stack `.env` |
+| `ORIGIN` | SvelteKit CSRF + Better Auth `baseURL`/`trustedOrigins` + secure-cookie gating + adapter-node URLs | Local `http://localhost:5173`; **prod = `https://dominatus.larront.com`** | ✅ set, verified live |
+| `DATABASE_URL` | SQLite path | Local `local.db`; prod = mounted volume path | ✅ `/data/local.db` (set by compose) |
+| `RESEND_API_KEY` | `src/lib/server/email.ts` | Resend → API Keys → create (`re_…`) | ✅ set in prod (2026-06-11); sending works |
+| `EMAIL_FROM` | Sender address | Must be on a Resend-verified domain; falls back to sandbox `onboarding@resend.dev` | ⬜ sandbox only — delivers solely to the Resend account email until a domain is verified (Stage 2) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `socialProviders.google` | Google Cloud Console → OAuth 2.0 client; redirect URI `https://<domain>/api/auth/callback/google` | ⬜ not set |
 | `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | `socialProviders.facebook` | Meta for Developers → app + Facebook Login; redirect URI `https://<domain>/api/auth/callback/facebook` | ⬜ not set |
 
@@ -135,12 +135,12 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 - [x] Test the restore path, not just the backup — `scripts/restore.js` (integrity-check → save `.pre-restore` → atomic swap → drop stale `-wal`/`-shm`, then copy the image mirror back); round-trip verified locally.
 - [x] **Uploaded scoresheets persist on the data volume** — battle-report images are written to `<DATABASE_URL dir>/images` (i.e. `/data/images`), so the existing `dominatus-data` mount covers them; no new volume needed. Stored on submit as evidence for the confirmed report (ADR 0001), served via the campaign-gated `/campaigns/[slug]/report/image/[file]`. Cleaned up on report delete/replace. `BODY_SIZE_LIMIT` (below) must stay above the 12 MB image cap.
 - [x] Resource limits + restart policy in compose — `restart: unless-stopped` (already set) plus `mem_limit: 1g` / `cpus: 2.0` in `docker-compose.yml`. **Starting points, not measured** — Tesseract OCR on `/analyze` is the memory driver, so don't lower `mem_limit` without checking OCR doesn't OOM; tune to the box after watching real usage.
-- [x] CI — `.github/workflows/ci.yml`: two jobs on PR + push to `main`. `verify` runs `bun run check` + `bun run test` (installs Playwright chromium for the `client` vitest project per `vite.config.ts`); `image` builds the Docker image (no push) with GHA layer cache. Bun tracks the Dockerfile's rolling `oven/bun:1`. *Not yet exercised on GitHub — first PR will be the real test.*
-- [~] CD — **part 1 done:** `.github/workflows/publish.yml` builds + pushes `ghcr.io/larront/dominatus` (semver + `:latest`) on `v*` tags via the built-in `GITHUB_TOKEN`. `docker-compose.yml` gained `image:` (pins via `IMAGE_TAG`, defaults `:latest`) so the host runs `docker compose pull && docker compose up -d`. **Remaining (part 2):** GHCR package starts **private** — make it public or give the host a `read:packages` token; and pick a redeploy trigger (watchtower / webhook / SSH-from-CI).
+- [x] CI — `.github/workflows/ci.yml`: two jobs on PR + push to `main`. `verify` runs `bun run check` + `bun run test`; `image` builds the Docker image (no push) with GHA layer cache. Actions pinned to Node-24 majors; Bun tracks the Dockerfile's rolling `oven/bun:1`. **Green on `main` (2026-06-11).** (Playwright install was dropped — no `*.svelte.spec` tests exist yet; re-add when the first lands.)
+- [~] CD — **part 1 done + live:** `.github/workflows/publish.yml` builds + pushes `ghcr.io/larront/dominatus` (semver + `:latest`) on `v*` tags via `GITHUB_TOKEN`; `v0.1.0` published and pulled by the host. `docker-compose.yml` is image-only (pins via `IMAGE_TAG`, defaults `:latest`); host runs `docker compose pull && up -d` (Dockge). Package is **public**. **Remaining (part 2):** auto-redeploy trigger (watchtower / webhook / SSH-from-CI) — today it's a manual Dockge redeploy after a tag.
 
 ## Action items for you (external accounts — I can't do these)
 
-- [ ] **Resend:** create account, verify a sending domain (add the SPF/DKIM/DMARC DNS records — needed for deliverability, not just sending), generate `RESEND_API_KEY`
-- [ ] **Google Cloud Console:** OAuth 2.0 client; redirect URI `https://<your-domain>/api/auth/callback/google`
-- [ ] **Meta for Developers:** app + Facebook Login; redirect URI `https://<your-domain>/api/auth/callback/facebook`
-- [ ] **Cloudflare:** create the tunnel, get its token/credentials, map the hostname
+- [~] **Resend:** account + `RESEND_API_KEY` done and **sending verified** (2026-06-11). **Remaining (Stage 2):** verify a sending domain (e.g. `send.larront.com`) with its DKIM/SPF/DMARC DNS records in Cloudflare, then set `EMAIL_FROM` — until then the sandbox sender only reaches the Resend account email, so other people can't register.
+- [ ] **Google Cloud Console:** OAuth 2.0 client; redirect URI `https://dominatus.larront.com/api/auth/callback/google`
+- [ ] **Meta for Developers:** app + Facebook Login; redirect URI `https://dominatus.larront.com/api/auth/callback/facebook`
+- [x] **Cloudflare:** tunnel live, hostname `dominatus.larront.com` mapped via the GUI
