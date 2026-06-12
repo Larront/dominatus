@@ -16,7 +16,7 @@ Target: Docker container behind a Cloudflare Tunnel, SQLite on a mounted volume.
   container startup — `drizzle-kit` is dev-only, kept out of the deploy path
 - **Ingress:** Cloudflare Tunnel (`cloudflared`) terminates TLS at the edge; app serves plain HTTP on a local port. No in-container reverse proxy.
 - **Email:** Resend (transactional)
-- **Auth methods (v1):** email + password with verification, Google, Facebook
+- **Auth methods (v1):** email + password with verification, Google (Facebook removed 2026-06-11 — Meta's live-mode/privacy-policy review wasn't worth it for one button)
 
 ## App changes
 
@@ -51,15 +51,14 @@ template lives in `.env.example`.
 | `DATABASE_URL` | SQLite path | Local `local.db`; prod = mounted volume path | ✅ `/data/local.db` (set by compose) |
 | `RESEND_API_KEY` | `src/lib/server/email.ts` | Resend → API Keys → create (`re_…`) | ✅ set in prod (2026-06-11); sending works |
 | `EMAIL_FROM` | Sender address | Must be on a Resend-verified domain; falls back to sandbox `onboarding@resend.dev` | ✅ `noreply@send.larront.com` — domain verified (DKIM+SPF+MX), delivery to any address confirmed (2026-06-11) |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `socialProviders.google` | Google Cloud Console → OAuth 2.0 client; redirect URI `https://<domain>/api/auth/callback/google` | ⬜ not set |
-| `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | `socialProviders.facebook` | Meta for Developers → app + Facebook Login; redirect URI `https://<domain>/api/auth/callback/facebook` | ⬜ not set |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `socialProviders.google` | Google Cloud Console → OAuth 2.0 client; redirect URI `https://dominatus.larront.com/api/auth/callback/google` | ⬜ not set |
 
 **Resend tiers:**
 - **Tier 0 (now, no key):** links log to the dev console — full flow testable with zero setup.
 - **Tier 1 (key only):** real emails, but the sandbox sender delivers *only* to your Resend signup address.
 - **Tier 2 (verified domain):** add SPF + DKIM + DMARC DNS records, set `EMAIL_FROM` to an address on that domain → send to anyone.
 
-**Social providers:** both also require the redirect URI above registered in the provider's
+**Social provider (Google):** also requires the redirect URI above registered in the Google Cloud
 console; the `https://<domain>` must match the production `ORIGIN`. Local OAuth testing needs the
 `http://localhost:5173/...` callback added too.
 
@@ -74,8 +73,8 @@ console; the `https://<domain>` must match the production `ORIGIN`. Local OAuth 
 ## Social sign-in
 
 - [x] Google provider (`socialProviders.google`) — needs `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
-- [x] Facebook provider (`socialProviders.facebook`) — needs `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET`
-- [x] Social buttons with monochrome brand marks (`src/lib/components/SocialSignIn.svelte`), shown in the AccessGate terminal
+- [x] Single "Continue with Google" button with a monochrome brand mark (`src/lib/components/SocialSignIn.svelte`), shown in the AccessGate terminal
+- Facebook/Meta removed (2026-06-11) — Meta's live-mode + privacy-policy review wasn't worth it for one provider; the code, env vars, and docs were stripped.
 
 ## Auth UX gaps — DONE (2026-06-11, via `/impeccable craft`)
 
@@ -142,5 +141,4 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 
 - [x] **Resend:** account, `RESEND_API_KEY`, and verified sending domain `send.larront.com` (DKIM+SPF+MX, auto-configured into Cloudflare) all done. `EMAIL_FROM=noreply@send.larront.com`; delivery to arbitrary addresses confirmed (2026-06-11). Optional later: a `_dmarc` policy record for extra deliverability margin.
 - [ ] **Google Cloud Console:** OAuth 2.0 client; redirect URI `https://dominatus.larront.com/api/auth/callback/google`
-- [ ] **Meta for Developers:** app + Facebook Login; redirect URI `https://dominatus.larront.com/api/auth/callback/facebook`
 - [x] **Cloudflare:** tunnel live, hostname `dominatus.larront.com` mapped via the GUI
