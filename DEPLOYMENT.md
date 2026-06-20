@@ -33,9 +33,9 @@ Target: Docker container behind a Cloudflare Tunnel, SQLite on a mounted volume.
 
 - [x] `.env.example` documenting every required var
 - [x] `docker-compose.yml` with named volume `dominatus-data` mounted at `/data`
-- [ ] `BETTER_AUTH_SECRET` — production value generated via `openssl rand -base64 32`, injected by host/secret, not committed
-- [ ] `ORIGIN` — public Cloudflare URL in prod (drives SvelteKit CSRF + Better Auth `baseURL`)
-- [ ] `DATABASE_URL` — path on the mounted volume
+- [x] `BETTER_AUTH_SECRET` — production value generated via `openssl rand -base64 32`, injected by host/secret, not committed (set in Dockge stack `.env`)
+- [x] `ORIGIN` — public Cloudflare URL in prod (drives SvelteKit CSRF + Better Auth `baseURL`); set + verified live as `https://dominatus.larront.com`
+- [x] `DATABASE_URL` — path on the mounted volume (`/data/local.db`, set by compose)
 
 ## Required keys & secrets — future setup log
 
@@ -51,7 +51,7 @@ template lives in `.env.example`.
 | `DATABASE_URL` | SQLite path | Local `local.db`; prod = mounted volume path | ✅ `/data/local.db` (set by compose) |
 | `RESEND_API_KEY` | `src/lib/server/email.ts` | Resend → API Keys → create (`re_…`) | ✅ set in prod (2026-06-11); sending works |
 | `EMAIL_FROM` | Sender address | Must be on a Resend-verified domain; falls back to sandbox `onboarding@resend.dev` | ✅ `noreply@send.larront.com` — domain verified (DKIM+SPF+MX), delivery to any address confirmed (2026-06-11) |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `socialProviders.google` | Google Cloud Console → OAuth 2.0 client; redirect URI `https://dominatus.larront.com/api/auth/callback/google` | ⬜ not set |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `socialProviders.google` | Google Cloud Console → OAuth 2.0 client; redirect URI `https://dominatus.larront.com/api/auth/callback/google` | ✅ set in prod |
 
 **Resend tiers:**
 - **Tier 0 (now, no key):** links log to the dev console — full flow testable with zero setup.
@@ -140,5 +140,5 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 ## Action items for you (external accounts — I can't do these)
 
 - [x] **Resend:** account, `RESEND_API_KEY`, and verified sending domain `send.larront.com` (DKIM+SPF+MX, auto-configured into Cloudflare) all done. `EMAIL_FROM=noreply@send.larront.com`; delivery to arbitrary addresses confirmed (2026-06-11). Optional later: a `_dmarc` policy record for extra deliverability margin.
-- [ ] **Google Cloud Console:** OAuth 2.0 client; redirect URI `https://dominatus.larront.com/api/auth/callback/google`
+- [x] **Google Cloud Console:** OAuth 2.0 client created; redirect URI `https://dominatus.larront.com/api/auth/callback/google` registered; `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` set in the Dockge stack `.env`
 - [x] **Cloudflare:** tunnel live, hostname `dominatus.larront.com` mapped via the GUI
