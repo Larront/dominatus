@@ -12,9 +12,12 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const { form, errors, enhance, message, submitting } = untrack(() =>
+	const { form, errors, enhance, submitting } = untrack(() =>
 		superForm(data.form, {
 			dataType: 'json',
+			// On a failed submit, jump to (and focus) the first invalid field rather than leaving the
+			// commander hunting for it in a long form.
+			scrollToError: 'smooth',
 			// The form posts JSON (nested combatants), so the scoresheet can't ride the schema —
 			// append it to the multipart body here; the action reads it off `formData` directly.
 			onSubmit({ formData }) {
@@ -98,6 +101,15 @@
 			c.battleReadyVp,
 			...(c.secondaries ?? []).map((s) => s.victoryPoints)
 		].filter((n): n is number => typeof n === 'number');
+		return parts.length ? parts.reduce((a, b) => a + b, 0) : null;
+	}
+
+	// The calculated secondary subtotal, shown beside primary so the commander sees the breakdown
+	// that feeds the total. Null until at least one secondary carries a number.
+	function secTotal(c: (typeof $form.combatants)[number]): number | null {
+		const parts = (c.secondaries ?? [])
+			.map((s) => s.victoryPoints)
+			.filter((n): n is number => typeof n === 'number');
 		return parts.length ? parts.reduce((a, b) => a + b, 0) : null;
 	}
 
@@ -246,7 +258,7 @@
 		"flex items-center gap-2.5 font-display font-semibold text-[10px] tracking-[0.14em] uppercase text-ink-dim mb-4 after:content-[''] after:flex-1 after:h-px after:bg-border";
 	const label = 'font-display font-semibold text-[10px] tracking-[0.1em] uppercase text-ink-dim';
 	const control =
-		'w-full bg-void border border-border px-[11px] py-2.5 font-body text-[13px] text-ink placeholder:text-ink-faint transition-[border-color,box-shadow] duration-[120ms] focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent-mid),0_0_14px_var(--color-accent-soft)]';
+		'w-full bg-void border border-border px-[11px] py-2.5 font-body text-[13px] text-ink placeholder:text-ink-faint transition-[border-color,box-shadow] duration-[120ms] focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent-mid),0_0_14px_var(--color-accent-soft)] aria-invalid:border-state-attacker-line aria-invalid:shadow-[0_0_0_1px_var(--color-state-attacker-line)]';
 
 	function sideClass(kind: 'attacker' | 'defender', victor: boolean) {
 		const top =
@@ -267,12 +279,12 @@
 		<p
 			class="mb-2.5 font-display text-[10px] font-semibold tracking-[0.14em] text-accent uppercase"
 		>
-			// {editing ? 'Amend Battle Report' : 'File Battle Report'}
+			// {editing ? 'Amend Battle Report' : 'Submit Battle Report'}
 		</p>
 		<h1
 			class="font-display text-[30px] leading-none font-bold tracking-[0.01em] text-balance text-ink"
 		>
-			{editing ? 'Amend Report' : 'Battle Report'}
+			{editing ? 'Amend Report' : 'Submit a Battle Report'}
 		</h1>
 		<p class="mt-3 max-w-[64ch] text-[13px] leading-[1.55] text-ink-dim">
 			{#if editing}
@@ -303,20 +315,6 @@
 			<Button href={base}>Return to map</Button>
 		</section>
 	{:else}
-		{#if $message}
-			<div
-				class="mt-[22px] flex items-center gap-3 border border-border-lum bg-accent-soft px-4 py-3"
-				role="status"
-			>
-				<span
-					class="size-2 shrink-0 bg-accent shadow-[0_0_8px_var(--color-accent)]"
-					aria-hidden="true"
-				></span>
-				<p class="flex-1 text-[13px] text-accent-ink">{$message}</p>
-				<Button variant="ghost" href={base} class="shrink-0">View map</Button>
-			</div>
-		{/if}
-
 		{#if $errors._errors}
 			<p
 				role="alert"
@@ -489,6 +487,7 @@
 				{@const lead = idxList[0]}
 				{@const c = $form.combatants[lead]}
 				{@const total = vpTotal(c)}
+				{@const secs = secTotal(c)}
 				<fieldset class={sideClass(kind, victor)}>
 					<legend
 						class="mb-3.5 flex items-center gap-2.5 p-0 {kind === 'defender'
@@ -541,7 +540,7 @@
 						</p>
 					{/if}
 
-					<div class="mb-2.5 grid grid-cols-[1fr_auto] items-end gap-2">
+					<div class="mb-2.5 grid grid-cols-[1fr_auto_auto] items-end gap-2.5">
 						<label class="flex flex-col gap-1.5">
 							<span class={label}>› Primary</span>
 							<input
@@ -553,6 +552,12 @@
 								bind:value={$form.combatants[lead].primaryVp}
 							/>
 						</label>
+						<div class="flex flex-col gap-1.5 pb-2.5 text-right">
+							<span class={label}>Secondary</span>
+							<span class="font-body text-[15px] leading-none font-semibold text-ink-dim"
+								>{secs ?? '—'}</span
+							>
+						</div>
 						<div class="flex flex-col gap-1.5 pb-2.5 text-right">
 							<span class={label}>Total VP</span>
 							<span class="font-body text-[15px] leading-none font-semibold text-accent"

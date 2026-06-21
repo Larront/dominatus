@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { onDestroy } from 'svelte';
 	import { signIn, signUp, sendVerificationEmail } from '$lib/auth-client';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -13,7 +14,13 @@
 	// phase that can re-dispatch the link. A live sign-in reloads the route so the server load
 	// returns the now-authenticated hub.
 	type Mode = 'signin' | 'enlist';
-	let mode = $state<Mode>('signin');
+	// How we landed on the verify phase: a fresh enlistment ('enlisted') vs a sign-in blocked because
+	// the address is still unverified ('unverified'). Drives distinct copy so a blocked sign-in
+	// plainly reads as "you haven't verified yet" rather than "we just sent you a link".
+	let verifyReason = $state<'enlisted' | 'unverified'>('enlisted');
+	// Open straight to the tab the entry link asked for — the splash "Enlist a commander" CTA links
+	// to /enter?mode=enlist; anything else (or no param) lands on sign-in.
+	let mode = $state<Mode>(page.url.searchParams.get('mode') === 'enlist' ? 'enlist' : 'signin');
 	let phase = $state<'form' | 'verify'>('form');
 	let name = $state('');
 	let email = $state('');
@@ -52,6 +59,7 @@
 		if (error) {
 			// An unverified address can't sign in yet (403) — route to the inbox phase, not an error.
 			if ((error as { status?: number }).status === 403) {
+				verifyReason = 'unverified';
 				phase = 'verify';
 				return;
 			}
@@ -60,6 +68,7 @@
 		}
 		// Enlistment has no session until the email is verified; sign-in is live now.
 		if (mode === 'enlist') {
+			verifyReason = 'enlisted';
 			phase = 'verify';
 			return;
 		}
@@ -105,14 +114,25 @@
 {/snippet}
 
 <AuthTerminal
-	kicker={phase === 'verify' ? '// Verify Transmission' : '// Access Required'}
+	kicker={phase === 'verify'
+		? verifyReason === 'unverified'
+			? '// Verification Required'
+			: '// Verify Transmission'
+		: '// Access Required'}
 	footer={phase === 'form' ? modeSwitch : undefined}
 >
 	{#if phase === 'verify'}
-		<p class="font-body text-[13px] leading-[1.55] text-ink-dim">
-			Verification dispatched to <span class="text-ink">{email}</span>. Follow the link in that
-			message to confirm your address and take the field.
-		</p>
+		{#if verifyReason === 'unverified'}
+			<p class="font-body text-[13px] leading-[1.55] text-ink-dim">
+				<span class="text-ink">{email}</span> hasn't been verified yet, so sign-in is blocked. Follow
+				the link we sent to confirm your address — or have us send a fresh one below — then sign in.
+			</p>
+		{:else}
+			<p class="font-body text-[13px] leading-[1.55] text-ink-dim">
+				Verification dispatched to <span class="text-ink">{email}</span>. Follow the link in that
+				message to confirm your address and take the field.
+			</p>
+		{/if}
 		<div class="mt-5 flex flex-col gap-3">
 			<Button
 				type="button"

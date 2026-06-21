@@ -17,7 +17,7 @@
 	const readout = [
 		'File a battle report in under a minute',
 		'Watch control shift across the orbital map',
-		'Standings the arbiter never reconciles by hand'
+		'Standings that tally themselves after every battle'
 	];
 </script>
 
@@ -92,7 +92,7 @@
 			<div class="rise mt-7 flex flex-wrap items-center gap-x-5 gap-y-3" style="--d: 200ms">
 				<Button href="/enter" variant="primary">Sign in →</Button>
 				<a
-					href="/enter"
+					href="/enter?mode=enlist"
 					class="font-body text-[13px] text-ink-dim transition-colors duration-150 hover:text-accent"
 				>
 					New here? Enlist a commander
@@ -116,7 +116,7 @@
 	<footer
 		class="relative z-10 px-[26px] py-5 font-display text-[10px] font-medium tracking-[0.18em] text-ink-faint uppercase max-[680px]:px-4"
 	>
-		// Self-hosted · Faction-neutral · One war at a time
+		// Self-hosted · Faction-neutral · Narrative-first
 	</footer>
 </div>
 

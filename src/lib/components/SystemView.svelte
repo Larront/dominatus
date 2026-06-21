@@ -199,8 +199,11 @@
 		</div>
 	</div>
 
+	<!-- System caption, parked in the empty band above the cluster. Screen-space (not in the tilted
+	     scene), so a center-anchored position collided with the inner orbits/planets in 3D; up top it
+	     clears the orbits in both projections and sits below the top-right view toggle. -->
 	<p
-		class="pointer-events-none absolute top-1/2 left-1/2 z-[2] [transform:translate(-50%,clamp(48px,12vmin,116px))] font-display text-[9.5px] font-medium tracking-[0.24em] whitespace-nowrap text-sun-glow uppercase [text-shadow:0_0_8px_var(--color-sun-glow)]"
+		class="pointer-events-none absolute top-[clamp(56px,8vmin,76px)] left-1/2 z-[2] -translate-x-1/2 font-display text-[9.5px] font-medium tracking-[0.24em] whitespace-nowrap text-sun-glow uppercase [text-shadow:0_0_8px_var(--color-sun-glow)]"
 	>
 		{campaignName} · Primary
 	</p>
@@ -237,15 +240,39 @@
 		>
 	</div>
 
-	<p
-		class="absolute right-5 bottom-5 z-[6] flex items-center gap-2 font-display text-[9.5px] font-medium tracking-[0.12em] text-ink-faint uppercase max-[720px]:hidden"
-	>
-		<svg viewBox="0 0 14 14" class="size-[13px]" aria-hidden="true">
-			<circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.2" />
-			<path d="M7 0v3M7 11v3M0 7h3M11 7h3" stroke="currentColor" stroke-width="1.2" />
-		</svg>
-		Select a world for intel
-	</p>
+	{#if worlds.length > 0}
+		<!-- The map's primary action. Bottom-right on desktop (clear of the bottom-left legend); on
+		     mobile it anchors bottom-centre above the legend, since the Report nav link lives in the
+		     header's hamburger there. -->
+		<div
+			class="absolute right-5 bottom-5 z-[6] flex flex-col items-end gap-2.5 max-[720px]:right-3 max-[720px]:bottom-3"
+		>
+			<a
+				href="{basePath}/report"
+				aria-label="Submit a battle report"
+				class="inline-flex items-center justify-center gap-2 border border-accent bg-accent px-4 py-2.5 font-display text-[11px] font-bold tracking-[0.1em] text-void uppercase no-underline shadow-[0_0_18px_var(--color-accent-soft)] transition-[background-color,box-shadow] duration-[120ms] hover:bg-accent-ink hover:shadow-[0_0_24px_var(--color-accent-glow)] focus-visible:shadow-[0_0_0_2px_var(--color-accent-mid),0_0_18px_var(--color-accent-soft)] focus-visible:outline-none max-[720px]:size-[52px] max-[720px]:gap-0 max-[720px]:p-0"
+			>
+				<svg viewBox="0 0 16 16" class="size-[15px] max-[720px]:size-[22px]" aria-hidden="true">
+					<path
+						d="M8 3.5v9M3.5 8h9"
+						stroke="currentColor"
+						stroke-width="1.9"
+						stroke-linecap="round"
+					/>
+				</svg>
+				<span class="max-[720px]:hidden">Submit Battle Report</span>
+			</a>
+			<p
+				class="flex items-center gap-2 font-display text-[9.5px] font-medium tracking-[0.12em] text-ink-faint uppercase max-[720px]:hidden"
+			>
+				<svg viewBox="0 0 14 14" class="size-[13px]" aria-hidden="true">
+					<circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.2" />
+					<path d="M7 0v3M7 11v3M0 7h3M11 7h3" stroke="currentColor" stroke-width="1.2" />
+				</svg>
+				Select a world for intel
+			</p>
+		</div>
+	{/if}
 
 	<div class="vignette" aria-hidden="true"></div>
 </div>
@@ -512,11 +539,21 @@
 
 	@media (max-width: 720px) {
 		.system {
-			width: min(60vh, 74vw);
-			height: min(60vh, 74vw);
+			width: min(64vh, 80vw);
+			height: min(64vh, 80vw);
+			/* Lift the cluster into the empty band above it (the tilt projects the orbits low, so a
+			   centred system leaves a big dead zone up top on tall phones). Keeps the tilt. */
+			transform: translateY(-7%) rotateX(var(--tilt));
 		}
 		.scene {
-			perspective-origin: 50% 40%;
+			perspective-origin: 50% 38%;
+		}
+	}
+
+	/* Reduced motion still gets the upward bias, just without the drift transform fighting it. */
+	@media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+		.system {
+			transform: translateY(-7%) rotateX(var(--tilt));
 		}
 	}
 

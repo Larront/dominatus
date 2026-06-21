@@ -36,6 +36,7 @@
 			onclick={() => (show = !show)}
 			aria-label={show ? 'Hide password' : 'Show password'}
 			aria-pressed={show}
+			tabindex="-1"
 			class="absolute inset-y-0 right-0 flex cursor-pointer items-center px-3 text-ink-faint transition-colors duration-150 hover:text-accent focus-visible:text-accent focus-visible:outline-none"
 		>
 			{#if show}

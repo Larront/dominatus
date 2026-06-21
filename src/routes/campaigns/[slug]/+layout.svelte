@@ -7,6 +7,10 @@
 	const slug = $derived(page.params.slug);
 	const base = $derived(`/campaigns/${slug}`);
 
+	// Mobile section nav collapses into a dropdown — the six inline links overflow a phone width
+	// (the desktop row is preserved above 720px). Closed on navigation, Escape, or a backdrop tap.
+	let menuOpen = $state(false);
+
 	const nav = $derived([
 		{ href: base, label: 'Map' },
 		{ href: `${base}/report`, label: 'Report' },
@@ -22,6 +26,8 @@
 	const navLink =
 		'border border-transparent px-[13px] py-[9px] font-display text-[11px] font-semibold tracking-[0.09em] uppercase no-underline transition-[color,border-color,background-color] duration-[120ms] max-[720px]:px-[9px] max-[720px]:py-2 max-[720px]:text-[10px]';
 </script>
+
+<svelte:window onkeydown={(e) => e.key === 'Escape' && (menuOpen = false)} />
 
 <div class="flex h-[100dvh] flex-col overflow-hidden bg-void">
 	<header
@@ -98,7 +104,8 @@
 			Cycle <b class="font-bold text-accent">{data.campaign.currentCycle}</b>
 		</span>
 
-		<nav class="flex gap-0.5" aria-label="Campaign sections">
+		<!-- Desktop: the section links inline. -->
+		<nav class="flex gap-0.5 max-[720px]:hidden" aria-label="Campaign sections">
 			{#each nav as item (item.href)}
 				<a
 					class="{navLink} {isActive(item.href)
@@ -111,6 +118,60 @@
 				</a>
 			{/each}
 		</nav>
+
+		<!-- Mobile: collapse the same links into a dropdown. -->
+		<div class="relative hidden max-[720px]:block">
+			<button
+				type="button"
+				onclick={() => (menuOpen = !menuOpen)}
+				aria-label="Campaign sections"
+				aria-expanded={menuOpen}
+				class="flex size-9 items-center justify-center border border-border bg-panel-2 text-ink-dim transition-[color,border-color] duration-[120ms] hover:border-border-lum hover:text-accent focus-visible:border-accent focus-visible:text-accent focus-visible:outline-none"
+			>
+				<svg viewBox="0 0 20 20" class="size-[18px]" aria-hidden="true">
+					{#if menuOpen}
+						<path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" fill="none" />
+					{:else}
+						<path
+							d="M3 6h14M3 10h14M3 14h14"
+							stroke="currentColor"
+							stroke-width="1.6"
+							fill="none"
+						/>
+					{/if}
+				</svg>
+			</button>
+
+			{#if menuOpen}
+				<!-- Tap-outside backdrop; the menu sits above it. -->
+				<button
+					type="button"
+					tabindex="-1"
+					aria-hidden="true"
+					class="fixed inset-0 z-10 cursor-default"
+					onclick={() => (menuOpen = false)}
+				></button>
+				<nav
+					class="absolute top-[calc(100%+12px)] right-0 z-20 flex min-w-[180px] flex-col border border-border bg-panel shadow-[0_12px_30px_-8px_rgba(0,0,0,0.7)]"
+					aria-label="Campaign sections"
+				>
+					{#each nav as item (item.href)}
+						<a
+							class="border-b border-border px-4 py-3 font-display text-[11px] font-semibold tracking-[0.09em] uppercase no-underline transition-[color,background-color] duration-[120ms] last:border-b-0 {isActive(
+								item.href
+							)
+								? 'bg-accent-soft text-accent'
+								: 'text-ink-dim hover:text-accent'}"
+							href={item.href}
+							aria-current={isActive(item.href) ? 'page' : undefined}
+							onclick={() => (menuOpen = false)}
+						>
+							{item.label}
+						</a>
+					{/each}
+				</nav>
+			{/if}
+		</div>
 	</header>
 
 	<main class="relative min-h-0 flex-1 overflow-y-auto">

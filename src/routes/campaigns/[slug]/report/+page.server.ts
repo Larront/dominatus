@@ -1,5 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { superValidate, message, setError } from 'sveltekit-superforms';
+import { superValidate, setError } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { battleReportSchema } from '$lib/schemas/battle-report';
 import { requireCampaignAccess } from '$lib/server/campaigns';
@@ -119,6 +119,7 @@ export const actions: Actions = {
 			throw e;
 		}
 
-		return message(form, 'Battle report logged. Control updated.');
+		// Straight back to the campaign map, where the freshly-folded control is the confirmation.
+		redirect(303, `/campaigns/${params.slug}`);
 	}
 };

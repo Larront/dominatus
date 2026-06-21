@@ -57,6 +57,30 @@
 		</header>
 
 		<div class="flex flex-col gap-[18px]">
+			<section
+				class="relative border border-border bg-panel px-[22px] pt-5 pb-[22px] before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-[linear-gradient(90deg,var(--color-accent),transparent_70%)] before:opacity-70 before:content-['']"
+			>
+				<h2
+					class="mb-4 flex items-center gap-2.5 font-display text-[10px] font-semibold tracking-[0.14em] text-ink-dim uppercase after:h-px after:flex-1 after:bg-border after:content-['']"
+				>
+					// Identity
+				</h2>
+				<dl class="flex flex-col">
+					<div class="flex items-center gap-3 border-t border-border py-2.5 first:border-t-0">
+						<dt class="w-[120px] font-display text-[10px] font-semibold tracking-[0.1em] text-ink-faint uppercase">
+							Commander
+						</dt>
+						<dd class="font-body text-[13px] text-ink">{data.user.name || '—'}</dd>
+					</div>
+					<div class="flex items-center gap-3 border-t border-border py-2.5">
+						<dt class="w-[120px] font-display text-[10px] font-semibold tracking-[0.1em] text-ink-faint uppercase">
+							Email
+						</dt>
+						<dd class="font-body text-[13px] break-all text-ink">{data.user.email}</dd>
+					</div>
+				</dl>
+			</section>
+
 			<DeleteAccountSection arbiterCampaigns={data.arbiterCampaigns} />
 		</div>
 	</main>
