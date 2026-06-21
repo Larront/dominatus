@@ -102,6 +102,9 @@ export const actions: Actions = {
 		const editId = url.searchParams.get('edit');
 		if (editId) {
 			if (role !== 'arbiter') return fail(403, { form });
+			// Optional free-text reason for the correction — rides alongside the JSON form body, never
+			// required (issue #6). Captured into the append-only audit trail with the pre-edit snapshot.
+			const reason = String(formData.get('reason') ?? '');
 			const newImage =
 				imageCheck.kind === 'ok' ? await saveReportImage(imageCheck.file) : undefined;
 			let previousImagePath: string | null = null;
@@ -109,6 +112,8 @@ export const actions: Actions = {
 				({ previousImagePath } = updateBattleReport(editId, {
 					...form.data,
 					campaignId: campaign.id,
+					actorUserId: locals.user.id,
+					reason,
 					...(newImage !== undefined ? { imagePath: newImage } : {})
 				}));
 			} catch (e) {

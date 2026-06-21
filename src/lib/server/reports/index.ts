@@ -1,7 +1,13 @@
 import { and, eq, asc, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { battleReport, battleReportCombatant, worldControl } from '$lib/server/db/schema';
+import {
+	battleReport,
+	battleReportCombatant,
+	reportAudit,
+	worldControl
+} from '$lib/server/db/schema';
 import { replay, type FoldReport } from '$lib/domain/control-fold';
+import { buildReportSnapshot } from './snapshot';
 import type { BattleReportInput } from '$lib/schemas/battle-report';
 
 /** The exact transaction-client type drizzle hands the `db.transaction` callback. */
@@ -146,6 +152,49 @@ export function recomputeWorldControl(tx: Tx, worldId: string): void {
 	if (rows.length) tx.insert(worldControl).values(rows).run();
 }
 
+/** What the arbiter is doing to a report, for the audit trail and (optional) reason. */
+type AuditContext = { actorUserId: string; reason?: string | null };
+
+/**
+ * Within an open transaction, freeze a report's current state to the append-only audit trail
+ * (issue #6) and return the report row so the caller can reuse it (e.g. for its world/image). Reads
+ * the full report and its combatants *before* the caller mutates them, so the snapshot is the prior
+ * state. Throws if the report isn't in this campaign — the caller's check, run before any write.
+ */
+function auditReport(
+	tx: Tx,
+	action: 'edit' | 'delete',
+	reportId: string,
+	campaignId: string,
+	ctx: AuditContext
+): typeof battleReport.$inferSelect {
+	const [report] = tx
+		.select()
+		.from(battleReport)
+		.where(and(eq(battleReport.id, reportId), eq(battleReport.campaignId, campaignId)))
+		.all();
+	if (!report) throw new Error('Report not found in this campaign');
+
+	const combatants = tx
+		.select()
+		.from(battleReportCombatant)
+		.where(eq(battleReportCombatant.reportId, reportId))
+		.all();
+
+	tx.insert(reportAudit)
+		.values({
+			campaignId,
+			reportId,
+			action,
+			actorUserId: ctx.actorUserId,
+			reason: ctx.reason?.trim() || null,
+			snapshot: buildReportSnapshot(report, combatants)
+		})
+		.run();
+
+	return report;
+}
+
 /**
  * Does this stored scoresheet belong to a report in this campaign? Gates the image-serving
  * route so a member of one campaign can't read another's scoresheet by filename.
@@ -249,16 +298,13 @@ export async function getReportForEdit(
  */
 export function updateBattleReport(
 	reportId: string,
-	input: BattleReportInput & { campaignId: string; imagePath?: string }
+	input: BattleReportInput & { campaignId: string; imagePath?: string } & AuditContext
 ): { worldIds: string[]; previousImagePath: string | null } {
 	return db.transaction((tx) => {
-		const existing = tx
-			.select({ worldId: battleReport.worldId, imagePath: battleReport.imagePath })
-			.from(battleReport)
-			.where(and(eq(battleReport.id, reportId), eq(battleReport.campaignId, input.campaignId)))
-			.all();
-		if (!existing.length) throw new Error('Report not found in this campaign');
-		const oldWorldId = existing[0].worldId;
+		// Freeze the pre-edit state to the audit trail first, in this same transaction, so the log and
+		// its audit can never diverge. Returns the existing row so we can re-fold the old world too.
+		const existing = auditReport(tx, 'edit', reportId, input.campaignId, input);
+		const oldWorldId = existing.worldId;
 
 		tx.update(battleReport)
 			.set({
@@ -295,7 +341,7 @@ export function updateBattleReport(
 		// Re-fold the new world, and the old one too if the report moved between worlds.
 		const worldIds = oldWorldId === input.worldId ? [input.worldId] : [oldWorldId, input.worldId];
 		for (const worldId of worldIds) recomputeWorldControl(tx, worldId);
-		return { worldIds, previousImagePath: existing[0].imagePath };
+		return { worldIds, previousImagePath: existing.imagePath };
 	});
 }
 
@@ -305,16 +351,20 @@ export function updateBattleReport(
  */
 export function deleteBattleReport(
 	reportId: string,
-	campaignId: string
+	campaignId: string,
+	ctx: AuditContext
 ): { worldId: string | null; imagePath: string | null } {
 	return db.transaction((tx) => {
-		const existing = tx
-			.select({ worldId: battleReport.worldId, imagePath: battleReport.imagePath })
+		const found = tx
+			.select({ id: battleReport.id })
 			.from(battleReport)
 			.where(and(eq(battleReport.id, reportId), eq(battleReport.campaignId, campaignId)))
 			.all();
-		if (!existing.length) return { worldId: null, imagePath: null };
-		const { worldId, imagePath } = existing[0];
+		if (!found.length) return { worldId: null, imagePath: null };
+
+		// Freeze the pre-delete state to the audit trail first, in this same transaction; the returned
+		// row gives us the world to re-fold and the scoresheet to unlink afterwards.
+		const { worldId, imagePath } = auditReport(tx, 'delete', reportId, campaignId, ctx);
 
 		// Combatants cascade on the FK; recompute the world from the now-shorter log.
 		tx.delete(battleReport).where(eq(battleReport.id, reportId)).run();

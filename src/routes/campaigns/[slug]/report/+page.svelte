@@ -28,6 +28,9 @@
 			// append it to the multipart body here; the action reads it off `formData` directly.
 			onSubmit({ formData }) {
 				if (imageFile) formData.set('image', imageFile);
+				// Optional reason for an arbiter amend (issue #6) — rides alongside the JSON body like the
+				// image; the action records it in the audit trail. Never required, so an empty box is fine.
+				if (editing && reason.trim()) formData.set('reason', reason);
 			}
 		})
 	);
@@ -207,6 +210,9 @@
 		battleReadyVp?: number;
 	};
 	type ReportDraft = { combatants: DraftCombatant[]; confidence?: number };
+
+	// Optional, never-blocking reason for an arbiter amend, captured into the audit trail (issue #6).
+	let reason = $state('');
 
 	let imageFile = $state<File | null>(null);
 	// Object URL for the on-screen preview, so the commander can cross-reference the image
@@ -812,6 +818,24 @@
 						bind:value={$form.narrative}
 					></textarea>
 				</label>
+				{#if editing}
+					<!-- Arbiter amend: an optional note explaining the correction, kept in the audit trail
+					     (issue #6). Never required — leaving it blank still saves. -->
+					<label class="mt-3.5 flex flex-col gap-1.5">
+						<span class={label}
+							>› Reason for correction <span class="tracking-[0.06em] text-ink-faint"
+								>optional</span
+							></span
+						>
+						<input
+							class={control}
+							type="text"
+							maxlength="300"
+							placeholder="Why are you amending this report? (logged for the record)"
+							bind:value={reason}
+						/>
+					</label>
+				{/if}
 			</section>
 
 			<!-- ── Submit ────────────────────────────────────────────── -->

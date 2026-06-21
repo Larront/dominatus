@@ -6,6 +6,7 @@ import {
 	warband,
 	battleReport,
 	paintingAward,
+	reportAudit,
 	campaign
 } from '$lib/server/db/schema';
 
@@ -67,6 +68,11 @@ export async function anonymizeDepartingUser(userId: string): Promise<void> {
 		.update(paintingAward)
 		.set({ grantedByUserId: DELETED_COMMANDER_ID })
 		.where(eq(paintingAward.grantedByUserId, userId));
+	// The audit trail is append-only and must outlive its actor — reassign, never cascade away.
+	await db
+		.update(reportAudit)
+		.set({ actorUserId: DELETED_COMMANDER_ID })
+		.where(eq(reportAudit.actorUserId, userId));
 
 	// Memberships are the user's active seats — drop them (cascade may be off in bun:sqlite, so
 	// do it explicitly). Warbands persist under the tombstone; the seat does not.

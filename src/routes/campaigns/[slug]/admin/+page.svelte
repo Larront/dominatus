@@ -459,7 +459,7 @@
 									formId="delete-{r.id}"
 									action="?/deleteReport"
 									recordId={r.id}
-									confirm="Delete the report over {r.worldName}? Standings and control will be recalculated as if it had never been submitted — this can't be undone."
+									reasonPrompt="Delete the report over {r.worldName}? Standings and control will be recalculated as if it had never been submitted — this can't be undone.&#10;&#10;Optionally note why (logged for the record), then OK to delete or Cancel to keep it."
 									class="inline-flex cursor-pointer items-center justify-center border border-border bg-panel-2 px-3.5 py-2.5 font-display text-[11px] font-semibold tracking-[0.09em] text-ink-dim uppercase transition-[color,border-color,background-color] duration-[120ms] hover:border-state-attacker-line hover:bg-state-attacker-soft hover:text-state-attacker focus-visible:border-state-attacker-line focus-visible:outline-none"
 								>
 									Delete Report
