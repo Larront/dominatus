@@ -43,6 +43,13 @@
       "when": 1781042104472,
       "tag": "0005_slimy_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1782082183812,
+      "tag": "0006_clever_prodigy",
+      "breakpoints": true
     }
   ]
 }

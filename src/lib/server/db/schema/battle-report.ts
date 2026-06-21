@@ -64,6 +64,13 @@ export const battleReportCombatant = sqliteTable(
 			.notNull()
 			.references(() => warband.id, { onDelete: 'cascade' }),
 		side: text('side', { enum: ['attacker', 'defender'] }).notNull(),
+		/**
+		 * This side's primary mission, from the edition's canonical list (see $lib/domain/missions) —
+		 * each side runs its own. Null when not recorded. Stored as free text, like secondaries, so an
+		 * edition's mission set is data, not a schema change; the canonical constraint lives at the form
+		 * and at analytics. In 2v2 only the side's lead combatant carries it (it shares the team score).
+		 */
+		primaryMission: text('primary_mission'),
 		/** Primary-mission VP. Null when not recorded (e.g. unanalysed manual entry). */
 		primaryVp: integer('primary_vp'),
 		/** Battle-ready / paint VP. */

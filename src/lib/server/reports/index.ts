@@ -232,6 +232,7 @@ export async function getReportForEdit(
 			combatants: r.combatants.map((c) => ({
 				warbandId: c.warbandId,
 				side: c.side,
+				primaryMission: c.primaryMission ?? '',
 				primaryVp: c.primaryVp,
 				battleReadyVp: c.battleReadyVp,
 				secondaries: c.secondaries ?? []
@@ -281,6 +282,7 @@ export function updateBattleReport(
 					reportId,
 					warbandId: c.warbandId,
 					side: c.side,
+					primaryMission: c.primaryMission?.trim() || null,
 					primaryVp: c.primaryVp ?? null,
 					battleReadyVp: c.battleReadyVp ?? null,
 					secondaries: c.secondaries.length ? c.secondaries : null
@@ -355,6 +357,7 @@ export function submitBattleReport(
 					reportId: report.id,
 					warbandId: c.warbandId,
 					side: c.side,
+					primaryMission: c.primaryMission?.trim() || null,
 					primaryVp: c.primaryVp ?? null,
 					battleReadyVp: c.battleReadyVp ?? null,
 					secondaries: c.secondaries.length ? c.secondaries : null

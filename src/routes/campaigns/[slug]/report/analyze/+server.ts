@@ -3,6 +3,8 @@ import { requireCampaignAccess } from '$lib/server/campaigns';
 import { getWarbandIdentitiesForCampaign } from '$lib/server/warbands';
 import { analyzeBattleReport } from '$lib/server/analysis/analyze-battle-report';
 import { matchWarbands } from '$lib/server/analysis/match-warbands';
+import { matchMission, matchSecondaries } from '$lib/server/analysis/match-missions';
+import { PRIMARY_MISSIONS, SECONDARY_MISSIONS } from '$lib/domain/missions';
 import { checkImageUpload } from '$lib/server/report-images';
 import type { RequestHandler } from './$types';
 
@@ -30,6 +32,18 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 	draft.combatants.forEach((c, i) => {
 		c.warbandId = matched[i];
 	});
+
+	// Constrain the OCR'd mission labels to the edition's canonical set; an uncertain read is left
+	// blank for the commander to choose rather than guessed. Each side runs its own primary, so match
+	// per combatant.
+	for (const c of draft.combatants) {
+		c.primaryMission = matchMission(c.detectedPrimaryMission, PRIMARY_MISSIONS);
+		const names = matchSecondaries(
+			c.secondaries.map((s) => s.name),
+			SECONDARY_MISSIONS
+		);
+		c.secondaries = c.secondaries.map((s, i) => ({ ...s, name: names[i] ?? '' }));
+	}
 
 	return json(draft);
 };
