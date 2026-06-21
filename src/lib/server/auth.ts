@@ -4,7 +4,7 @@ import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
-import { sendEmail } from '$lib/server/email';
+import { sendEmail, brandedEmail } from '$lib/server/email';
 import { anonymizeDepartingUser } from '$lib/server/account-deletion';
 
 // Secure cookies and trusted origins both derive from ORIGIN, so a single env var drives the
@@ -45,7 +45,15 @@ export const auth = betterAuth({
 			await sendEmail({
 				to: user.email,
 				subject: 'Reset your Dominatus password',
-				html: `<p>Click below to choose a new password:</p><p><a href="${url}">Reset password</a></p><p>If you didn't request this, you can ignore this email.</p>`
+				html: brandedEmail({
+					kicker: '// Cipher Reset',
+					heading: 'Reset your password',
+					body: 'A new access cipher was requested for your Dominatus account. Choose a new password with the link below.',
+					ctaLabel: 'Reset password',
+					ctaUrl: url,
+					footnote:
+						"If you didn't request this, you can safely ignore this message — your password stays as it is."
+				})
 			});
 		}
 	},
@@ -56,7 +64,13 @@ export const auth = betterAuth({
 			await sendEmail({
 				to: user.email,
 				subject: 'Verify your email for Dominatus',
-				html: `<p>Welcome to Dominatus. Confirm your email to finish signing up:</p><p><a href="${url}">Verify email</a></p>`
+				html: brandedEmail({
+					kicker: '// Verify Transmission',
+					heading: 'Confirm your enlistment',
+					body: 'Welcome to Dominatus, commander. Confirm your email to finish enlisting and take the field.',
+					ctaLabel: 'Verify email',
+					ctaUrl: url
+				})
 			});
 		}
 	},
@@ -75,7 +89,14 @@ export const auth = betterAuth({
 				await sendEmail({
 					to: user.email,
 					subject: 'Confirm account deletion — Dominatus',
-					html: `<p>You asked to delete your Dominatus account. This is permanent.</p><p>Your warbands and battle history stay on record under "Deleted Commander" so campaign standings hold; your login and memberships are removed.</p><p><a href="${url}">Confirm account deletion</a></p><p>If you didn't request this, ignore this email — nothing happens.</p>`
+					html: brandedEmail({
+						kicker: '// Discharge Order',
+						heading: 'Confirm account deletion',
+						body: 'You asked to delete your Dominatus account — this is permanent. Your warbands and battle history stay on record under "Deleted Commander" so campaign standings hold; your login and memberships are removed.',
+						ctaLabel: 'Confirm deletion',
+						ctaUrl: url,
+						footnote: "If you didn't request this, ignore this email — nothing happens."
+					})
 				});
 			},
 			// Reassign the departing commander's data to the tombstone before the row is removed.
