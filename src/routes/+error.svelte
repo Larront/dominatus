@@ -15,7 +15,9 @@
 	);
 </script>
 
-<main class="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-6 text-center">
+<main
+	class="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-6 text-center"
+>
 	<!-- A faint phosphor bloom and edge vignette, the same atmosphere the hub carries. -->
 	<div aria-hidden="true" class="pointer-events-none absolute inset-0">
 		<div

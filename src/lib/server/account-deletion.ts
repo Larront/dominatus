@@ -1,6 +1,13 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { user, membership, warband, battleReport, paintingAward, campaign } from '$lib/server/db/schema';
+import {
+	user,
+	membership,
+	warband,
+	battleReport,
+	paintingAward,
+	campaign
+} from '$lib/server/db/schema';
 
 /**
  * Account deletion preserves campaign integrity rather than cascading a departing commander's

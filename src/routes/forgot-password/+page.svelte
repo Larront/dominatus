@@ -37,8 +37,8 @@
 <AuthTerminal kicker="// Recover Access" footer={backLink}>
 	{#if sent}
 		<p class="font-body text-[13px] leading-[1.55] text-ink-dim">
-			If <span class="text-ink">{email}</span> is on the rolls, a reset link is inbound. Follow it
-			to set a new password — the link expires after a short while.
+			If <span class="text-ink">{email}</span> is on the rolls, a reset link is inbound. Follow it to
+			set a new password — the link expires after a short while.
 		</p>
 	{:else}
 		<p class="mb-4 font-body text-[13px] leading-[1.55] text-ink-dim">

@@ -225,7 +225,9 @@
 					</label>
 					{#if confirmingTransfer}
 						<div class="flex items-center gap-3">
-							<Button type="submit" variant="primary" disabled={!transferTo}>Confirm transfer</Button>
+							<Button type="submit" variant="primary" disabled={!transferTo}
+								>Confirm transfer</Button
+							>
 							<Button type="button" onclick={() => (confirmingTransfer = false)}>Cancel</Button>
 						</div>
 					{:else}

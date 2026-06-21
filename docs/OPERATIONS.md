@@ -9,7 +9,17 @@ stdout, captured by Docker's `json-file` driver. Each request carries a per-requ
 `requestId` (via a pino child logger) so all lines from one request can be correlated:
 
 ```json
-{ "level": 30, "time": 1781127870465, "requestId": "…", "method": "POST", "path": "/campaigns", "status": 303, "ms": 12, "userId": "abc123", "msg": "request" }
+{
+	"level": 30,
+	"time": 1781127870465,
+	"requestId": "…",
+	"method": "POST",
+	"path": "/campaigns",
+	"status": 303,
+	"ms": 12,
+	"userId": "abc123",
+	"msg": "request"
+}
 ```
 
 pino levels are numeric: `info`=30, `warn`=40, `error`=50. Unhandled 500s are logged at
@@ -23,9 +33,9 @@ In route handlers, prefer the request-scoped logger so lines inherit the `reques
 
 ```ts
 export const actions = {
-  default: async ({ locals }) => {
-    locals.log.info({ campaignId }, 'campaign created');
-  }
+	default: async ({ locals }) => {
+		locals.log.info({ campaignId }, 'campaign created');
+	}
 };
 ```
 

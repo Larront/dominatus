@@ -44,7 +44,9 @@ check.close();
 const ok = result && Object.values(result)[0] === 'ok';
 if (!ok) {
 	await unlink(target);
-	console.error(JSON.stringify({ level: 'error', msg: 'backup integrity_check failed', target, result }));
+	console.error(
+		JSON.stringify({ level: 'error', msg: 'backup integrity_check failed', target, result })
+	);
 	process.exit(1);
 }
 
@@ -64,7 +66,8 @@ try {
 		await copyFile(join(imagesSrc, f), join(imagesDest, f));
 		copied++;
 	}
-	if (copied) console.log(JSON.stringify({ level: 'info', msg: 'images mirrored', copied, dir: imagesDest }));
+	if (copied)
+		console.log(JSON.stringify({ level: 'info', msg: 'images mirrored', copied, dir: imagesDest }));
 } catch (e) {
 	if (e?.code !== 'ENOENT') throw e; // no images dir yet — nothing to mirror
 }
