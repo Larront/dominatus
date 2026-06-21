@@ -78,15 +78,23 @@ single source of a battle's record.
 _Avoid_: Battle (the report is the record; there is no separate battle entity).
 
 **Mission**:
-A scoring objective from the current edition's canonical mission set (Warhammer 40k 10th
-edition, the Pariah Nexus pack). A **Primary Mission** is the main objective a side plays
-to — **each side runs its own** — and a **Secondary Mission** is one of the side's chosen
-extra objectives. The canonical lists are a code-level domain constant, not arbiter-editable:
-an edition's set is fixed game data, so rotating packs is a code change, not a campaign setting.
-A battle report carries each side's primary mission and its secondary scores; the picker (and,
-later, analytics) constrains entries to the canonical set, while storage stays free text so a
-future pack is data, not a schema migration.
+A scoring objective from the current edition's canonical mission set (Warhammer 40k). A
+**Primary Mission** is the main objective a side plays to — **each side runs its own** — and a
+**Secondary Mission** is one of the side's chosen extra objectives. The canonical lists are a
+code-level domain constant, not arbiter-editable: an edition's set is fixed game data, so
+rotating packs is a code change, not a campaign setting. A battle report carries each side's
+primary mission and its secondary scores; the picker (and, later, analytics) constrains entries
+to the canonical set, while storage stays free text so a future pack is data, not a schema
+migration.
 _Avoid_: Task, Objective (unqualified — say "primary/secondary mission").
+
+**Force Disposition**:
+The broad objective category a side fields under (e.g. _Take and Hold_, _Reconnaissance_) —
+distinct from its named primary mission, and like it, **each side declares its own**. A fixed
+canonical list, the same code-level domain constant as Mission, surfaced as an optional picker
+per side on the battle report. Unlike missions it is never on the scoresheet, so it is always
+entered by hand, never OCR-matched.
+_Avoid_: Deployment (the disposition is the objective category, not the table layout).
 
 **Report Draft**:
 The provisional set of battle-report fields the server derives from an uploaded image via

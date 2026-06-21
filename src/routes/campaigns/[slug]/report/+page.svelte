@@ -8,7 +8,12 @@
 	import SegmentedField from '$lib/components/ui/SegmentedField.svelte';
 	import Checkbox from '$lib/components/ui/Checkbox.svelte';
 	import { MAX_SECONDARIES } from '$lib/schemas/battle-report';
-	import { PRIMARY_MISSIONS, SECONDARY_MISSIONS, isSecondaryMission } from '$lib/domain/missions';
+	import {
+		PRIMARY_MISSIONS,
+		SECONDARY_MISSIONS,
+		FORCE_DISPOSITIONS,
+		isSecondaryMission
+	} from '$lib/domain/missions';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -43,6 +48,10 @@
 	const primaryMissionItems = [
 		{ value: '', label: '— No primary mission —' },
 		...PRIMARY_MISSIONS.map((m) => ({ value: m, label: m }))
+	];
+	const forceDispositionItems = [
+		{ value: '', label: '— No disposition —' },
+		...FORCE_DISPOSITIONS.map((d) => ({ value: d, label: d }))
 	];
 	const secondaryMissionItems = SECONDARY_MISSIONS.map((m) => ({ value: m, label: m }));
 	function secondaryItems(current: string) {
@@ -87,6 +96,7 @@
 			side,
 			warbandId: '',
 			primaryMission: '',
+			forceDisposition: '',
 			secondaries: []
 		});
 		const att = $form.combatants.filter((c) => c.side === 'attacker');
@@ -248,19 +258,27 @@
 		$form.combatants = players.map((p, i) => {
 			const side: 'attacker' | 'defender' = i < half ? 'attacker' : 'defender';
 			const isLead = i === 0 || i === half;
-			// Each side runs its own primary, carried (with the score) on its lead combatant.
+			// Each side runs its own primary, carried (with the score) on its lead combatant. Force
+			// disposition isn't on the scoresheet, so it always starts blank for the commander to pick.
 			return isLead
 				? {
 						side,
 						warbandId: p.warbandId ?? '',
 						primaryMission: p.primaryMission ?? '',
+						forceDisposition: '',
 						primaryVp: p.primaryVp ?? null,
 						battleReadyVp: p.battleReadyVp ?? 10,
 						secondaries: (p.secondaries ?? [])
 							.slice(0, MAX_SECONDARIES)
 							.map((s) => ({ name: s.name, victoryPoints: s.victoryPoints }))
 					}
-				: { side, warbandId: p.warbandId ?? '', primaryMission: '', secondaries: [] };
+				: {
+						side,
+						warbandId: p.warbandId ?? '',
+						primaryMission: '',
+						forceDisposition: '',
+						secondaries: []
+					};
 		});
 
 		const missing = players.filter((p) => !p.warbandId);
@@ -578,6 +596,24 @@
 						{#if $errors.combatants?.[lead]?.primaryMission}<span
 								class="font-body text-[11.5px] text-state-attacker"
 								>{$errors.combatants[lead].primaryMission}</span
+							>{/if}
+					</div>
+
+					<div class="mb-2.5 flex flex-col gap-1.5">
+						<span class={label}
+							>› Force disposition <span class="tracking-[0.06em] text-ink-faint">optional</span
+							></span
+						>
+						<Select
+							items={forceDispositionItems}
+							value={$form.combatants[lead].forceDisposition ?? ''}
+							onValueChange={(v) => patchCombatant(lead, { forceDisposition: v })}
+							ariaLabel="{kind} force disposition"
+							placeholder="Select a force disposition"
+						/>
+						{#if $errors.combatants?.[lead]?.forceDisposition}<span
+								class="font-body text-[11.5px] text-state-attacker"
+								>{$errors.combatants[lead].forceDisposition}</span
 							>{/if}
 					</div>
 

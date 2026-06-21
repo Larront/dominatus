@@ -1,0 +1,1 @@
+ALTER TABLE `battle_report_combatant` ADD `force_disposition` text;

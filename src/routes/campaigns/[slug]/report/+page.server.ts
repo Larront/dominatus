@@ -32,10 +32,25 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 		form.data.cycle = campaign.currentCycle;
 		// Each side's lead combatant carries the (in 2v2, shared) score; battle-ready
 		// defaults on at +10 VP, so the commander only unticks an unpainted force.
-		// `primaryMission: ''` binds cleanly to each side's picker (a CV draft may fill it).
+		// `primaryMission`/`forceDisposition: ''` bind cleanly to each side's pickers (a CV draft may
+		// fill the mission; disposition is always manual).
 		form.data.combatants = [
-			{ side: 'attacker', warbandId: '', primaryMission: '', secondaries: [], battleReadyVp: 10 },
-			{ side: 'defender', warbandId: '', primaryMission: '', secondaries: [], battleReadyVp: 10 }
+			{
+				side: 'attacker',
+				warbandId: '',
+				primaryMission: '',
+				forceDisposition: '',
+				secondaries: [],
+				battleReadyVp: 10
+			},
+			{
+				side: 'defender',
+				warbandId: '',
+				primaryMission: '',
+				forceDisposition: '',
+				secondaries: [],
+				battleReadyVp: 10
+			}
 		];
 		// Outcome starts unset so the form never pre-declares a victor — the commander must choose.
 		form.data.outcome = undefined as unknown as typeof form.data.outcome;

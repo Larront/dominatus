@@ -71,6 +71,12 @@ export const battleReportCombatant = sqliteTable(
 		 * and at analytics. In 2v2 only the side's lead combatant carries it (it shares the team score).
 		 */
 		primaryMission: text('primary_mission'),
+		/**
+		 * This side's force disposition, from the edition's canonical list (see $lib/domain/missions) —
+		 * each side declares its own. Null when not recorded. Free text, like the missions, so the set
+		 * is data not a schema change. Not on the scoresheet, so it is never OCR-derived.
+		 */
+		forceDisposition: text('force_disposition'),
 		/** Primary-mission VP. Null when not recorded (e.g. unanalysed manual entry). */
 		primaryVp: integer('primary_vp'),
 		/** Battle-ready / paint VP. */

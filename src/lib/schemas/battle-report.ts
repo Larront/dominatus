@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PRIMARY_MISSIONS } from '$lib/domain/missions';
+import { PRIMARY_MISSIONS, FORCE_DISPOSITIONS } from '$lib/domain/missions';
 
 /**
  * Validation for the battle-report form. Shared by the Superforms client and the
@@ -44,6 +44,18 @@ export const combatantSchema = z.object({
 		.refine(
 			(m) => m === '' || (PRIMARY_MISSIONS as readonly string[]).includes(m),
 			'Choose a primary mission from the list'
+		)
+		.optional(),
+	/**
+	 * This side's force disposition (each side declares its own). Optional, and constrained to the
+	 * canonical list when set — same pattern as `primaryMission`. Not on the scoresheet, so it is a
+	 * manual picker only, never seeded from a draft.
+	 */
+	forceDisposition: z
+		.string()
+		.refine(
+			(d) => d === '' || (FORCE_DISPOSITIONS as readonly string[]).includes(d),
+			'Choose a force disposition from the list'
 		)
 		.optional(),
 	// Full score breakdown — all optional so manual entry never blocks while the CV

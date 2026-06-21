@@ -4,12 +4,12 @@ import { PRIMARY_MISSIONS, SECONDARY_MISSIONS } from '$lib/domain/missions';
 
 describe('matchMission', () => {
 	it('resolves a confident match to the canonical mission', () => {
-		expect(matchMission('Take and Hold', PRIMARY_MISSIONS)).toBe('Take and Hold');
+		expect(matchMission('Unstoppable Force', PRIMARY_MISSIONS)).toBe('Unstoppable Force');
 	});
 
 	it('tolerates OCR slips in the label', () => {
-		// l→1 and a dropped letter — the kind of slip the full-page OCR pass makes.
-		expect(matchMission('Take and Ho1d', PRIMARY_MISSIONS)).toBe('Take and Hold');
+		// l→1 — the kind of slip the full-page OCR pass makes.
+		expect(matchMission('Unstoppab1e Force', PRIMARY_MISSIONS)).toBe('Unstoppable Force');
 	});
 
 	it('picks the closest canonical mission among several near-matches', () => {

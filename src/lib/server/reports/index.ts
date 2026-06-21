@@ -233,6 +233,7 @@ export async function getReportForEdit(
 				warbandId: c.warbandId,
 				side: c.side,
 				primaryMission: c.primaryMission ?? '',
+				forceDisposition: c.forceDisposition ?? '',
 				primaryVp: c.primaryVp,
 				battleReadyVp: c.battleReadyVp,
 				secondaries: c.secondaries ?? []
@@ -283,6 +284,7 @@ export function updateBattleReport(
 					warbandId: c.warbandId,
 					side: c.side,
 					primaryMission: c.primaryMission?.trim() || null,
+					forceDisposition: c.forceDisposition?.trim() || null,
 					primaryVp: c.primaryVp ?? null,
 					battleReadyVp: c.battleReadyVp ?? null,
 					secondaries: c.secondaries.length ? c.secondaries : null
@@ -358,6 +360,7 @@ export function submitBattleReport(
 					warbandId: c.warbandId,
 					side: c.side,
 					primaryMission: c.primaryMission?.trim() || null,
+					forceDisposition: c.forceDisposition?.trim() || null,
 					primaryVp: c.primaryVp ?? null,
 					battleReadyVp: c.battleReadyVp ?? null,
 					secondaries: c.secondaries.length ? c.secondaries : null
