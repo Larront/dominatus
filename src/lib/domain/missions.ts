@@ -57,25 +57,24 @@ export const FORCE_DISPOSITIONS = [
 
 /** Secondary missions — each side scores its own selection of these. */
 export const SECONDARY_MISSIONS = [
-	'Engage on All Fronts',
-	'Bring It Down',
-	'Assassination',
-	'Behind Enemy Lines',
-	'Cleanse',
-	'Storm Hostile Objective',
-	'Area Denial',
-	'No Prisoners',
-	'Defend Stronghold',
-	'Overwhelming Force',
-	'Recover Assets',
-	'Sabotage',
-	'Cull the Horde',
-	'Containment',
-	'Marked for Death',
-	'Extend Battle Lines',
+	'A Grievous Blow',
 	'A Tempting Target',
-	'Capture Enemy Outpost',
-	'Establish Locus'
+	'Assassination',
+	'Beacon',
+	'Behind Enemy Lines',
+	'Bring It Down',
+	'Burden Of Trust',
+	'Centre Ground',
+	'Cleanse',
+	'Defend Stronghold',
+	'Display Of Might',
+	'Engage On All Fronts',
+	'Forward Position',
+	'No Prisoners',
+	'Outflank',
+	'Overwhelming Force',
+	'Plunder',
+	"Secure No Man's Land"
 ] as const;
 
 export type PrimaryMission = (typeof PRIMARY_MISSIONS)[number];

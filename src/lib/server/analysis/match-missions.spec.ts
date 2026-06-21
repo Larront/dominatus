@@ -28,10 +28,12 @@ describe('matchMission', () => {
 
 describe('matchSecondaries', () => {
 	it('maps each detected name to canonical, blanking the uncertain', () => {
+		// Input casing differs from canonical ("on" vs "On") — the matcher normalizes and returns
+		// the canonical form; the unknown stays blank; the OCR slip resolves.
 		const out = matchSecondaries(
 			['Engage on All Fronts', 'Zzzz unknown', 'Assassinaton'],
 			SECONDARY_MISSIONS
 		);
-		expect(out).toEqual(['Engage on All Fronts', undefined, 'Assassination']);
+		expect(out).toEqual(['Engage On All Fronts', undefined, 'Assassination']);
 	});
 });
