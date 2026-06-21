@@ -1,4 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { version } from '$app/environment';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { feedbackSchema } from '$lib/schemas/feedback';
@@ -34,7 +35,9 @@ export const actions: Actions = {
 			message: form.data.message,
 			reporter: { name: locals.user.name, email: locals.user.email },
 			// Where the commander was when they opened the form — useful triage context.
-			context: safeFrom(url.searchParams.get('from')) ?? undefined
+			context: safeFrom(url.searchParams.get('from')) ?? undefined,
+			// Stamp the build the report was filed against.
+			appVersion: version
 		});
 
 		return message(form, 'Transmission received — thank you for the intel.');

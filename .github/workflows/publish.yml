@@ -6,9 +6,9 @@ on:
   push:
     tags: ['v*']
 
-# GITHUB_TOKEN needs package write to push to GHCR; contents read for the checkout.
+# GITHUB_TOKEN needs package write to push to GHCR, and contents write to cut the GitHub Release.
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -41,3 +41,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Publish a GitHub Release for the tag once the image is up. Notes are auto-generated from
+      # merged PRs per .github/release.yml; a tag containing a hyphen (e.g. v1.0.0-rc1) is a pre-release.
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
