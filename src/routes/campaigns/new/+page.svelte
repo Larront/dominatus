@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
@@ -22,7 +22,9 @@
 	// One nested form for the whole rite. dataType:'json' lets the worlds array, the scoring
 	// profile object, and the effect pool post as structured data rather than flat fields.
 	const { form, errors, enhance, submitting } = untrack(() =>
-		superForm(data.form, { dataType: 'json' })
+		// scrollToError jumps to the first invalid field on a failed submit instead of leaving the
+		// arbiter hunting through the long founding form.
+		superForm(data.form, { dataType: 'json', scrollToError: 'smooth' })
 	);
 
 	// ── identity ──────────────────────────────────────────────────────────────
@@ -39,22 +41,40 @@
 	let systemNonce = $state(0);
 	const seed = () => (Math.random() * 0x100000000) >>> 0;
 
+	// Rolling a world mounts new WebGL planet canvases, which blocks for a beat. Flip a flag so the
+	// previews show a loading placeholder and the controls disable while it happens.
+	let generating = $state(false);
+
 	const archetypeItems = ARCHETYPES.map((a) => ({ value: a.render, label: a.tag }));
 
-	function shuffleSystem() {
-		$form.worlds = generateSystem($form.worlds.length, seed());
+	async function regenerate(mutate: () => void) {
+		if (generating) return;
+		generating = true;
+		// Two frames so the placeholder actually paints before the (blocking) planet remount.
+		await new Promise(requestAnimationFrame);
+		await new Promise(requestAnimationFrame);
+		mutate();
 		systemNonce++;
+		await tick();
+		generating = false;
+	}
+
+	function shuffleSystem() {
+		regenerate(() => {
+			$form.worlds = generateSystem($form.worlds.length, seed());
+		});
 	}
 	function addWorld() {
-		if ($form.worlds.length >= MAX_WORLDS) return;
-		$form.worlds = [
-			...$form.worlds,
-			generateOne(
-				seed(),
-				$form.worlds.map((w) => w.name)
-			)
-		];
-		systemNonce++;
+		if (generating || $form.worlds.length >= MAX_WORLDS) return;
+		regenerate(() => {
+			$form.worlds = [
+				...$form.worlds,
+				generateOne(
+					seed(),
+					$form.worlds.map((w) => w.name)
+				)
+			];
+		});
 	}
 	function removeWorld(i: number) {
 		if ($form.worlds.length <= MIN_WORLDS) return;
@@ -132,7 +152,7 @@
 		"flex items-center gap-2.5 font-display font-semibold text-[10px] tracking-[0.14em] uppercase text-ink-dim mb-1 after:content-[''] after:flex-1 after:h-px after:bg-border";
 	const label = 'font-display font-semibold text-[10px] tracking-[0.1em] uppercase text-ink-dim';
 	const control =
-		'w-full bg-void border border-border px-[11px] py-2.5 font-body text-[13px] text-ink placeholder:text-ink-faint transition-[border-color,box-shadow] duration-[120ms] focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent-mid),0_0_14px_var(--color-accent-soft)]';
+		'w-full bg-void border border-border px-[11px] py-2.5 font-body text-[13px] text-ink placeholder:text-ink-faint transition-[border-color,box-shadow] duration-[120ms] focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent-mid),0_0_14px_var(--color-accent-soft)] aria-invalid:border-state-attacker-line aria-invalid:shadow-[0_0_0_1px_var(--color-state-attacker-line)]';
 	const num =
 		'w-[58px] bg-void border border-border px-2 py-2 font-body text-[14px] text-center tabular-nums text-ink transition-[border-color,box-shadow] duration-[120ms] focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent-mid)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none';
 	const fieldError = 'font-body text-[12px] text-state-attacker';
@@ -292,7 +312,7 @@
 							<button
 								type="button"
 								onclick={() => removeWorld($form.worlds.length - 1)}
-								disabled={$form.worlds.length <= MIN_WORLDS}
+								disabled={generating || $form.worlds.length <= MIN_WORLDS}
 								aria-label="Fewer worlds"
 								class="px-2.5 py-2 font-display text-[15px] leading-none text-ink-dim transition-colors hover:text-accent disabled:opacity-30 disabled:hover:text-ink-dim"
 							>
@@ -306,14 +326,16 @@
 							<button
 								type="button"
 								onclick={addWorld}
-								disabled={$form.worlds.length >= MAX_WORLDS}
+								disabled={generating || $form.worlds.length >= MAX_WORLDS}
 								aria-label="More worlds"
 								class="px-2.5 py-2 font-display text-[15px] leading-none text-ink-dim transition-colors hover:text-accent disabled:opacity-30 disabled:hover:text-ink-dim"
 							>
 								+
 							</button>
 						</div>
-						<Button type="button" onclick={shuffleSystem}>↻ Shuffle</Button>
+						<Button type="button" onclick={shuffleSystem} disabled={generating}>
+							{generating ? 'Rolling…' : '↻ Shuffle'}
+						</Button>
 					</div>
 				</div>
 
@@ -325,13 +347,20 @@
 					{#each $form.worlds as world, i (i)}
 						<article class="flex flex-col gap-3 border border-border bg-panel-2/50 p-3.5">
 							<div class="flex items-start gap-3">
-								{#key `${systemNonce}:${i}:${world.render}`}
-									<span
-										class="grid size-[72px] shrink-0 place-items-center rounded-full bg-[radial-gradient(circle_at_50%_38%,var(--color-accent-soft),transparent_72%)]"
-									>
-										<Planet render={world.render} size={64} resolution={90} name={world.name} />
-									</span>
-								{/key}
+								<span
+									class="grid size-[72px] shrink-0 place-items-center rounded-full bg-[radial-gradient(circle_at_50%_38%,var(--color-accent-soft),transparent_72%)]"
+								>
+									{#if generating}
+										<span
+											class="size-[58px] animate-pulse rounded-full border border-dashed border-border-lum/60 bg-[radial-gradient(circle_at_50%_40%,var(--color-accent-soft),transparent_68%)]"
+											aria-hidden="true"
+										></span>
+									{:else}
+										{#key `${systemNonce}:${i}:${world.render}`}
+											<Planet render={world.render} size={64} resolution={90} name={world.name} />
+										{/key}
+									{/if}
+								</span>
 								<div class="flex min-w-0 flex-1 flex-col gap-1.5">
 									<input
 										bind:value={$form.worlds[i].name}
@@ -447,7 +476,7 @@
 												{cat.threshold.prefix}
 												<input
 													type="number"
-													min="1"
+													min="0"
 													step="1"
 													inputmode="numeric"
 													aria-label="{cat.label} threshold"

@@ -208,7 +208,7 @@ export const actions: Actions = {
 		if (!form.valid) return fail(400, { form });
 		const { imagePath } = deleteBattleReport(form.data.id, campaign.id);
 		await deleteReportImage(imagePath); // drop the scoresheet now the report is gone
-		return message(form, 'Report reversed.');
+		return message(form, 'Report deleted. Standings and control recalculated.');
 	},
 
 	transferArbiter: async ({ request, params, locals }) => {

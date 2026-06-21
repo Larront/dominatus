@@ -31,7 +31,17 @@
 		message: profileMessage,
 		submitting: profileSubmitting,
 		enhance: profileEnhance
-	} = untrack(() => superForm(data.profileForm, { id: 'profile', resetForm: false }));
+		// dataType:'json' posts the whole $profile store as structured data — the point inputs bind
+		// to $profile[...] with no `name`, so without this only named fields post and every value
+		// arrives 0. Mirrors the founding form's scoring grid.
+	} = untrack(() =>
+		superForm(data.profileForm, {
+			id: 'profile',
+			resetForm: false,
+			dataType: 'json',
+			scrollToError: 'smooth'
+		})
+	);
 
 	// Join code — the credential commanders enter to enlist. Copyable, and regeneratable to revoke
 	// one that's been shared too widely (the load re-reads the campaign, so the new code shows).
@@ -54,7 +64,9 @@
 		message: detailsMessage,
 		submitting: detailsSubmitting,
 		enhance: detailsEnhance
-	} = untrack(() => superForm(data.detailsForm, { id: 'details', resetForm: false }));
+	} = untrack(() =>
+		superForm(data.detailsForm, { id: 'details', resetForm: false, scrollToError: 'smooth' })
+	);
 
 	// Add-effect (single form). The per-row edit/delete forms live in EffectRow; worlds in WorldRow.
 	const {
@@ -86,7 +98,7 @@
 		"flex items-center gap-2.5 font-display font-semibold text-[10px] tracking-[0.14em] uppercase text-ink-dim mb-4 after:content-[''] after:flex-1 after:h-px after:bg-border";
 	const label = 'font-display font-semibold text-[10px] tracking-[0.1em] uppercase text-ink-dim';
 	const control =
-		'w-full bg-void border border-border px-[11px] py-2.5 font-body text-[13px] text-ink placeholder:text-ink-faint transition-[border-color,box-shadow] duration-[120ms] focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent-mid),0_0_14px_var(--color-accent-soft)]';
+		'w-full bg-void border border-border px-[11px] py-2.5 font-body text-[13px] text-ink placeholder:text-ink-faint transition-[border-color,box-shadow] duration-[120ms] focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent-mid),0_0_14px_var(--color-accent-soft)] aria-invalid:border-state-attacker-line aria-invalid:shadow-[0_0_0_1px_var(--color-state-attacker-line)]';
 	const num =
 		'w-[58px] bg-void border border-border px-2 py-2 font-body text-[14px] text-center tabular-nums text-ink transition-[border-color,box-shadow] duration-[120ms] focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent-mid)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none';
 </script>
@@ -102,7 +114,7 @@
 			Manage Campaign
 		</h1>
 		<p class="mt-3 max-w-[64ch] text-[13px] leading-[1.55] text-ink-dim">
-			Edit campaign details and correct the battle-report log. Reversing or amending a report
+			Edit campaign details and correct the battle-report log. Deleting or amending a report
 			re-folds control and standings from the full log — the record stays honest.
 		</p>
 	</header>
@@ -275,7 +287,7 @@
 											{cat.threshold.prefix}
 											<input
 												type="number"
-												min="1"
+												min="0"
 												step="1"
 												inputmode="numeric"
 												aria-label="{cat.label} threshold"
@@ -439,16 +451,16 @@
 							</span>
 
 							<span class="ml-auto flex shrink-0 items-center gap-2">
-								<Button href="{base}/report?edit={r.id}" class="px-2.5 py-1.5">Edit</Button>
+								<Button href="{base}/report?edit={r.id}">Edit</Button>
 								<DestructiveForm
 									form={data.deleteForm}
 									formId="delete-{r.id}"
 									action="?/deleteReport"
 									recordId={r.id}
-									confirm="Reverse this report over {r.worldName}? Control will re-fold."
-									class="cursor-pointer border border-border bg-panel-2 px-2.5 py-1.5 font-display text-[11px] font-semibold tracking-[0.09em] text-ink-dim uppercase transition-[color,border-color,background-color] duration-[120ms] hover:border-state-attacker-line hover:bg-state-attacker-soft hover:text-state-attacker focus-visible:border-state-attacker-line focus-visible:outline-none"
+									confirm="Delete the report over {r.worldName}? Standings and control will be recalculated as if it had never been submitted — this can't be undone."
+									class="inline-flex cursor-pointer items-center justify-center border border-border bg-panel-2 px-3.5 py-2.5 font-display text-[11px] font-semibold tracking-[0.09em] text-ink-dim uppercase transition-[color,border-color,background-color] duration-[120ms] hover:border-state-attacker-line hover:bg-state-attacker-soft hover:text-state-attacker focus-visible:border-state-attacker-line focus-visible:outline-none"
 								>
-									Reverse
+									Delete Report
 								</DestructiveForm>
 							</span>
 						</li>

@@ -57,29 +57,33 @@ export const DEFAULT_PROFILE: ScoringProfile = {
 
 const points = z.number().int().min(0, 'Points cannot be negative.').max(99, 'Keep it under 100.');
 
-export const scoringProfileSchema = z.object({
-	win: points,
-	draw: points,
-	underdog: points,
-	narrative: points,
-	loss: points,
-	milestonePoints: points,
-	milestoneStep: z
-		.number()
-		.int()
-		.min(5, 'A control step of at least 5%.')
-		.max(100, 'A control step of at most 100%.'),
-	streakBonus: points,
-	streakLength: z
-		.number()
-		.int()
-		.min(2, 'A streak is at least 2 wins.')
-		.max(10, 'Keep the streak length at 10 or fewer.'),
-	kingkiller: points,
-	paintUnit: points,
-	paintCharacter: points,
-	paintTerrain: points
-}) satisfies z.ZodType<ScoringProfile>;
+export const scoringProfileSchema = z
+	.object({
+		win: points,
+		draw: points,
+		underdog: points,
+		narrative: points,
+		loss: points,
+		milestonePoints: points,
+		// Threshold knobs only matter when their category grants points. Allow 0 here so a
+		// switched-off milestone/streak (0 pts) doesn't error on its step; the real range is
+		// enforced below, but only when the category is actually on.
+		milestoneStep: z.number().int().min(0).max(100),
+		streakBonus: points,
+		streakLength: z.number().int().min(0).max(10),
+		kingkiller: points,
+		paintUnit: points,
+		paintCharacter: points,
+		paintTerrain: points
+	})
+	.refine((p) => p.milestonePoints === 0 || (p.milestoneStep >= 5 && p.milestoneStep <= 100), {
+		path: ['milestoneStep'],
+		message: 'A control step between 5% and 100%.'
+	})
+	.refine((p) => p.streakBonus === 0 || (p.streakLength >= 2 && p.streakLength <= 10), {
+		path: ['streakLength'],
+		message: 'A streak length of 2 to 10 wins.'
+	}) satisfies z.ZodType<ScoringProfile>;
 
 /** A scoring category as the founding form and rules page render it. */
 export interface CategoryMeta {
