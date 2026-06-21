@@ -19,7 +19,11 @@
 		class="relative z-10 flex items-center gap-4 border-b border-border bg-[linear-gradient(180deg,var(--color-panel)_0%,transparent_140%)] px-[22px] py-3.5 backdrop-blur-[6px] after:absolute
 			after:-bottom-px after:left-0 after:h-px after:w-full after:bg-[linear-gradient(90deg,transparent,var(--color-border-lum)_30%,var(--color-border-lum)_70%,transparent)] after:opacity-60 after:content-[''] max-[680px]:px-4"
 	>
-		<a class="flex items-center gap-[13px] no-underline" href="/" aria-label="Back to your campaigns">
+		<a
+			class="flex items-center gap-[13px] no-underline"
+			href="/"
+			aria-label="Back to your campaigns"
+		>
 			<BrandMark
 				class="size-9 shrink-0 text-accent drop-shadow-[0_0_6px_var(--color-accent-glow)]"
 			/>
@@ -35,6 +39,7 @@
 		{#if data.user.name}
 			<span class="font-body text-[12px] text-ink-dim max-[520px]:hidden">{data.user.name}</span>
 		{/if}
+		<Button href="/feedback?from=/account" variant="ghost">Feedback</Button>
 		<Button type="button" variant="ghost" onclick={logout}>Sign out</Button>
 	</header>
 
@@ -67,13 +72,17 @@
 				</h2>
 				<dl class="flex flex-col">
 					<div class="flex items-center gap-3 border-t border-border py-2.5 first:border-t-0">
-						<dt class="w-[120px] font-display text-[10px] font-semibold tracking-[0.1em] text-ink-faint uppercase">
+						<dt
+							class="w-[120px] font-display text-[10px] font-semibold tracking-[0.1em] text-ink-faint uppercase"
+						>
 							Commander
 						</dt>
 						<dd class="font-body text-[13px] text-ink">{data.user.name || '—'}</dd>
 					</div>
 					<div class="flex items-center gap-3 border-t border-border py-2.5">
-						<dt class="w-[120px] font-display text-[10px] font-semibold tracking-[0.1em] text-ink-faint uppercase">
+						<dt
+							class="w-[120px] font-display text-[10px] font-semibold tracking-[0.1em] text-ink-faint uppercase"
+						>
 							Email
 						</dt>
 						<dd class="font-body text-[13px] break-all text-ink">{data.user.email}</dd>

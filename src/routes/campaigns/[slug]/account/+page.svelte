@@ -48,6 +48,35 @@
 	</header>
 
 	<div class="flex flex-col gap-[18px]">
+		<!-- ── Identity ──────────────────────────────────────────── -->
+		<section class={panel}>
+			<h2 class={sec}>// Identity</h2>
+			<dl class="flex flex-col">
+				<div class="flex items-center gap-3 border-t border-border py-2.5 first:border-t-0">
+					<dt
+						class="w-[120px] font-display text-[10px] font-semibold tracking-[0.1em] text-ink-faint uppercase"
+					>
+						Commander
+					</dt>
+					<dd class="font-body text-[13px] text-ink">{data.user.name || '—'}</dd>
+				</div>
+				<div class="flex items-center gap-3 border-t border-border py-2.5">
+					<dt
+						class="w-[120px] font-display text-[10px] font-semibold tracking-[0.1em] text-ink-faint uppercase"
+					>
+						Email
+					</dt>
+					<dd class="font-body text-[13px] break-all text-ink">{data.user.email}</dd>
+				</div>
+			</dl>
+			<p class="mt-3.5 border-t border-border pt-3.5 font-body text-[12.5px] text-ink-dim">
+				Manage your account across all campaigns on the
+				<a href="/account" class="text-accent transition-colors duration-150 hover:underline"
+					>full account screen</a
+				>.
+			</p>
+		</section>
+
 		<!-- ── Roster ────────────────────────────────────────────── -->
 		<section class={panel}>
 			<h2 class={sec}>// Roster</h2>

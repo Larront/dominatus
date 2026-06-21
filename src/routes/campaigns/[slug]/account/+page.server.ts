@@ -21,7 +21,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	// Seed the colour the commander confirms — an empty native picker would default to black.
 	form.data.color = '#5f93c4';
 
-	return { form, warbands, arbiterCampaigns };
+	return { form, warbands, arbiterCampaigns, user: locals.user };
 };
 
 export const actions: Actions = {

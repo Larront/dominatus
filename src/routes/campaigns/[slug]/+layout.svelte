@@ -18,7 +18,9 @@
 		{ href: `${base}/rules`, label: 'Rules' },
 		// The admin console is the arbiter's alone (its route also guards server-side).
 		...(data.role === 'arbiter' ? [{ href: `${base}/admin`, label: 'Admin' }] : []),
-		{ href: `${base}/account`, label: 'Account' }
+		{ href: `${base}/account`, label: 'Account' },
+		// App-wide feedback; carries the current path so the form can return the commander here.
+		{ href: `/feedback?from=${encodeURIComponent(page.url.pathname)}`, label: 'Feedback' }
 	]);
 	const isActive = (href: string) =>
 		href === base ? page.url.pathname === base : page.url.pathname.startsWith(href);
@@ -34,6 +36,23 @@
 		class="relative z-10 flex flex-shrink-0 items-center gap-4 border-b border-border bg-[linear-gradient(180deg,var(--color-panel)_0%,transparent_140%)] px-[22px] py-3 backdrop-blur-[6px] after:absolute after:-bottom-px
 			after:left-0 after:h-px after:w-full after:bg-[linear-gradient(90deg,transparent,var(--color-border-lum)_30%,var(--color-border-lum)_70%,transparent)] after:opacity-60 after:content-[''] max-[720px]:gap-2.5 max-[720px]:px-3.5"
 	>
+		<a
+			href="/"
+			aria-label="Back to all your campaigns"
+			class="flex size-9 shrink-0 items-center justify-center border border-border bg-panel-2 text-ink-dim transition-[color,border-color] duration-[120ms] hover:border-border-lum hover:text-accent focus-visible:border-accent focus-visible:text-accent focus-visible:outline-none"
+		>
+			<svg viewBox="0 0 20 20" class="size-[18px]" aria-hidden="true">
+				<path
+					d="M12 4l-6 6 6 6"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.7"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			</svg>
+		</a>
+
 		<a
 			class="flex items-center gap-[13px] no-underline"
 			href={base}

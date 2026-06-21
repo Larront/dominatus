@@ -6,17 +6,71 @@ import { log } from './log';
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 const from = env.EMAIL_FROM ?? 'Dominatus <onboarding@resend.dev>';
 
-type Email = { to: string; subject: string; html: string };
+type Email = { to: string; subject: string; html: string; replyTo?: string };
 
-export async function sendEmail({ to, subject, html }: Email): Promise<void> {
+export async function sendEmail({ to, subject, html, replyTo }: Email): Promise<void> {
 	// No key (local/dev): log the message so verification/reset links are still usable.
 	if (!resend) {
 		log.warn({ to, subject, html }, 'RESEND_API_KEY not set — email not sent');
 		return;
 	}
 
-	const { error } = await resend.emails.send({ from, to, subject, html });
+	const { error } = await resend.emails.send({ from, to, subject, html, replyTo });
 	if (error) throw new Error(`Failed to send "${subject}" to ${to}: ${error.message}`);
+}
+
+/** Minimal HTML-entity escape for interpolating user-supplied text into an email body. */
+function escapeHtml(s: string): string {
+	return s
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;');
+}
+
+/**
+ * Routes a user's bug report or suggestion to the maintainer (FEEDBACK_EMAIL). Unlike the
+ * transactional shell, the body carries user input, so the message is HTML-escaped and the
+ * reporter's address rides on Reply-To for a one-tap response. If FEEDBACK_EMAIL is unset, the
+ * report is logged rather than dropped — local dev and a missing prod var both stay usable.
+ */
+export async function sendFeedbackEmail(opts: {
+	type: 'bug' | 'suggestion';
+	message: string;
+	reporter: { name?: string | null; email: string };
+	context?: string;
+}): Promise<void> {
+	const { type, message, reporter, context } = opts;
+	const to = env.FEEDBACK_EMAIL;
+	const label = type === 'bug' ? 'Bug report' : 'Suggestion';
+
+	if (!to) {
+		log.warn({ type, message, reporter, context }, 'FEEDBACK_EMAIL not set — feedback not sent');
+		return;
+	}
+
+	const who = `${escapeHtml(reporter.name || 'A commander')} (${escapeHtml(reporter.email)})`;
+	const html = `<!doctype html>
+<html lang="en">
+<body style="margin:0;padding:0;background:#070b09;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#070b09;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;background:#0e1411;border:1px solid #1f2a24;">
+        <tr><td style="height:3px;background:linear-gradient(90deg,#54e0a0,rgba(84,224,160,0));font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td style="padding:30px 32px 34px;font-family:Arial,Helvetica,sans-serif;">
+          <div style="font-size:15px;font-weight:bold;letter-spacing:4px;color:#e8efe9;text-transform:uppercase;">DOMINATUS</div>
+          <div style="margin-top:24px;font-size:11px;font-weight:bold;letter-spacing:2.5px;color:#54e0a0;text-transform:uppercase;">${label}</div>
+          <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#9fb0a7;">From ${who}${context ? ` · <span style="color:#6b7d74;">${escapeHtml(context)}</span>` : ''}</p>
+          <div style="margin:18px 0 0;padding:16px 18px;background:#070b09;border:1px solid #1f2a24;font-size:14px;line-height:1.6;color:#e8efe9;white-space:pre-wrap;word-break:break-word;">${escapeHtml(message)}</div>
+        </td></tr>
+      </table>
+      <div style="margin-top:16px;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:2px;color:#4a574f;text-transform:uppercase;">Campaign Cogitator &middot; Reply to reach the reporter</div>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+	await sendEmail({ to, subject: `[Dominatus] ${label}`, html, replyTo: reporter.email });
 }
 
 /**

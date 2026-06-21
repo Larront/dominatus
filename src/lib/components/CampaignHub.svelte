@@ -67,6 +67,7 @@
 	{#if user.name}
 		<span class="font-body text-[12px] text-ink-dim max-[520px]:hidden">{user.name}</span>
 	{/if}
+	<Button href="/feedback?from=/" variant="ghost">Feedback</Button>
 	<Button href="/account" variant="ghost">Account</Button>
 	<Button type="button" variant="ghost" onclick={logout}>Sign out</Button>
 </header>
