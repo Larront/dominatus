@@ -4,6 +4,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import BrandMark from '$lib/components/BrandMark.svelte';
 	import SegmentedField from '$lib/components/ui/SegmentedField.svelte';
+	import AppVersion from '$lib/components/AppVersion.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -100,10 +101,15 @@
 					{/if}
 				</label>
 
-				<p class="mt-3.5 border-t border-border pt-3.5 font-body text-[12px] text-ink-faint">
-					Sent as <span class="text-ink-dim">{data.user.name || data.user.email}</span>
-					({data.user.email}).
-				</p>
+				<div
+					class="mt-3.5 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3.5"
+				>
+					<p class="font-body text-[12px] text-ink-faint">
+						Sent as <span class="text-ink-dim">{data.user.name || data.user.email}</span>
+						({data.user.email}).
+					</p>
+					<AppVersion />
+				</div>
 			</section>
 
 			<footer class="flex flex-wrap items-center justify-between gap-3.5 pt-1">

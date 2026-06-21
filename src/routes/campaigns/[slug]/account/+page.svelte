@@ -5,6 +5,7 @@
 	import { signOut } from '$lib/auth-client';
 	import Button from '$lib/components/ui/Button.svelte';
 	import DeleteAccountSection from '$lib/components/DeleteAccountSection.svelte';
+	import AppVersion from '$lib/components/AppVersion.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -196,4 +197,8 @@
 		<!-- ── Danger zone ───────────────────────────────────────── -->
 		<DeleteAccountSection arbiterCampaigns={data.arbiterCampaigns} />
 	</div>
+
+	<p class="mt-8 text-center">
+		<AppVersion />
+	</p>
 </main>

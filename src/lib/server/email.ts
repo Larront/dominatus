@@ -39,8 +39,9 @@ export async function sendFeedbackEmail(opts: {
 	message: string;
 	reporter: { name?: string | null; email: string };
 	context?: string;
+	appVersion?: string;
 }): Promise<void> {
-	const { type, message, reporter, context } = opts;
+	const { type, message, reporter, context, appVersion } = opts;
 	const to = env.FEEDBACK_EMAIL;
 	const label = type === 'bug' ? 'Bug report' : 'Suggestion';
 
@@ -60,7 +61,7 @@ export async function sendFeedbackEmail(opts: {
         <tr><td style="padding:30px 32px 34px;font-family:Arial,Helvetica,sans-serif;">
           <div style="font-size:15px;font-weight:bold;letter-spacing:4px;color:#e8efe9;text-transform:uppercase;">DOMINATUS</div>
           <div style="margin-top:24px;font-size:11px;font-weight:bold;letter-spacing:2.5px;color:#54e0a0;text-transform:uppercase;">${label}</div>
-          <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#9fb0a7;">From ${who}${context ? ` · <span style="color:#6b7d74;">${escapeHtml(context)}</span>` : ''}</p>
+          <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#9fb0a7;">From ${who}${context ? ` · <span style="color:#6b7d74;">${escapeHtml(context)}</span>` : ''}${appVersion ? ` · <span style="color:#6b7d74;">v${escapeHtml(appVersion)}</span>` : ''}</p>
           <div style="margin:18px 0 0;padding:16px 18px;background:#070b09;border:1px solid #1f2a24;font-size:14px;line-height:1.6;color:#e8efe9;white-space:pre-wrap;word-break:break-word;">${escapeHtml(message)}</div>
         </td></tr>
       </table>
