@@ -1,6 +1,8 @@
-# sv
+# Dominatus
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A self-hosted tracker for custom Warhammer 40k narrative campaigns — a top-down orbital map of
+contested worlds, battle reports, and shifting control. See [`CONTEXT.md`](CONTEXT.md) for the
+domain language and [`PRODUCT.md`](PRODUCT.md) for the product shape.
 
 ## Creating a project
 
@@ -40,6 +42,40 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
+## Workflow
+
+Three kinds of branch:
+
+- **`main`** — reflects the currently deployed app. Protected: changes land only through a pull
+  request (no review required — solo project), and CI must pass first.
+- **`next`** — the integration branch where in-progress work accumulates.
+- **`feature/*`** — an independent feature pass. Branch off `next`, open a PR back into `next`.
+
+```sh
+git switch next && git pull
+git switch -c feature/my-change       # do the work
+gh pr create --base next --fill       # feature → next
+```
+
+Merged feature branches are deleted automatically.
+
+### Cutting a release
+
+A release is a promotion of `next` into `main`, followed by a version tag:
+
+```sh
+# on next: bump "version" in package.json to X.Y.Z, commit
+gh pr create --base main --head next --title "release: vX.Y.Z"   # next → main (CI gates it)
+# after merge, tag main (tags aren't blocked by branch protection):
+git switch main && git pull
+git tag vX.Y.Z && git push origin vX.Y.Z
+```
+
+Bumping the version on `next` first keeps it to a single release PR. Pushing the tag triggers [`publish.yml`](.github/workflows/publish.yml), which builds the image to
+GHCR (`ghcr.io/larront/dominatus:X.Y.Z`, `:X.Y`, `:latest`) and cuts a GitHub Release with notes
+auto-generated from the merged PRs (categorised by label via [`.github/release.yml`](.github/release.yml)).
+Then redeploy in Dockge. Pre-release tags (e.g. `vX.Y.Z-rc1`) skip `:latest` and are marked as a pre-release.
 
 ## Backups
 

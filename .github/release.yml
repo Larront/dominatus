@@ -1,0 +1,26 @@
+# Configures GitHub's auto-generated release notes (used by publish.yml on a version tag).
+# Merged PRs are grouped by their labels; anything unlabelled falls through to "Other changes".
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: ✨ Features
+      labels:
+        - feature
+        - enhancement
+    - title: 🐛 Fixes
+      labels:
+        - bug
+        - fix
+    - title: 🛠 Operations & CI
+      labels:
+        - ops
+        - ci
+    - title: 📚 Docs
+      labels:
+        - documentation
+        - docs
+    - title: 🔧 Other changes
+      labels:
+        - '*'
