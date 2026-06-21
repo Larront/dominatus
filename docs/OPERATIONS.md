@@ -47,8 +47,8 @@ format is parse-ready if one is added later.
 ## Backups
 
 The SQLite database (WAL mode) is snapshotted with `VACUUM INTO`, which is safe to run
-against the live app. Snapshots land on the `dominatus-backups` volume (`/backups`) and
-are rotated to the newest `BACKUP_KEEP` (default 14). Runs are manual.
+against the live app. Snapshots land on the `/backups` mount (host bind mount
+`/data/dominatus/backups`) and are rotated to the newest `BACKUP_KEEP` (default 14). Runs are manual.
 
 ### Take a backup
 
@@ -69,8 +69,9 @@ docker compose cp app:/backups ./backups-export      # whole dir
 docker compose cp app:/backups/local-2026-06-11T14-32-05-123Z.db ./
 ```
 
-> The backups volume survives `docker compose down` but **not** `docker compose down -v`.
-> Copy critical snapshots off-host until an offsite target is added.
+> Backups are a host bind mount (`/data/dominatus/backups`), so they survive `docker compose down`
+> **and** `down -v`. They are not offsite, though — copy critical snapshots off the host until an
+> offsite target is added.
 
 ### Restore a snapshot (DESTRUCTIVE)
 

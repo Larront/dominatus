@@ -44,14 +44,14 @@ You can preview the production build with `npm run preview`.
 ## Backups
 
 The SQLite database (WAL mode) is snapshotted with `VACUUM INTO`, which is safe to run
-against the live app. Snapshots land on the `dominatus-backups` volume (`/backups`) and
-are rotated to the newest `BACKUP_KEEP` (default 14). Runs are manual.
+against the live app. Snapshots land on the `/backups` mount (host bind mount
+`/data/dominatus/backups`) and are rotated to the newest `BACKUP_KEEP` (default 14). Runs are manual.
 
 ```sh
 # take a snapshot
 docker compose exec app bun scripts/backup.js
 
-# copy snapshots off the host (the volume survives `down` but NOT `down -v`)
+# copy snapshots off the host (bind mount; survives `down -v`, but still not offsite)
 docker compose cp app:/backups ./backups-export
 
 # restore (DESTRUCTIVE — saves the current db to local.db.pre-restore first)

@@ -22,11 +22,16 @@ services:
     # the host. (mem_limit/cpus are honoured by `docker compose up` and Podman without swarm.)
     mem_limit: 1g
     cpus: 2.0
+    # Host bind mounts (not named volumes): the DB and scoresheet images live at a known host
+    # path, are easy to back up off-box, and survive `docker compose down -v`. The host dirs MUST
+    # be owned by the container's non-root `bun` user (UID 1000) or migrate.js can't write on boot:
+    #   sudo mkdir -p /data/dominatus/data /data/dominatus/backups
+    #   sudo chown -R 1000:1000 /data/dominatus
     volumes:
-      - dominatus-data:/data
-      # Snapshots written by `bun scripts/backup.js`. Separate volume so a botched
-      # `docker compose down -v` on data doesn't take the backups with it by accident.
-      - dominatus-backups:/backups
+      - /data/dominatus/data:/data
+      # Snapshots written by `bun scripts/backup.js`. Kept in a sibling dir, not under /data, so a
+      # data-dir wipe (manual or a `restore.js` swap) can't take the backups with it.
+      - /data/dominatus/backups:/backups
     ports:
       - '3000:3000'
     # Cap log growth: the json-file driver is unbounded by default and the structured
@@ -36,7 +41,3 @@ services:
       options:
         max-size: '10m'
         max-file: '5'
-
-volumes:
-  dominatus-data:
-  dominatus-backups:
