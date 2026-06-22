@@ -16,6 +16,7 @@
 		{ href: `${base}/report`, label: 'Report' },
 		{ href: `${base}/standings`, label: 'Standings' },
 		{ href: `${base}/chronicle`, label: 'Chronicle' },
+		{ href: `${base}/gallery`, label: 'Gallery' },
 		{ href: `${base}/rules`, label: 'Rules' },
 		// The admin console is the arbiter's alone (its route also guards server-side).
 		...(data.role === 'arbiter' ? [{ href: `${base}/admin`, label: 'Admin' }] : []),

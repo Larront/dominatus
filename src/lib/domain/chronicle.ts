@@ -59,6 +59,8 @@ export interface ChronicleAward {
 	warband: ChronicleWarband;
 	kind: PaintingKind;
 	note: string | null;
+	/** The award's painted-models photo (UUID filename) or null — a thumbnail links into the gallery. */
+	imagePath: string | null;
 }
 
 /**
@@ -126,6 +128,8 @@ export interface PaintingAwardEvent extends EventBase {
 	warband: ChronicleWarband;
 	kind: PaintingKind;
 	note: string | null;
+	/** The award's painted-models photo (UUID filename) or null — a thumbnail links into the gallery. */
+	imagePath: string | null;
 }
 
 export interface WarbandMusteredEvent extends EventBase {
@@ -257,7 +261,8 @@ export function buildChronicle(src: ChronicleSources): ChronicleEvent[] {
 			id: a.id,
 			warband: a.warband,
 			kind: a.kind,
-			note: a.note
+			note: a.note,
+			imagePath: a.imagePath
 		});
 	}
 	for (const m of src.musters) {

@@ -6,5 +6,6 @@ export const load: PageServerLoad = async ({ parent }) => {
 	// commanders both read the same feed.
 	const { campaign } = await parent();
 	const events = await getChronicle(campaign.id, campaign.currentCycle);
-	return { events };
+	// `slug` lets a painting-award event's thumbnail link into the gallery, filtered to its warband.
+	return { events, slug: campaign.slug };
 };

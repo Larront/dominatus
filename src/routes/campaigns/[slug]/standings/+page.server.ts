@@ -9,6 +9,7 @@ import {
 	getStatReports,
 	getStatWarbands,
 	getMissionAnalytics,
+	getGalleryAwards,
 	getPaintingAwards,
 	getAwardsForCommander,
 	getAwardForImageWrite,
@@ -38,6 +39,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 		statReports,
 		statWarbands,
 		missionAnalytics,
+		galleryImages,
 		warbands,
 		awards,
 		myAwards,
@@ -51,6 +53,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 		getStatWarbands(campaign.id),
 		// Campaign-wide mission win rates / average scores, computed server-side (static, no filters).
 		getMissionAnalytics(campaign.id),
+		// Every award photo, so the stat block can show the selected warband's painted models (issue #14).
+		getGalleryAwards(campaign.id),
 		isArbiter ? getWarbandsForCampaign(campaign.id) : Promise.resolve([]),
 		isArbiter ? getPaintingAwards(campaign.id, profile) : Promise.resolve([]),
 		!isArbiter && user?.id
@@ -66,6 +70,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 		statReports,
 		statWarbands,
 		missionAnalytics,
+		galleryImages,
 		// The id of the viewer's commander, so the stats default to their own warbands when present.
 		viewerUserId: user?.id ?? null,
 		myWarbands,

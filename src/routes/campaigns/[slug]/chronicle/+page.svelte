@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import type { ChronicleWarband } from '$lib/domain/chronicle';
+	import GalleryThumb from '$lib/components/ui/GalleryThumb.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -122,6 +123,18 @@
 									>
 									{#if event.note}<span class="text-ink-faint">— {event.note}</span>{/if}
 								</p>
+								{#if event.imagePath}
+									<!-- Thumbnail of the painted models, linking into the gallery filtered to this warband. -->
+									<div class="mt-2">
+										<GalleryThumb
+											slug={data.slug}
+											imagePath={event.imagePath}
+											warbandId={event.warband.id}
+											warbandName={event.warband.name}
+											note={event.note}
+										/>
+									</div>
+								{/if}
 							{:else if event.type === 'warband-mustered'}
 								<p
 									class="font-display text-[10px] font-semibold tracking-[0.12em] text-ink-faint uppercase"

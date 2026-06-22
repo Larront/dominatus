@@ -34,7 +34,7 @@ export async function getChronicle(
 		}),
 		db.query.paintingAward.findMany({
 			where: eq(paintingAward.campaignId, campaignId),
-			columns: { id: true, cycle: true, createdAt: true, kind: true, note: true },
+			columns: { id: true, cycle: true, createdAt: true, kind: true, note: true, imagePath: true },
 			with: { warband: { columns: { id: true, name: true, short: true, color: true } } }
 		}),
 		db.query.warband.findMany({
@@ -94,7 +94,8 @@ export async function getChronicle(
 			at: a.createdAt.getTime(),
 			warband: tag(a.warband),
 			kind: a.kind,
-			note: a.note
+			note: a.note,
+			imagePath: a.imagePath
 		})),
 		musters: warbands.map((w) => ({
 			id: w.id,

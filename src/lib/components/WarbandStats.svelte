@@ -1,16 +1,22 @@
 <script lang="ts">
 	import { computeStatBlock, type StatReport } from '$lib/domain/stat-block';
-	import type { StatWarband } from '$lib/server/standings';
+	import type { StatWarband, GalleryAward } from '$lib/server/standings';
 	import Select from '$lib/components/ui/Select.svelte';
+	import GalleryThumb from '$lib/components/ui/GalleryThumb.svelte';
 
 	let {
 		warbands,
 		reports,
-		viewerUserId = null
+		viewerUserId = null,
+		galleryImages = [],
+		slug
 	}: {
 		warbands: StatWarband[];
 		reports: StatReport[];
 		viewerUserId?: string | null;
+		/** Every award photo in the campaign, for the selected warband's painted-models strip (issue #14). */
+		galleryImages?: GalleryAward[];
+		slug: string;
 	} = $props();
 
 	// Selection is two axes, each a token: `cmd:<userId>` (all that commander's warbands) or
@@ -101,6 +107,11 @@
 	const selfIds = $derived(idsFor(subject));
 	const oppIds = $derived(opponent === 'all' ? undefined : idsFor(opponent));
 	const block = $derived(computeStatBlock(reports, selfIds, oppIds));
+
+	// The subject's painted-models photos (issue #14) — the awards on the warband(s) currently in
+	// view, newest first (gallery order). Each thumbnail links into the gallery filtered to its
+	// warband. The opponent axis is irrelevant here: this is the subject's own painting.
+	const subjectImages = $derived(galleryImages.filter((img) => selfIds.includes(img.warbandId)));
 
 	// A single-warband selection lends its colour to the select's leading swatch.
 	const swatch = (token: string) =>
@@ -201,6 +212,26 @@
 				<div class={label}>Loss margin</div>
 				<div class={value}>{signed(block.lossDifferential)}</div>
 			</div>
+		</div>
+	{/if}
+
+	{#if subjectImages.length > 0}
+		<!-- The subject's painted models — a strip of award photos linking into the gallery (issue #14). -->
+		<div class="mt-4">
+			<div class={label}>Painted models</div>
+			<ul class="mt-2 flex flex-wrap gap-2">
+				{#each subjectImages as img (img.id)}
+					<li>
+						<GalleryThumb
+							{slug}
+							imagePath={img.imagePath}
+							warbandId={img.warbandId}
+							warbandName={img.warbandName}
+							note={img.note}
+						/>
+					</li>
+				{/each}
+			</ul>
 		</div>
 	{/if}
 </section>

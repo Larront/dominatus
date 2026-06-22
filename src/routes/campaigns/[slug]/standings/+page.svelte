@@ -206,6 +206,8 @@
 			warbands={data.statWarbands}
 			reports={data.statReports}
 			viewerUserId={data.viewerUserId}
+			galleryImages={data.galleryImages}
+			slug={data.slug}
 		/>
 	{/if}
 

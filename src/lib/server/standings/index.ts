@@ -232,6 +232,47 @@ export async function getPaintingAwards(
 /** A painting award shaped for the image-curation panel. */
 export type EditableAward = Awaited<ReturnType<typeof getPaintingAwards>>[number];
 
+/** One painted-models photo for the gallery: the image plus the caption fields (issue #14). */
+export interface GalleryAward {
+	id: string;
+	warbandId: string;
+	warbandName: string;
+	warbandShort: string;
+	warbandColor: string;
+	cycle: number;
+	kind: PaintingKind;
+	note: string | null;
+	/** The stored image filename — always present here (only awards with a photo make the gallery). */
+	imagePath: string;
+}
+
+/**
+ * Every painting award that carries a photo, newest first — the source for the members-only gallery
+ * (issue #14) and the per-warband thumbnail strips that link into it. Awards without an image are
+ * dropped here so the page never renders an empty frame; the client filters the rest by warband.
+ */
+export async function getGalleryAwards(campaignId: string): Promise<GalleryAward[]> {
+	const rows = await db.query.paintingAward.findMany({
+		where: eq(paintingAward.campaignId, campaignId),
+		orderBy: (a, { desc }) => [desc(a.createdAt)],
+		columns: { id: true, warbandId: true, cycle: true, kind: true, note: true, imagePath: true },
+		with: { warband: { columns: { name: true, short: true, color: true } } }
+	});
+	return rows
+		.filter((a): a is typeof a & { imagePath: string } => !!a.imagePath)
+		.map((a) => ({
+			id: a.id,
+			warbandId: a.warbandId,
+			warbandName: a.warband.name,
+			warbandShort: a.warband.short,
+			warbandColor: a.warband.color,
+			cycle: a.cycle,
+			kind: a.kind,
+			note: a.note,
+			imagePath: a.imagePath
+		}));
+}
+
 /**
  * Painting awards a commander may attach images to — those granted to the warbands they command,
  * newest first. The arbiter curates every award through {@link getPaintingAwards}; this is the

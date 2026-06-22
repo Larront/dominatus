@@ -48,14 +48,20 @@ const award = (
 	id: string,
 	at: number,
 	cycle: number,
-	opts: { warband?: string; kind?: ChronicleAward['kind']; note?: string | null } = {}
+	opts: {
+		warband?: string;
+		kind?: ChronicleAward['kind'];
+		note?: string | null;
+		imagePath?: string | null;
+	} = {}
 ): ChronicleAward => ({
 	id,
 	at,
 	cycle,
 	warband: wb(opts.warband ?? 'a'),
 	kind: opts.kind ?? 'unit',
-	note: opts.note ?? null
+	note: opts.note ?? null,
+	imagePath: opts.imagePath ?? null
 });
 
 const muster = (warbandId: string, at: number): ChronicleMuster => ({
@@ -122,17 +128,30 @@ describe('buildChronicle', () => {
 		expect(battle?.type === 'battle-fought' && battle.defenders.map((w) => w.id)).toEqual(['b']);
 	});
 
-	it('derives a painting-award event, carrying kind and note', () => {
+	it('derives a painting-award event, carrying kind, note, and image path', () => {
 		const events = build({
-			awards: [award('aw1', 100, 1, { warband: 'a', kind: 'character', note: 'Bio-Titan' })]
+			awards: [
+				award('aw1', 100, 1, {
+					warband: 'a',
+					kind: 'character',
+					note: 'Bio-Titan',
+					imagePath: 'photo.jpg'
+				})
+			]
 		});
 		expect(events.find((e) => e.type === 'painting-award')).toMatchObject({
 			type: 'painting-award',
 			id: 'aw1',
 			cycle: 1,
 			kind: 'character',
-			note: 'Bio-Titan'
+			note: 'Bio-Titan',
+			imagePath: 'photo.jpg'
 		});
+	});
+
+	it('carries a null image path for an award with no photo', () => {
+		const events = build({ awards: [award('aw1', 100, 1)] });
+		expect(events.find((e) => e.type === 'painting-award')).toMatchObject({ imagePath: null });
 	});
 
 	it('derives a warband-mustered event from a join record', () => {
