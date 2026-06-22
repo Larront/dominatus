@@ -164,8 +164,88 @@ export async function getPaintingAwards(
 		cycle: a.cycle,
 		kind: a.kind,
 		points: paintingValue(profile, a.kind),
-		note: a.note
+		note: a.note,
+		imagePath: a.imagePath
 	}));
+}
+
+/** A painting award shaped for the image-curation panel. */
+export type EditableAward = Awaited<ReturnType<typeof getPaintingAwards>>[number];
+
+/**
+ * Painting awards a commander may attach images to — those granted to the warbands they command,
+ * newest first. The arbiter curates every award through {@link getPaintingAwards}; this is the
+ * commander's narrower slice so they only see (and can write images on) their own warbands' awards.
+ */
+export async function getAwardsForCommander(
+	campaignId: string,
+	userId: string,
+	profile: ScoringProfile = DEFAULT_PROFILE
+): Promise<EditableAward[]> {
+	const rows = await db.query.paintingAward.findMany({
+		where: eq(paintingAward.campaignId, campaignId),
+		orderBy: (a, { desc }) => [desc(a.createdAt)],
+		with: {
+			warband: { columns: { name: true, short: true, color: true, commanderUserId: true } }
+		}
+	});
+	return rows
+		.filter((a) => a.warband.commanderUserId === userId)
+		.map((a) => ({
+			id: a.id,
+			warbandId: a.warbandId,
+			warbandName: a.warband.name,
+			warbandShort: a.warband.short,
+			warbandColor: a.warband.color,
+			cycle: a.cycle,
+			kind: a.kind,
+			points: paintingValue(profile, a.kind),
+			note: a.note,
+			imagePath: a.imagePath
+		}));
+}
+
+/**
+ * Does this stored image belong to an award in this campaign? Gates the award-image serving route
+ * so a member of one campaign can't read another's award photo by filename (parallel to
+ * `imageInCampaign` for report scoresheets).
+ */
+export async function imageInAwardForCampaign(campaignId: string, name: string): Promise<boolean> {
+	const row = await db.query.paintingAward.findFirst({
+		where: and(eq(paintingAward.campaignId, campaignId), eq(paintingAward.imagePath, name)),
+		columns: { id: true }
+	});
+	return !!row;
+}
+
+/**
+ * Load an award for an image write: its current image and the commander of its warband, scoped to
+ * the campaign so a stray id can't reach across campaigns. The caller pairs `commanderUserId` with
+ * `canWriteAwardImage` to authorize, and `imagePath` is the prior file to clean up on replace/remove.
+ */
+export async function getAwardForImageWrite(
+	awardId: string,
+	campaignId: string
+): Promise<{ imagePath: string | null; commanderUserId: string } | null> {
+	const row = await db.query.paintingAward.findFirst({
+		where: and(eq(paintingAward.id, awardId), eq(paintingAward.campaignId, campaignId)),
+		columns: { imagePath: true },
+		with: { warband: { columns: { commanderUserId: true } } }
+	});
+	if (!row) return null;
+	return { imagePath: row.imagePath, commanderUserId: row.warband.commanderUserId };
+}
+
+/** Point an award at a stored image (or null to clear it), scoped to its campaign. */
+export async function setAwardImagePath(
+	awardId: string,
+	campaignId: string,
+	imagePath: string | null
+): Promise<void> {
+	await db
+		.update(paintingAward)
+		.set({ imagePath })
+		.where(and(eq(paintingAward.id, awardId), eq(paintingAward.campaignId, campaignId)));
 }
 
 /**
@@ -178,6 +258,8 @@ export async function grantPaintingAward(input: {
 	cycle: number;
 	kind: PaintingKind;
 	note?: string | null;
+	/** An optional already-stored image filename the arbiter attached at grant time. */
+	imagePath?: string | null;
 	grantedByUserId: string;
 }): Promise<void> {
 	await db.insert(paintingAward).values({
@@ -186,13 +268,22 @@ export async function grantPaintingAward(input: {
 		cycle: input.cycle,
 		kind: input.kind,
 		note: input.note?.trim() || null,
+		imagePath: input.imagePath ?? null,
 		grantedByUserId: input.grantedByUserId
 	});
 }
 
-/** Revoke a painting award, scoped to its campaign so a stray id can't reach across campaigns. */
-export async function revokePaintingAward(id: string, campaignId: string): Promise<void> {
-	await db
+/**
+ * Revoke a painting award, scoped to its campaign so a stray id can't reach across campaigns.
+ * Returns the revoked award's image filename (or null) so the caller can clean up the stored file.
+ */
+export async function revokePaintingAward(
+	id: string,
+	campaignId: string
+): Promise<{ imagePath: string | null }> {
+	const rows = await db
 		.delete(paintingAward)
-		.where(and(eq(paintingAward.id, id), eq(paintingAward.campaignId, campaignId)));
+		.where(and(eq(paintingAward.id, id), eq(paintingAward.campaignId, campaignId)))
+		.returning({ imagePath: paintingAward.imagePath });
+	return { imagePath: rows[0]?.imagePath ?? null };
 }

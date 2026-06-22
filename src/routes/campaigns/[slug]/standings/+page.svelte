@@ -5,10 +5,15 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import SegmentedField from '$lib/components/ui/SegmentedField.svelte';
 	import DestructiveForm from '$lib/components/ui/DestructiveForm.svelte';
+	import AwardImage from '$lib/components/ui/AwardImage.svelte';
 	import WarbandStats from '$lib/components/WarbandStats.svelte';
-	import type { PageData } from './$types';
+	import type { PageData, ActionData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	// The optional painting photo rides alongside the grant form's flat fields — picked here and
+	// appended to the multipart body on submit (the schema doesn't model the file).
+	let awardImageFile = $state<File | null>(null);
 
 	// Award form (arbiter only, Superforms). `id: 'award'` scopes it so the plain revoke action's
 	// response never feeds back here. Select/SegmentedField aren't native controls, so hidden
@@ -19,7 +24,18 @@
 		message: awardMessage,
 		submitting: granting,
 		enhance: awardEnhance
-	} = untrack(() => superForm(data.awardForm, { id: 'award' }));
+	} = untrack(() =>
+		superForm(data.awardForm, {
+			id: 'award',
+			onSubmit({ formData }) {
+				if (awardImageFile) formData.set('image', awardImageFile);
+			}
+		})
+	);
+
+	// An award-image action returns `{ awardId, imageError }` on failure; surface it on its own row.
+	const imageError = (id: string): string | undefined =>
+		form && 'awardId' in form && form.awardId === id ? (form.imageError ?? undefined) : undefined;
 
 	const warbandItems = $derived(data.warbands.map((w) => ({ value: w.id, label: w.name })));
 	const leadColor = $derived(data.warbands.find((w) => w.id === $award.warbandId)?.color);
@@ -198,6 +214,7 @@
 			<form
 				method="POST"
 				action="?/grantAward"
+				enctype="multipart/form-data"
 				class="mt-4 grid grid-cols-[1fr_auto] gap-3 max-[640px]:grid-cols-1"
 				use:awardEnhance
 			>
@@ -226,6 +243,13 @@
 							duration-[120ms] placeholder:text-ink-faint focus-visible:border-accent
 							focus-visible:shadow-[0_0_0_1px_var(--color-accent-mid)] focus-visible:outline-none"
 					/>
+					<input
+						type="file"
+						accept="image/jpeg,image/png,image/webp"
+						onchange={(e) => (awardImageFile = e.currentTarget.files?.[0] ?? null)}
+						aria-label="Painted models photo (optional)"
+						class="max-w-full font-body text-[12px] text-ink-dim file:mr-2.5 file:cursor-pointer file:border file:border-border file:bg-panel-2 file:px-[11px] file:py-[7px] file:font-display file:text-[10px] file:tracking-[0.08em] file:text-ink-dim file:uppercase"
+					/>
 				</div>
 
 				<div class="flex items-start max-[640px]:items-stretch">
@@ -242,6 +266,11 @@
 
 			{#if $awardErrors.warbandId}
 				<p class="mt-3 font-body text-[12px] text-state-attacker">{$awardErrors.warbandId}</p>
+			{:else if $awardErrors._errors}
+				<!-- A bad image (wrong type/oversize) surfaces as a form-level error, like the report form. -->
+				<p class="mt-3 font-body text-[12px] text-state-attacker">
+					{$awardErrors._errors.join(' ')}
+				</p>
 			{:else if $awardMessage}
 				<p class="mt-3 font-body text-[12px] text-accent">{$awardMessage}</p>
 			{/if}
@@ -250,8 +279,57 @@
 				<ul class="mt-5 flex flex-col">
 					{#each data.awards as a (a.id)}
 						<li
-							class="flex items-center gap-3 border-t border-border py-2.5 font-body text-[13px] first:border-t-0"
+							class="flex flex-col border-t border-border py-2.5 font-body text-[13px] first:border-t-0"
 						>
+							<div class="flex items-center gap-3">
+								<span class="size-2 shrink-0" style="background: {a.warbandColor}"></span>
+								<span class="text-ink">{a.warbandName}</span>
+								<span class="text-ink-dim">{kindLabel[a.kind] ?? a.kind}</span>
+								{#if a.note}<span class="truncate text-ink-faint">— {a.note}</span>{/if}
+								<span class="ml-auto shrink-0 font-semibold text-accent tabular-nums"
+									>+{a.points}</span
+								>
+								<DestructiveForm
+									form={data.revokeForm}
+									formId="revoke-{a.id}"
+									action="?/revokeAward"
+									recordId={a.id}
+									ariaLabel="Revoke award for {a.warbandName}"
+									class="shrink-0 border border-transparent px-1.5 py-0.5 font-display text-[10px] tracking-[0.08em] text-ink-faint uppercase
+										transition-colors hover:border-state-attacker-line hover:text-state-attacker focus-visible:outline-none"
+								>
+									Revoke
+								</DestructiveForm>
+							</div>
+							<AwardImage
+								awardId={a.id}
+								imagePath={a.imagePath}
+								slug={data.slug}
+								removeForm={data.revokeForm}
+								error={imageError(a.id)}
+							/>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+	{/if}
+
+	{#if !data.isArbiter && data.myAwards.length}
+		<!-- A commander curates the painted-models photo on their own warbands' awards. -->
+		<section class="mt-8 border border-border bg-panel-2/60 p-5">
+			<h2 class="font-display text-[11px] font-semibold tracking-[0.14em] text-ink-dim uppercase">
+				<span class="text-accent">▸</span> Your painting awards
+			</h2>
+			<p class="mt-1.5 font-body text-[12px] leading-[1.5] text-ink-dim">
+				Attach a photo of the painted models — the arbiter grants the award itself.
+			</p>
+			<ul class="mt-4 flex flex-col">
+				{#each data.myAwards as a (a.id)}
+					<li
+						class="flex flex-col border-t border-border py-2.5 font-body text-[13px] first:border-t-0"
+					>
+						<div class="flex items-center gap-3">
 							<span class="size-2 shrink-0" style="background: {a.warbandColor}"></span>
 							<span class="text-ink">{a.warbandName}</span>
 							<span class="text-ink-dim">{kindLabel[a.kind] ?? a.kind}</span>
@@ -259,21 +337,17 @@
 							<span class="ml-auto shrink-0 font-semibold text-accent tabular-nums"
 								>+{a.points}</span
 							>
-							<DestructiveForm
-								form={data.revokeForm}
-								formId="revoke-{a.id}"
-								action="?/revokeAward"
-								recordId={a.id}
-								ariaLabel="Revoke award for {a.warbandName}"
-								class="shrink-0 border border-transparent px-1.5 py-0.5 font-display text-[10px] tracking-[0.08em] text-ink-faint uppercase
-									transition-colors hover:border-state-attacker-line hover:text-state-attacker focus-visible:outline-none"
-							>
-								Revoke
-							</DestructiveForm>
-						</li>
-					{/each}
-				</ul>
-			{/if}
+						</div>
+						<AwardImage
+							awardId={a.id}
+							imagePath={a.imagePath}
+							slug={data.slug}
+							removeForm={data.revokeForm}
+							error={imageError(a.id)}
+						/>
+					</li>
+				{/each}
+			</ul>
 		</section>
 	{/if}
 </main>
