@@ -60,10 +60,14 @@
 				<button type="button" class={danger} onclick={requestDeletion} disabled={deleting}>
 					{deleting ? 'Sending…' : 'Yes, email me the deletion link'}
 				</button>
-				<Button type="button" onclick={() => (confirming = false)} disabled={deleting}>Cancel</Button>
+				<Button type="button" onclick={() => (confirming = false)} disabled={deleting}
+					>Cancel</Button
+				>
 			</div>
 		{:else}
-			<button type="button" class={danger} onclick={() => (confirming = true)}>Delete account</button>
+			<button type="button" class={danger} onclick={() => (confirming = true)}
+				>Delete account</button
+			>
 		{/if}
 		{#if errorMsg}<p class="{fieldError} mt-3">{errorMsg}</p>{/if}
 	{/if}

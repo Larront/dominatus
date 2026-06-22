@@ -7,7 +7,7 @@
 	const slug = $derived(page.params.slug);
 	const base = $derived(`/campaigns/${slug}`);
 
-	// Mobile section nav collapses into a dropdown — the six inline links overflow a phone width
+	// Mobile section nav collapses into a dropdown — the inline links overflow a phone width
 	// (the desktop row is preserved above 720px). Closed on navigation, Escape, or a backdrop tap.
 	let menuOpen = $state(false);
 
@@ -15,6 +15,7 @@
 		{ href: base, label: 'Map' },
 		{ href: `${base}/report`, label: 'Report' },
 		{ href: `${base}/standings`, label: 'Standings' },
+		{ href: `${base}/chronicle`, label: 'Chronicle' },
 		{ href: `${base}/rules`, label: 'Rules' },
 		// The admin console is the arbiter's alone (its route also guards server-side).
 		...(data.role === 'arbiter' ? [{ href: `${base}/admin`, label: 'Admin' }] : []),

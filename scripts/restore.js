@@ -21,7 +21,9 @@ const dir = process.env.BACKUP_DIR || '/backups';
 const arg = process.argv[2];
 
 if (!arg) {
-	const snapshots = (await readdir(dir)).filter((f) => f.startsWith('local-') && f.endsWith('.db')).sort();
+	const snapshots = (await readdir(dir))
+		.filter((f) => f.startsWith('local-') && f.endsWith('.db'))
+		.sort();
 	console.error('Usage: bun scripts/restore.js <snapshot>\n\nAvailable in ' + dir + ':');
 	for (const f of snapshots) console.error('  ' + f);
 	process.exit(1);
@@ -35,14 +37,23 @@ const check = new Database(source, { readonly: true });
 const result = check.query('PRAGMA integrity_check').get();
 check.close();
 if (!result || Object.values(result)[0] !== 'ok') {
-	console.error(JSON.stringify({ level: 'error', msg: 'snapshot failed integrity_check; aborting', source, result }));
+	console.error(
+		JSON.stringify({
+			level: 'error',
+			msg: 'snapshot failed integrity_check; aborting',
+			source,
+			result
+		})
+	);
 	process.exit(1);
 }
 
 // Keep the current DB recoverable in case this restore is itself a mistake.
 try {
 	await copyFile(dest, dest + '.pre-restore');
-	console.log(JSON.stringify({ level: 'info', msg: 'saved current db', to: dest + '.pre-restore' }));
+	console.log(
+		JSON.stringify({ level: 'info', msg: 'saved current db', to: dest + '.pre-restore' })
+	);
 } catch (e) {
 	if (e?.code !== 'ENOENT') throw e; // no existing DB to preserve — fine on a fresh volume
 }

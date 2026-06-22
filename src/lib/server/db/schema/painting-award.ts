@@ -28,6 +28,12 @@ export const paintingAward = sqliteTable(
 		kind: text('kind', { enum: ['unit', 'character', 'terrain'] }).notNull(),
 		/** Optional free-text note, e.g. "Hierophant Bio-Titan". */
 		note: text('note'),
+		/**
+		 * Optional photo of the painted models, one per award. Stored exactly like a report
+		 * scoresheet (UUID filename on the data volume) and served through the membership-gated
+		 * award-image route; null when no image is attached.
+		 */
+		imagePath: text('image_path'),
 		grantedByUserId: text('granted_by_user_id')
 			.notNull()
 			.references(() => user.id),

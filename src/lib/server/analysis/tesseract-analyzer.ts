@@ -197,9 +197,11 @@ function buildDraft(words: OcrWord[]): { draft: ReportDraft; rects: Rect[][] } {
 			const total = rowTotal(line, gridMaxX);
 			const grid = gridSum(line, labelMaxX, gridMaxX);
 			if (!seenPrimary) {
-				// First scored row is the primary; its NN/NN total is reliable.
+				// First scored row is the primary; its NN/NN total is reliable and its label names
+				// the primary mission (matched to the canonical list downstream).
 				if (total === undefined && grid === 0 && !label) continue;
 				combatant.primaryVp = total ?? grid;
+				combatant.detectedPrimaryMission = label || undefined;
 				seenPrimary = true;
 				continue;
 			}

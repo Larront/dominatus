@@ -1,0 +1,1 @@
+ALTER TABLE `painting_award` ADD `image_path` text;

@@ -8,6 +8,12 @@
 	import SegmentedField from '$lib/components/ui/SegmentedField.svelte';
 	import Checkbox from '$lib/components/ui/Checkbox.svelte';
 	import { MAX_SECONDARIES } from '$lib/schemas/battle-report';
+	import {
+		PRIMARY_MISSIONS,
+		SECONDARY_MISSIONS,
+		FORCE_DISPOSITIONS,
+		isSecondaryMission
+	} from '$lib/domain/missions';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -22,6 +28,9 @@
 			// append it to the multipart body here; the action reads it off `formData` directly.
 			onSubmit({ formData }) {
 				if (imageFile) formData.set('image', imageFile);
+				// Optional reason for an arbiter amend (issue #6) — rides alongside the JSON body like the
+				// image; the action records it in the audit trail. Never required, so an empty box is fine.
+				if (editing && reason.trim()) formData.set('reason', reason);
 			}
 		})
 	);
@@ -35,6 +44,24 @@
 	const wbMap = $derived(new Map(data.warbands.map((w) => [w.id, w])));
 	const wbName = (id: string) => wbMap.get(id)?.name ?? '';
 	const wbColor = (id: string) => wbMap.get(id)?.color ?? 'var(--color-ink-dim)';
+
+	// Mission pickers are sourced from the edition's canonical lists (issue: mission capture). The
+	// primary is constrained to the list (with an explicit "none"); secondaries are too, but keep
+	// any out-of-list value an amended report already carries so editing never silently drops it.
+	const primaryMissionItems = [
+		{ value: '', label: '— No primary mission —' },
+		...PRIMARY_MISSIONS.map((m) => ({ value: m, label: m }))
+	];
+	const forceDispositionItems = [
+		{ value: '', label: '— No disposition —' },
+		...FORCE_DISPOSITIONS.map((d) => ({ value: d, label: d }))
+	];
+	const secondaryMissionItems = SECONDARY_MISSIONS.map((m) => ({ value: m, label: m }));
+	function secondaryItems(current: string) {
+		return current && !isSecondaryMission(current)
+			? [{ value: current, label: current }, ...secondaryMissionItems]
+			: secondaryMissionItems;
+	}
 
 	const worldItems = $derived(data.worlds.map((w) => ({ value: w.id, label: w.name })));
 	const warbandItems = $derived(
@@ -68,7 +95,13 @@
 
 	function setFormat(next: string) {
 		const n = next === '2v2' ? 2 : 1;
-		const blank = (side: 'attacker' | 'defender') => ({ side, warbandId: '', secondaries: [] });
+		const blank = (side: 'attacker' | 'defender') => ({
+			side,
+			warbandId: '',
+			primaryMission: '',
+			forceDisposition: '',
+			secondaries: []
+		});
 		const att = $form.combatants.filter((c) => c.side === 'attacker');
 		const def = $form.combatants.filter((c) => c.side === 'defender');
 		while (att.length < n) att.push(blank('attacker'));
@@ -171,11 +204,15 @@
 		detectedName?: string;
 		detectedFaction?: string;
 		warbandId?: string;
+		primaryMission?: string;
 		primaryVp?: number;
 		secondaries: DraftSecondary[];
 		battleReadyVp?: number;
 	};
 	type ReportDraft = { combatants: DraftCombatant[]; confidence?: number };
+
+	// Optional, never-blocking reason for an arbiter amend, captured into the audit trail (issue #6).
+	let reason = $state('');
 
 	let imageFile = $state<File | null>(null);
 	// Object URL for the on-screen preview, so the commander can cross-reference the image
@@ -227,17 +264,27 @@
 		$form.combatants = players.map((p, i) => {
 			const side: 'attacker' | 'defender' = i < half ? 'attacker' : 'defender';
 			const isLead = i === 0 || i === half;
+			// Each side runs its own primary, carried (with the score) on its lead combatant. Force
+			// disposition isn't on the scoresheet, so it always starts blank for the commander to pick.
 			return isLead
 				? {
 						side,
 						warbandId: p.warbandId ?? '',
+						primaryMission: p.primaryMission ?? '',
+						forceDisposition: '',
 						primaryVp: p.primaryVp ?? null,
 						battleReadyVp: p.battleReadyVp ?? 10,
 						secondaries: (p.secondaries ?? [])
 							.slice(0, MAX_SECONDARIES)
 							.map((s) => ({ name: s.name, victoryPoints: s.victoryPoints }))
 					}
-				: { side, warbandId: p.warbandId ?? '', secondaries: [] };
+				: {
+						side,
+						warbandId: p.warbandId ?? '',
+						primaryMission: '',
+						forceDisposition: '',
+						secondaries: []
+					};
 		});
 
 		const missing = players.filter((p) => !p.warbandId);
@@ -540,9 +587,45 @@
 						</p>
 					{/if}
 
+					<div class="mb-2.5 flex flex-col gap-1.5">
+						<span class={label}
+							>› Primary mission <span class="tracking-[0.06em] text-ink-faint">optional</span
+							></span
+						>
+						<Select
+							items={primaryMissionItems}
+							value={$form.combatants[lead].primaryMission ?? ''}
+							onValueChange={(v) => patchCombatant(lead, { primaryMission: v })}
+							ariaLabel="{kind} primary mission"
+							placeholder="Select a primary mission"
+						/>
+						{#if $errors.combatants?.[lead]?.primaryMission}<span
+								class="font-body text-[11.5px] text-state-attacker"
+								>{$errors.combatants[lead].primaryMission}</span
+							>{/if}
+					</div>
+
+					<div class="mb-2.5 flex flex-col gap-1.5">
+						<span class={label}
+							>› Force disposition <span class="tracking-[0.06em] text-ink-faint">optional</span
+							></span
+						>
+						<Select
+							items={forceDispositionItems}
+							value={$form.combatants[lead].forceDisposition ?? ''}
+							onValueChange={(v) => patchCombatant(lead, { forceDisposition: v })}
+							ariaLabel="{kind} force disposition"
+							placeholder="Select a force disposition"
+						/>
+						{#if $errors.combatants?.[lead]?.forceDisposition}<span
+								class="font-body text-[11.5px] text-state-attacker"
+								>{$errors.combatants[lead].forceDisposition}</span
+							>{/if}
+					</div>
+
 					<div class="mb-2.5 grid grid-cols-[1fr_auto_auto] items-end gap-2.5">
 						<label class="flex flex-col gap-1.5">
-							<span class={label}>› Primary</span>
+							<span class={label}>› Primary <span class="text-ink-faint">VP</span></span>
 							<input
 								class="{control} text-right"
 								type="number"
@@ -583,13 +666,13 @@
 					<div class="flex flex-col gap-1.5">
 						{#each c.secondaries ?? [] as sec, j (j)}
 							<div class="grid grid-cols-[1fr_58px_30px] gap-1.5">
-								<input
-									class="{control} px-[9px] py-[7px] text-[12px]"
-									type="text"
-									placeholder="Secondary mission"
-									maxlength="80"
+								<Select
+									items={secondaryItems(sec.name)}
 									value={sec.name}
-									oninput={(e) => patchSecondary(lead, j, { name: e.currentTarget.value })}
+									onValueChange={(v) => patchSecondary(lead, j, { name: v })}
+									ariaLabel="Secondary mission"
+									placeholder="Secondary mission"
+									class="py-[7px] text-[12px]"
 								/>
 								<input
 									class="{control} px-[9px] py-[7px] text-right text-[12px]"
@@ -735,6 +818,23 @@
 						bind:value={$form.narrative}
 					></textarea>
 				</label>
+				{#if editing}
+					<!-- Arbiter amend: an optional note explaining the correction, kept in the audit trail
+					     (issue #6). Never required — leaving it blank still saves. -->
+					<label class="mt-3.5 flex flex-col gap-1.5">
+						<span class={label}
+							>› Reason for correction <span class="tracking-[0.06em] text-ink-faint">optional</span
+							></span
+						>
+						<input
+							class={control}
+							type="text"
+							maxlength="300"
+							placeholder="Why are you amending this report? (logged for the record)"
+							bind:value={reason}
+						/>
+					</label>
+				{/if}
 			</section>
 
 			<!-- ── Submit ────────────────────────────────────────────── -->
