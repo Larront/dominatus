@@ -44,18 +44,19 @@ each. **None of these block local dev** — with no Resend key the verification/
 to the server console, and the social buttons simply error until their credentials exist. Full
 template lives in `.env.example`.
 
-| Env var | Used by | How to obtain | Status |
-|---|---|---|---|
-| `BETTER_AUTH_SECRET` | Better Auth session signing | `openssl rand -base64 32`; host-injected in prod, never committed | ✅ set in Dockge stack `.env` |
-| `ORIGIN` | SvelteKit CSRF + Better Auth `baseURL`/`trustedOrigins` + secure-cookie gating + adapter-node URLs | Local `http://localhost:5173`; **prod = `https://dominatus.larront.com`** | ✅ set, verified live |
-| `DATABASE_URL` | SQLite path | Local `local.db`; prod = mounted volume path | ✅ `/data/local.db` (set by compose) |
-| `RESEND_API_KEY` | `src/lib/server/email.ts` | Resend → API Keys → create (`re_…`) | ✅ set in prod (2026-06-11); sending works |
-| `EMAIL_FROM` | Sender address | Must be on a Resend-verified domain; falls back to sandbox `onboarding@resend.dev` | ✅ `noreply@send.larront.com` — domain verified (DKIM+SPF+MX), delivery to any address confirmed (2026-06-11) |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `socialProviders.google` | Google Cloud Console → OAuth 2.0 client; redirect URI `https://dominatus.larront.com/api/auth/callback/google` | ✅ set in prod |
+| Env var                                     | Used by                                                                                            | How to obtain                                                                                                  | Status                                                                                                        |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`                        | Better Auth session signing                                                                        | `openssl rand -base64 32`; host-injected in prod, never committed                                              | ✅ set in Dockge stack `.env`                                                                                 |
+| `ORIGIN`                                    | SvelteKit CSRF + Better Auth `baseURL`/`trustedOrigins` + secure-cookie gating + adapter-node URLs | Local `http://localhost:5173`; **prod = `https://dominatus.larront.com`**                                      | ✅ set, verified live                                                                                         |
+| `DATABASE_URL`                              | SQLite path                                                                                        | Local `local.db`; prod = mounted volume path                                                                   | ✅ `/data/local.db` (set by compose)                                                                          |
+| `RESEND_API_KEY`                            | `src/lib/server/email.ts`                                                                          | Resend → API Keys → create (`re_…`)                                                                            | ✅ set in prod (2026-06-11); sending works                                                                    |
+| `EMAIL_FROM`                                | Sender address                                                                                     | Must be on a Resend-verified domain; falls back to sandbox `onboarding@resend.dev`                             | ✅ `noreply@send.larront.com` — domain verified (DKIM+SPF+MX), delivery to any address confirmed (2026-06-11) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `socialProviders.google`                                                                           | Google Cloud Console → OAuth 2.0 client; redirect URI `https://dominatus.larront.com/api/auth/callback/google` | ✅ set in prod                                                                                                |
 
 **Resend tiers:**
+
 - **Tier 0 (now, no key):** links log to the dev console — full flow testable with zero setup.
-- **Tier 1 (key only):** real emails, but the sandbox sender delivers *only* to your Resend signup address.
+- **Tier 1 (key only):** real emails, but the sandbox sender delivers _only_ to your Resend signup address.
 - **Tier 2 (verified domain):** add SPF + DKIM + DMARC DNS records, set `EMAIL_FROM` to an address on that domain → send to anyone.
 
 **Social provider (Google):** also requires the redirect URI above registered in the Google Cloud
@@ -82,7 +83,7 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 
 - [x] `/reset-password` page consuming the `?token=` link — new+confirm password, min-8, invalid/expired-token state, success → `/`
 - [x] `/forgot-password` — dedicated route calling `requestPasswordReset` (note: Better Auth 1.4.x renamed `forgetPassword` → `requestPasswordReset`); neutral success (no account enumeration)
-- [x] "Resend verification email" — folded into AccessGate's verify phase with a 30s cooldown; fires after enlist *and* on an unverified sign-in (403)
+- [x] "Resend verification email" — folded into AccessGate's verify phase with a 30s cooldown; fires after enlist _and_ on an unverified sign-in (403)
 - [x] Sign-out control — already present in the `CampaignHub` header; logout now lands on `/` (was `/login`)
 - [x] Custom `+error.svelte` — `// SIGNAL LOST` (404) / `// COGITATOR FAULT` (5xx), plain recovery
 - [x] **Consolidation:** AccessGate at `/` is the single canonical anonymous terminal (social + forgot folded in). `/login` and `/signup` routes were **purged**; all 8 `redirect(302, '/login')` repointed to `/`. New shared `AuthTerminal.svelte` shell backs AccessGate, forgot-password, and reset-password.
@@ -90,7 +91,7 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 ## Ingress
 
 > **Deferred to deploy time** (decided 2026-06-11). Hosting only happens at the end of
-> development, and none of this can be *verified* until the container is actually running behind
+> development, and none of this can be _verified_ until the container is actually running behind
 > the tunnel (secure-cookie flag landing, headers forwarding). The config itself is production-only
 > and has **no localhost-dev impact**: `PROTOCOL_HEADER`/`HOST_HEADER` are read by adapter-node in
 > the built container (Vite dev never touches them); `trustedOrigins` derives from `ORIGIN` (=
@@ -107,7 +108,7 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 - [x] `trustedOrigins` set to the public URL — `auth.ts` sets `trustedOrigins: [ORIGIN]` (dev = `localhost:5173`, prod = `dominatus.larront.com`)
 - [x] Secure-cookie + URL config done on the app side — `useSecureCookies` gated on `ORIGIN.startsWith('https://')` (off for localhost dev, on in prod). `PROTOCOL_HEADER`/`HOST_HEADER` **not needed**: adapter-node uses `ORIGIN` to build request URLs, so they resolve as `https` behind the tunnel without proxy-header config.
 - [x] cloudflared ingress rule + DNS route — done via the Cloudflare GUI; public DNS resolves to the edge and the tunnel reaches the app.
-- [x] **Verified behind the live tunnel** (2026-06-11): `GET /healthz` → 200 through the edge, and `/` returns the app's own headers incl. `Strict-Transport-Security` — proving HSTS + `useSecureCookies` are active under the prod https `ORIGIN`. *(LAN note: a split-horizon DNS entry resolves the hostname to a local IP `192.168.50.103` from inside the network, so test from off-LAN or fix the local override; the public path is correct.)*
+- [x] **Verified behind the live tunnel** (2026-06-11): `GET /healthz` → 200 through the edge, and `/` returns the app's own headers incl. `Strict-Transport-Security` — proving HSTS + `useSecureCookies` are active under the prod https `ORIGIN`. _(LAN note: a split-horizon DNS entry resolves the hostname to a local IP `192.168.50.103` from inside the network, so test from off-LAN or fix the local override; the public path is correct.)_
 
 ## Security & hardening
 
@@ -124,8 +125,8 @@ All five flows built in the "Campaign Cogitator" design system; `bun run check` 
 
 ## Observability
 
-- [~] Error tracking / alerting (e.g. Sentry) — **deliberately deferred** (decided 2026-06-11). JSON logs to `docker logs` are an acceptable floor at this scale; the tradeoff accepted is no *push* alerting (you have to go look). `handleError` in `hooks.server.ts` is the single wiring point if a tracker (Sentry/GlitchTip) is added later.
-- [ ] External uptime monitoring hitting `/healthz` — **decided: Uptime Kuma** as a separate compose stack on the same box (deploy-time). Same-box is acceptable here: host-down is covered by physical presence, and Kuma probing the *public* `https://<domain>/healthz` (through the tunnel) still catches tunnel/DNS/TLS/networking failures. Run as its own compose project with its own volume so an app `down -v` can't touch it; alert to Discord/Telegram/ntfy.
+- [~] Error tracking / alerting (e.g. Sentry) — **deliberately deferred** (decided 2026-06-11). JSON logs to `docker logs` are an acceptable floor at this scale; the tradeoff accepted is no _push_ alerting (you have to go look). `handleError` in `hooks.server.ts` is the single wiring point if a tracker (Sentry/GlitchTip) is added later.
+- [ ] External uptime monitoring hitting `/healthz` — **decided: Uptime Kuma** as a separate compose stack on the same box (deploy-time). Same-box is acceptable here: host-down is covered by physical presence, and Kuma probing the _public_ `https://<domain>/healthz` (through the tunnel) still catches tunnel/DNS/TLS/networking failures. Run as its own compose project with its own volume so an app `down -v` can't touch it; alert to Discord/Telegram/ntfy.
 - [x] Log destination/retention — Docker `json-file` rotation (`max-size: 10m`, `max-file: 5`, ~50 MB/service) in `docker-compose.yml`. No external shipper yet, but the JSON format is parse-ready for one.
 
 ## Ops

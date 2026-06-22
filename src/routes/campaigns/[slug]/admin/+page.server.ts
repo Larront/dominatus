@@ -202,11 +202,17 @@ export const actions: Actions = {
 	},
 
 	deleteReport: async ({ request, params, locals }) => {
-		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-		// The form id is read from the POST so the response routes back to the right row's form.
-		const form = await superValidate(request, zod4(idActionSchema));
+		const { campaign, userId } = await requireArbiter(params.slug, locals.user?.id);
+		// Read the body once: the id-action form plus the optional free-text reason that rides
+		// alongside it (issue #6) — prompted in the UI, never required.
+		const formData = await request.formData();
+		const form = await superValidate(formData, zod4(idActionSchema));
 		if (!form.valid) return fail(400, { form });
-		const { imagePath } = deleteBattleReport(form.data.id, campaign.id);
+		const reason = String(formData.get('reason') ?? '');
+		const { imagePath } = deleteBattleReport(form.data.id, campaign.id, {
+			actorUserId: userId,
+			reason
+		});
 		await deleteReportImage(imagePath); // drop the scoresheet now the report is gone
 		return message(form, 'Report deleted. Standings and control recalculated.');
 	},

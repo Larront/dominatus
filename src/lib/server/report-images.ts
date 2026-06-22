@@ -20,7 +20,8 @@ const EXT_BY_TYPE: Record<string, string> = {
 };
 
 /** A stored filename is a UUID + known extension — the only shape the serving route trusts. */
-const STORED_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/;
+const STORED_NAME =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/;
 
 const CONTENT_TYPE: Record<string, string> = {
 	jpg: 'image/jpeg',
@@ -51,7 +52,11 @@ export type ImageCheck =
 export function checkImageUpload(value: FormDataEntryValue | null): ImageCheck {
 	if (!(value instanceof File) || value.size === 0) return { kind: 'none' };
 	if (!EXT_BY_TYPE[value.type])
-		return { kind: 'error', message: 'Scoresheet must be a JPEG, PNG, or WebP image.', status: 400 };
+		return {
+			kind: 'error',
+			message: 'Scoresheet must be a JPEG, PNG, or WebP image.',
+			status: 400
+		};
 	if (value.size > MAX_IMAGE_BYTES)
 		return { kind: 'error', message: 'That image is too large (max 12 MB).', status: 413 };
 	return { kind: 'ok', file: value };

@@ -32,9 +32,25 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 		form.data.cycle = campaign.currentCycle;
 		// Each side's lead combatant carries the (in 2v2, shared) score; battle-ready
 		// defaults on at +10 VP, so the commander only unticks an unpainted force.
+		// `primaryMission`/`forceDisposition: ''` bind cleanly to each side's pickers (a CV draft may
+		// fill the mission; disposition is always manual).
 		form.data.combatants = [
-			{ side: 'attacker', warbandId: '', secondaries: [], battleReadyVp: 10 },
-			{ side: 'defender', warbandId: '', secondaries: [], battleReadyVp: 10 }
+			{
+				side: 'attacker',
+				warbandId: '',
+				primaryMission: '',
+				forceDisposition: '',
+				secondaries: [],
+				battleReadyVp: 10
+			},
+			{
+				side: 'defender',
+				warbandId: '',
+				primaryMission: '',
+				forceDisposition: '',
+				secondaries: [],
+				battleReadyVp: 10
+			}
 		];
 		// Outcome starts unset so the form never pre-declares a victor — the commander must choose.
 		form.data.outcome = undefined as unknown as typeof form.data.outcome;
@@ -86,12 +102,18 @@ export const actions: Actions = {
 		const editId = url.searchParams.get('edit');
 		if (editId) {
 			if (role !== 'arbiter') return fail(403, { form });
-			const newImage = imageCheck.kind === 'ok' ? await saveReportImage(imageCheck.file) : undefined;
+			// Optional free-text reason for the correction — rides alongside the JSON form body, never
+			// required (issue #6). Captured into the append-only audit trail with the pre-edit snapshot.
+			const reason = String(formData.get('reason') ?? '');
+			const newImage =
+				imageCheck.kind === 'ok' ? await saveReportImage(imageCheck.file) : undefined;
 			let previousImagePath: string | null = null;
 			try {
 				({ previousImagePath } = updateBattleReport(editId, {
 					...form.data,
 					campaignId: campaign.id,
+					actorUserId: locals.user.id,
+					reason,
 					...(newImage !== undefined ? { imagePath: newImage } : {})
 				}));
 			} catch (e) {

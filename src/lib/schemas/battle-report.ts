@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PRIMARY_MISSIONS, FORCE_DISPOSITIONS } from '$lib/domain/missions';
 
 /**
  * Validation for the battle-report form. Shared by the Superforms client and the
@@ -30,6 +31,33 @@ export const secondaryScoreSchema = z.object({
 export const combatantSchema = z.object({
 	warbandId: z.string().min(1, 'Select a warband'),
 	side: battleSide,
+	/**
+	 * This side's primary mission (each side runs its own). Optional — a report without one submits
+	 * fine — but when set it must be one of the edition's canonical primary missions (the constraint
+	 * lives here and at the picker). Empty string means "none chosen". A plain `.includes` (not the
+	 * `isPrimaryMission` guard) keeps the field a plain string rather than narrowing it to the literal
+	 * union. Secondaries stay free text by contrast, constrained only at the picker so existing /
+	 * rotated names survive.
+	 */
+	primaryMission: z
+		.string()
+		.refine(
+			(m) => m === '' || (PRIMARY_MISSIONS as readonly string[]).includes(m),
+			'Choose a primary mission from the list'
+		)
+		.optional(),
+	/**
+	 * This side's force disposition (each side declares its own). Optional, and constrained to the
+	 * canonical list when set — same pattern as `primaryMission`. Not on the scoresheet, so it is a
+	 * manual picker only, never seeded from a draft.
+	 */
+	forceDisposition: z
+		.string()
+		.refine(
+			(d) => d === '' || (FORCE_DISPOSITIONS as readonly string[]).includes(d),
+			'Choose a force disposition from the list'
+		)
+		.optional(),
 	// Full score breakdown — all optional so manual entry never blocks while the CV
 	// draft (ADR 0001), which populates these, is stubbed. Control uses `outcome`,
 	// not these values; they are the durable record. Total VP is derived for display.

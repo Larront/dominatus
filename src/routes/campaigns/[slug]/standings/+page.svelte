@@ -1,39 +1,9 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
-	import { superForm } from 'sveltekit-superforms';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Select from '$lib/components/ui/Select.svelte';
-	import SegmentedField from '$lib/components/ui/SegmentedField.svelte';
-	import DestructiveForm from '$lib/components/ui/DestructiveForm.svelte';
+	import WarbandStats from '$lib/components/WarbandStats.svelte';
+	import MissionAnalytics from '$lib/components/MissionAnalytics.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
-
-	// Award form (arbiter only, Superforms). `id: 'award'` scopes it so the plain revoke action's
-	// response never feeds back here. Select/SegmentedField aren't native controls, so hidden
-	// inputs carry their bound store values into the POST body.
-	const {
-		form: award,
-		errors: awardErrors,
-		message: awardMessage,
-		submitting: granting,
-		enhance: awardEnhance
-	} = untrack(() => superForm(data.awardForm, { id: 'award' }));
-
-	const warbandItems = $derived(data.warbands.map((w) => ({ value: w.id, label: w.name })));
-	const leadColor = $derived(data.warbands.find((w) => w.id === $award.warbandId)?.color);
-
-	const kindOptions = [
-		{ value: 'unit', label: 'Unit · 1' },
-		{ value: 'character', label: 'Char / Vehicle · 2' },
-		{ value: 'terrain', label: 'Terrain · 1' }
-	];
-
-	const kindLabel: Record<string, string> = {
-		unit: 'Unit',
-		character: 'Character / vehicle',
-		terrain: 'Terrain / display'
-	};
 
 	// Breakdown columns are driven by the campaign's scoring profile, so a zeroed category never
 	// shows a dead column. Commanders see only active categories; the arbiter sees every category
@@ -183,92 +153,15 @@
 		</table>
 	</div>
 
-	{#if data.isArbiter}
-		<!-- Arbiter award panel: grant painting points the report log can't capture. -->
-		<section class="mt-8 border border-border bg-panel-2/60 p-5">
-			<h2 class="font-display text-[11px] font-semibold tracking-[0.14em] text-ink-dim uppercase">
-				<span class="text-accent">▸</span> Grant painting award
-			</h2>
-
-			<form
-				method="POST"
-				action="?/grantAward"
-				class="mt-4 grid grid-cols-[1fr_auto] gap-3 max-[640px]:grid-cols-1"
-				use:awardEnhance
-			>
-				<input type="hidden" name="warbandId" value={$award.warbandId} />
-				<input type="hidden" name="kind" value={$award.kind} />
-
-				<div class="flex flex-col gap-3">
-					<Select
-						items={warbandItems}
-						bind:value={$award.warbandId}
-						placeholder="Select warband…"
-						ariaLabel="Warband to award"
-						{leadColor}
-					/>
-					<SegmentedField
-						options={kindOptions}
-						value={$award.kind}
-						onValueChange={(v) => ($award.kind = v as typeof $award.kind)}
-						ariaLabel="What was painted"
-					/>
-					<input
-						name="note"
-						bind:value={$award.note}
-						placeholder="Note (optional) — e.g. Hierophant Bio-Titan"
-						class="border border-border bg-void px-3 py-2.5 font-body text-[13px] text-ink transition-[border-color,box-shadow]
-							duration-[120ms] placeholder:text-ink-faint focus-visible:border-accent
-							focus-visible:shadow-[0_0_0_1px_var(--color-accent-mid)] focus-visible:outline-none"
-					/>
-				</div>
-
-				<div class="flex items-start max-[640px]:items-stretch">
-					<Button
-						type="submit"
-						variant="primary"
-						disabled={!$award.warbandId || $granting}
-						class="max-[640px]:w-full"
-					>
-						{$granting ? 'Granting…' : 'Grant'}
-					</Button>
-				</div>
-			</form>
-
-			{#if $awardErrors.warbandId}
-				<p class="mt-3 font-body text-[12px] text-state-attacker">{$awardErrors.warbandId}</p>
-			{:else if $awardMessage}
-				<p class="mt-3 font-body text-[12px] text-accent">{$awardMessage}</p>
-			{/if}
-
-			{#if data.awards.length}
-				<ul class="mt-5 flex flex-col">
-					{#each data.awards as a (a.id)}
-						<li
-							class="flex items-center gap-3 border-t border-border py-2.5 font-body text-[13px] first:border-t-0"
-						>
-							<span class="size-2 shrink-0" style="background: {a.warbandColor}"></span>
-							<span class="text-ink">{a.warbandName}</span>
-							<span class="text-ink-dim">{kindLabel[a.kind] ?? a.kind}</span>
-							{#if a.note}<span class="truncate text-ink-faint">— {a.note}</span>{/if}
-							<span class="ml-auto shrink-0 font-semibold text-accent tabular-nums"
-								>+{a.points}</span
-							>
-							<DestructiveForm
-								form={data.revokeForm}
-								formId="revoke-{a.id}"
-								action="?/revokeAward"
-								recordId={a.id}
-								ariaLabel="Revoke award for {a.warbandName}"
-								class="shrink-0 border border-transparent px-1.5 py-0.5 font-display text-[10px] tracking-[0.08em] text-ink-faint uppercase
-									transition-colors hover:border-state-attacker-line hover:text-state-attacker focus-visible:outline-none"
-							>
-								Revoke
-							</DestructiveForm>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</section>
+	{#if data.statWarbands.length > 0}
+		<WarbandStats
+			warbands={data.statWarbands}
+			reports={data.statReports}
+			viewerUserId={data.viewerUserId}
+			galleryImages={data.galleryImages}
+			slug={data.slug}
+		/>
 	{/if}
+
+	<MissionAnalytics analytics={data.missionAnalytics} />
 </main>

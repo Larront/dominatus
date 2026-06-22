@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { fadeRise } from '$lib/motion';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
@@ -7,7 +8,7 @@
 	const slug = $derived(page.params.slug);
 	const base = $derived(`/campaigns/${slug}`);
 
-	// Mobile section nav collapses into a dropdown — the six inline links overflow a phone width
+	// Mobile section nav collapses into a dropdown — the inline links overflow a phone width
 	// (the desktop row is preserved above 720px). Closed on navigation, Escape, or a backdrop tap.
 	let menuOpen = $state(false);
 
@@ -15,6 +16,8 @@
 		{ href: base, label: 'Map' },
 		{ href: `${base}/report`, label: 'Report' },
 		{ href: `${base}/standings`, label: 'Standings' },
+		{ href: `${base}/chronicle`, label: 'Chronicle' },
+		{ href: `${base}/gallery`, label: 'Gallery' },
 		{ href: `${base}/rules`, label: 'Rules' },
 		// The admin console is the arbiter's alone (its route also guards server-side).
 		...(data.role === 'arbiter' ? [{ href: `${base}/admin`, label: 'Admin' }] : []),
@@ -102,29 +105,9 @@
 
 		<div class="flex-1"></div>
 
-		{#if data.role === 'arbiter' && data.campaign.joinCode}
-			<a
-				href="{base}/admin"
-				class="flex items-center gap-2 border border-border bg-panel-2 px-[13px] py-[7px] font-display text-[10.5px] font-medium tracking-[0.1em] whitespace-nowrap text-ink-dim uppercase no-underline transition-[color,border-color] duration-[120ms] hover:border-border-lum hover:text-accent max-[760px]:hidden"
-				aria-label="Invite code {data.campaign.joinCode} — manage in admin"
-			>
-				Invite <b class="font-bold tracking-[0.22em] text-accent">{data.campaign.joinCode}</b>
-			</a>
-		{/if}
-
-		<span
-			class="flex items-center gap-2.5 border border-border bg-panel-2 px-[13px] py-[7px] font-display text-[10.5px] font-medium tracking-[0.1em] whitespace-nowrap text-ink-dim uppercase max-[1000px]:hidden"
-			aria-label="Current cycle {data.campaign.currentCycle}"
-		>
-			<span
-				class="size-[7px] animate-blink bg-accent shadow-[0_0_7px_var(--color-accent)] motion-reduce:animate-none"
-				aria-hidden="true"
-			></span>
-			Cycle <b class="font-bold text-accent">{data.campaign.currentCycle}</b>
-		</span>
-
-		<!-- Desktop: the section links inline. -->
-		<nav class="flex gap-0.5 max-[720px]:hidden" aria-label="Campaign sections">
+		<!-- Desktop: the section links inline. Collapses to the dropdown below 1024px —
+		     the full section list overflows the header at tablet/half-screen widths. -->
+		<nav class="flex gap-0.5 max-[1024px]:hidden" aria-label="Campaign sections">
 			{#each nav as item (item.href)}
 				<a
 					class="{navLink} {isActive(item.href)
@@ -138,8 +121,8 @@
 			{/each}
 		</nav>
 
-		<!-- Mobile: collapse the same links into a dropdown. -->
-		<div class="relative hidden max-[720px]:block">
+		<!-- Narrow widths: collapse the same links into a dropdown. -->
+		<div class="relative hidden max-[1024px]:block">
 			<button
 				type="button"
 				onclick={() => (menuOpen = !menuOpen)}
@@ -169,10 +152,12 @@
 					aria-hidden="true"
 					class="fixed inset-0 z-10 cursor-default"
 					onclick={() => (menuOpen = false)}
+					transition:fadeRise={{ y: 0 }}
 				></button>
 				<nav
 					class="absolute top-[calc(100%+12px)] right-0 z-20 flex min-w-[180px] flex-col border border-border bg-panel shadow-[0_12px_30px_-8px_rgba(0,0,0,0.7)]"
 					aria-label="Campaign sections"
+					transition:fadeRise={{ y: -6 }}
 				>
 					{#each nav as item (item.href)}
 						<a

@@ -71,10 +71,10 @@ over-built for the problem).
 - `ReportDraft` mirrors the form's score breakdown and carries the detected player name/faction
   for matching; it deliberately omits world / side / outcome, which the sheet can't supply.
 - At the **analyze** step the uploaded image seeds the draft in memory and is not stored. The
-  scoresheet *is* persisted at **submit**, as evidence attached to the human-confirmed report:
+  scoresheet _is_ persisted at **submit**, as evidence attached to the human-confirmed report:
   the image rides the form's multipart body (the form is `dataType: 'json'`, so the file is
   appended client-side, not in the schema), the action writes it to `<dir of
-  DATABASE_URL>/images` on the data volume and stores the filename in `battle_report.image_path`,
+DATABASE_URL>/images` on the data volume and stores the filename in `battle_report.image_path`,
   and a campaign-gated route (`/campaigns/[slug]/report/image/[file]`) streams it back into the
   battle log. This doesn't make the draft authoritative — the stored image only records a report
   the commander already confirmed. Storage lives behind `src/lib/server/report-images.ts`;

@@ -1,18 +1,12 @@
-import { fail } from '@sveltejs/kit';
-import { superValidate, message, setError } from 'sveltekit-superforms';
-import { zod4 } from 'sveltekit-superforms/adapters';
-import { paintingAwardSchema } from '$lib/schemas/painting-award';
-import { idActionSchema } from '$lib/schemas/id-action';
-import { requireArbiter } from '$lib/server/campaigns';
 import {
 	getStandings,
-	getPaintingAwards,
-	grantPaintingAward,
-	revokePaintingAward
+	getStatReports,
+	getStatWarbands,
+	getMissionAnalytics,
+	getGalleryAwards
 } from '$lib/server/standings';
-import { getWarbandsForCampaign } from '$lib/server/warbands';
 import { DEFAULT_PROFILE } from '$lib/domain/scoring-profile';
-import type { PageServerLoad, Actions } from './$types';
+import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const { campaign, role, user } = await parent();
@@ -20,60 +14,30 @@ export const load: PageServerLoad = async ({ parent }) => {
 	// Score by the campaign's profile; legacy campaigns with no profile fall back to the default.
 	const profile = campaign.scoringProfile ?? DEFAULT_PROFILE;
 
-	// The award panel (warband picker + recent grants) is arbiter-only, so only load it then.
-	const [standings, warbands, awards, awardForm, revokeForm] = await Promise.all([
-		getStandings(campaign.id, profile, user?.id),
-		isArbiter ? getWarbandsForCampaign(campaign.id) : Promise.resolve([]),
-		isArbiter ? getPaintingAwards(campaign.id, profile) : Promise.resolve([]),
-		superValidate(zod4(paintingAwardSchema), { id: 'award' }),
-		// Base form for the per-row revoke buttons; each row overrides the id client-side.
-		superValidate(zod4(idActionSchema))
-	]);
+	const [standings, statReports, statWarbands, missionAnalytics, galleryImages] = await Promise.all(
+		[
+			getStandings(campaign.id, profile, user?.id),
+			// The whole campaign log + every warband, so any warband's block and any head-to-head
+			// rivalry can be computed client-side (issue #12).
+			getStatReports(campaign.id),
+			getStatWarbands(campaign.id),
+			// Campaign-wide mission win rates / average scores, computed server-side (static, no filters).
+			getMissionAnalytics(campaign.id),
+			// Every award photo, so the stat block can show the selected warband's painted models (issue #14).
+			getGalleryAwards(campaign.id)
+		]
+	);
 
 	return {
 		standings,
+		statReports,
+		statWarbands,
+		missionAnalytics,
+		galleryImages,
+		// The id of the viewer's commander, so the stats default to their own warbands when present.
+		viewerUserId: user?.id ?? null,
 		isArbiter,
 		profile,
-		warbands,
-		awards,
-		awardForm,
-		revokeForm,
-		currentCycle: campaign.currentCycle
+		slug: campaign.slug
 	};
-};
-
-export const actions: Actions = {
-	grantAward: async ({ request, params, locals }) => {
-		// Granting is an arbiter authority (CONTEXT.md), enforced server-side at the one guard.
-		const { campaign, userId } = await requireArbiter(params.slug, locals.user?.id);
-
-		const form = await superValidate(request, zod4(paintingAwardSchema), { id: 'award' });
-		if (!form.valid) return fail(400, { form });
-
-		// Trust the server's view: the warband must belong to this campaign.
-		const warbands = await getWarbandsForCampaign(campaign.id);
-		if (!warbands.some((w) => w.id === form.data.warbandId)) {
-			return setError(form, 'warbandId', 'Choose a warband.');
-		}
-
-		await grantPaintingAward({
-			campaignId: campaign.id,
-			warbandId: form.data.warbandId,
-			cycle: campaign.currentCycle,
-			kind: form.data.kind,
-			note: form.data.note,
-			grantedByUserId: userId
-		});
-		return message(form, 'Award granted.');
-	},
-
-	revokeAward: async ({ request, params, locals }) => {
-		const { campaign } = await requireArbiter(params.slug, locals.user?.id);
-
-		// The form id is read from the POST so the response routes back to the right row's form.
-		const form = await superValidate(request, zod4(idActionSchema));
-		if (!form.valid) return fail(400, { form });
-		await revokePaintingAward(form.data.id, campaign.id);
-		return message(form, 'Award revoked.');
-	}
 };

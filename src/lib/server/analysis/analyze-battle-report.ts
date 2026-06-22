@@ -24,6 +24,17 @@ export interface ReportDraftCombatant {
 	/** OCR'd faction / army (e.g. "World Eaters"). */
 	detectedFaction?: string;
 	/**
+	 * OCR'd primary-mission label from this block's first scored row. Each side runs its own primary,
+	 * so the matching step fuzzy-matches this per combatant.
+	 */
+	detectedPrimaryMission?: string;
+	/**
+	 * This side's primary mission, resolved to the canonical list by the matching step — blank when
+	 * the OCR'd label didn't confidently match, for the commander to pick. The analyzer never sets it
+	 * (it only reads `detectedPrimaryMission`); the matching step fills it.
+	 */
+	primaryMission?: string;
+	/**
 	 * The campaign warband this player resolves to. The analyzer never sets this (it has no
 	 * campaign context); the matching step fills it from `detectedName`/`detectedFaction`,
 	 * leaving it blank when unsure so the commander picks.
