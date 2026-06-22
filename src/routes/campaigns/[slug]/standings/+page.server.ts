@@ -7,6 +7,7 @@ import { requireArbiter, requireCampaignAccess } from '$lib/server/campaigns';
 import {
 	getStandings,
 	getStatReports,
+	getStatWarbands,
 	getPaintingAwards,
 	getAwardsForCommander,
 	getAwardForImageWrite,
@@ -26,19 +27,18 @@ export const load: PageServerLoad = async ({ parent }) => {
 	// Score by the campaign's profile; legacy campaigns with no profile fall back to the default.
 	const profile = campaign.scoringProfile ?? DEFAULT_PROFILE;
 
-	// The stat block is for the viewing commander's own warbands — load them (empty for a
-	// non-commander viewer), then the games they fought, both shaped for the client-side block.
+	// The awards-curation slice still keys off the viewer's own warbands (empty for a non-commander).
 	const myWarbands = user?.id ? await getWarbandsForCommander(campaign.id, user.id) : [];
 
 	// The grant panel + full award list is arbiter-only. A commander instead sees the awards on
 	// their own warbands so they can attach a painted-models photo (the arbiter curates every one).
-	const [standings, statReports, warbands, awards, myAwards, awardForm, revokeForm] =
+	const [standings, statReports, statWarbands, warbands, awards, myAwards, awardForm, revokeForm] =
 		await Promise.all([
 			getStandings(campaign.id, profile, user?.id),
-			getStatReports(
-				campaign.id,
-				myWarbands.map((w) => w.id)
-			),
+			// The whole campaign log + every warband, so any warband's block and any head-to-head
+			// rivalry can be computed client-side (issue #12).
+			getStatReports(campaign.id),
+			getStatWarbands(campaign.id),
 			isArbiter ? getWarbandsForCampaign(campaign.id) : Promise.resolve([]),
 			isArbiter ? getPaintingAwards(campaign.id, profile) : Promise.resolve([]),
 			!isArbiter && user?.id
@@ -52,6 +52,9 @@ export const load: PageServerLoad = async ({ parent }) => {
 	return {
 		standings,
 		statReports,
+		statWarbands,
+		// The id of the viewer's commander, so the stats default to their own warbands when present.
+		viewerUserId: user?.id ?? null,
 		myWarbands,
 		isArbiter,
 		profile,

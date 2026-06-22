@@ -93,23 +93,17 @@ export async function getStandings(
 }
 
 /**
- * The battle-report log shaped for the warband stat block (issue #8), in fold order (oldest first,
- * so streaks read chronologically), narrowed to the games the viewer's warbands fought in. Carries
- * every combatant of those reports — both sides — since the block reads the opposing side's VP line
- * too. Returns the whole side's score components; the pure `computeStatBlock` does the rest under a
- * self filter. Empty when the viewer commands no warbands here.
+ * The whole campaign's battle-report log shaped for the warband stat block, in fold order (oldest
+ * first, so streaks read chronologically). Carries every combatant of every report — both sides —
+ * since the block reads the opposing side's VP line and the head-to-head filter narrows by it. The
+ * pure `computeStatBlock` does the rest under a self filter (and an optional opponent filter), so a
+ * single log serves any warband's block and any rivalry the client picks (issue #12).
  *
- * Deliberately a separate read from `getStandings`' fold: the stat block is a personal, self-filtered
- * derivation, not part of the control/standings replay, and it needs columns that fold doesn't (VP
- * and the first-turn side). It can't disagree with the replay because it scores nothing control does.
+ * Deliberately a separate read from `getStandings`' fold: the stat block isn't part of the
+ * control/standings replay, and it needs columns that fold doesn't (VP and the first-turn side). It
+ * can't disagree with the replay because it scores nothing control does.
  */
-export async function getStatReports(
-	campaignId: string,
-	myWarbandIds: string[]
-): Promise<StatReport[]> {
-	if (myWarbandIds.length === 0) return [];
-	const mine = new Set(myWarbandIds);
-
+export async function getStatReports(campaignId: string): Promise<StatReport[]> {
 	const reports = await db.query.battleReport.findMany({
 		where: eq(battleReport.campaignId, campaignId),
 		orderBy: FOLD_ORDER,
@@ -127,19 +121,49 @@ export async function getStatReports(
 		}
 	});
 
-	return reports
-		.filter((r) => r.combatants.some((c) => mine.has(c.warbandId)))
-		.map<StatReport>((r) => ({
-			outcome: r.outcome,
-			wentFirst: r.wentFirst,
-			combatants: r.combatants.map((c) => ({
-				warbandId: c.warbandId,
-				side: c.side,
-				primaryVp: c.primaryVp,
-				battleReadyVp: c.battleReadyVp,
-				secondaries: c.secondaries
-			}))
-		}));
+	return reports.map<StatReport>((r) => ({
+		outcome: r.outcome,
+		wentFirst: r.wentFirst,
+		combatants: r.combatants.map((c) => ({
+			warbandId: c.warbandId,
+			side: c.side,
+			primaryVp: c.primaryVp,
+			battleReadyVp: c.battleReadyVp,
+			secondaries: c.secondaries
+		}))
+	}));
+}
+
+/** A warband for the stats selectors: display identity plus its commander, to group the field by who commands what. */
+export interface StatWarband {
+	id: string;
+	name: string;
+	short: string;
+	color: string;
+	commanderUserId: string;
+	commanderName: string;
+}
+
+/**
+ * Every warband in the campaign, with its commander, for the stat-block comparison selectors (issue
+ * #12): any warband's block is viewable, and the opponent axis offers a whole commander (all their
+ * warbands) or a single warband. Ordered by creation so the lists stay stable across reads.
+ */
+export async function getStatWarbands(campaignId: string): Promise<StatWarband[]> {
+	const rows = await db.query.warband.findMany({
+		where: eq(warband.campaignId, campaignId),
+		columns: { id: true, name: true, short: true, color: true, commanderUserId: true },
+		with: { commander: { columns: { name: true } } },
+		orderBy: (w, { asc }) => [asc(w.createdAt)]
+	});
+	return rows.map((w) => ({
+		id: w.id,
+		name: w.name,
+		short: w.short,
+		color: w.color,
+		commanderUserId: w.commanderUserId,
+		commanderName: w.commander.name
+	}));
 }
 
 /**

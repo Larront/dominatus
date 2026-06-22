@@ -200,8 +200,12 @@
 		</table>
 	</div>
 
-	{#if data.myWarbands.length > 0}
-		<WarbandStats myWarbands={data.myWarbands} reports={data.statReports} />
+	{#if data.statWarbands.length > 0}
+		<WarbandStats
+			warbands={data.statWarbands}
+			reports={data.statReports}
+			viewerUserId={data.viewerUserId}
+		/>
 	{/if}
 
 	{#if data.isArbiter}

@@ -12,6 +12,11 @@
  * the side's combatants. In 2v2 a side shares one team score carried by its lead (CONTEXT: Mission;
  * the report form), so the side line is that single shared score, which is also the side's average.
  * That is why the loss differential's "opposing side's average" is just the opposing side line here.
+ *
+ * **Head-to-head** (issue #12) is the same block under an *opponent filter*: pass the warband ids of
+ * the foe(s) and a game counts only when one of them fought on the *opposing* side. It is not a
+ * separate computation — every stat (record, streaks, VP, differential) re-derives over the narrower
+ * slice, so a rivalry reads in exactly the units the overall block does.
  */
 
 import type { FoldSide } from './control-fold';
@@ -79,9 +84,18 @@ const mean = (xs: number[]): number | null =>
  * Compute a warband stat block from the report log under a self filter. Pure: no I/O, inputs never
  * mutated. `self` is the warband ids the view is for (all the commander's, or a single one); a
  * report counts only when one of those warbands fought in it, scored from that side's perspective.
+ *
+ * `opponents`, when given, narrows to head-to-head: the game also has to have one of those warbands
+ * on the *opposing* side, otherwise it is skipped entirely (not just zeroed). Omit it for the
+ * field-wide block (all opponents).
  */
-export function computeStatBlock(reports: StatReport[], self: Iterable<string>): StatBlock {
+export function computeStatBlock(
+	reports: StatReport[],
+	self: Iterable<string>,
+	opponents?: Iterable<string>
+): StatBlock {
 	const mine = new Set(self);
+	const foes = opponents ? new Set(opponents) : null;
 
 	let played = 0;
 	let wins = 0;
@@ -106,9 +120,12 @@ export function computeStatBlock(reports: StatReport[], self: Iterable<string>):
 		// self combatant fixes my side; a report with none of my warbands isn't my game.
 		const mySide = r.combatants.find((c) => mine.has(c.warbandId))?.side;
 		if (!mySide) continue;
+		const oppSide: FoldSide = mySide === 'attacker' ? 'defender' : 'attacker';
+
+		// Head-to-head: the game only counts when one of the named foes fought on the opposing side.
+		if (foes && !r.combatants.some((c) => c.side === oppSide && foes.has(c.warbandId))) continue;
 
 		played++;
-		const oppSide: FoldSide = mySide === 'attacker' ? 'defender' : 'attacker';
 		const won = r.outcome === mySide;
 		const lost = r.outcome !== 'stalemate' && r.outcome !== mySide;
 

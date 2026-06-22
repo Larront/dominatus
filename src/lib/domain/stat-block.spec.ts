@@ -241,4 +241,79 @@ describe('computeStatBlock', () => {
 			expect(both.losses).toBe(1);
 		});
 	});
+
+	describe('head-to-head (opponent filter)', () => {
+		// A foe builder: `me` plays a named opponent. With no opponent filter all three count; the
+		// filter narrows to just the games against the named foe.
+		const vs = (
+			outcome: 'attacker' | 'defender' | 'stalemate',
+			foe: string,
+			opts: { meVp?: number; oppVp?: number } = {}
+		): StatReport => ({
+			outcome,
+			wentFirst: null,
+			combatants: [combatant('me', 'attacker', opts.meVp), combatant(foe, 'defender', opts.oppVp)]
+		});
+
+		it('omitting opponents keeps the field-wide block (all opponents)', () => {
+			const b = computeStatBlock([vs('attacker', 'rax'), vs('defender', 'kael')], SELF);
+			expect(b.played).toBe(2);
+			expect(b.wins).toBe(1);
+			expect(b.losses).toBe(1);
+		});
+
+		it('narrows to only games against the named foe', () => {
+			const reports = [vs('attacker', 'rax'), vs('defender', 'kael'), vs('attacker', 'rax')];
+			const h2h = computeStatBlock(reports, SELF, ['rax']);
+			expect(h2h.played).toBe(2);
+			expect(h2h.wins).toBe(2);
+			expect(h2h.losses).toBe(0);
+			expect(h2h.winRate).toBeCloseTo(1);
+		});
+
+		it('treats the opponent filter as a whole commander (any of their warbands)', () => {
+			// Kael commands two warbands; the head-to-head against Kael folds both.
+			const reports = [vs('attacker', 'kael-1'), vs('defender', 'kael-2'), vs('attacker', 'rax')];
+			const h2h = computeStatBlock(reports, SELF, ['kael-1', 'kael-2']);
+			expect(h2h.played).toBe(2);
+			expect(h2h.wins).toBe(1);
+			expect(h2h.losses).toBe(1);
+		});
+
+		it('skips the game entirely when the foe is absent — not merely zeroed', () => {
+			// Streaks and averages re-derive over the slice: the win vs rax is the only game, so the
+			// loss vs kael never touches the current streak.
+			const reports = [vs('defender', 'kael'), vs('attacker', 'rax')];
+			const h2h = computeStatBlock(reports, SELF, ['rax']);
+			expect(h2h.played).toBe(1);
+			expect(h2h.currentStreak).toBe(1);
+		});
+
+		it('recomputes VP and loss differential over the narrowed slice', () => {
+			const reports = [
+				vs('defender', 'rax', { meVp: 40, oppVp: 70 }), // loss vs rax, diff +30
+				vs('defender', 'kael', { meVp: 10, oppVp: 90 }) // loss vs kael — excluded
+			];
+			const h2h = computeStatBlock(reports, SELF, ['rax']);
+			expect(h2h.avgVpInLosses).toBeCloseTo(40);
+			expect(h2h.lossDifferential).toBeCloseTo(30);
+		});
+
+		it('only counts the foe on the opposing side, never as a teammate', () => {
+			// `me` and `rax` fight on the same side (2v2 allies). A head-to-head vs rax must find no
+			// games — you never face a teammate.
+			const report: StatReport = {
+				outcome: 'attacker',
+				wentFirst: null,
+				combatants: [
+					combatant('me', 'attacker'),
+					combatant('rax', 'attacker'),
+					combatant('opp1', 'defender'),
+					combatant('opp2', 'defender')
+				]
+			};
+			expect(computeStatBlock([report], SELF, ['rax']).played).toBe(0);
+			expect(computeStatBlock([report], SELF, ['opp1']).played).toBe(1);
+		});
+	});
 });
