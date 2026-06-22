@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import Planet from './Planet.svelte';
 	import Button from './ui/Button.svelte';
+	import { fadeRise, slideX } from '$lib/motion';
 	import type { WorldWithControl } from '$lib/domain/world';
 	import type { BattleLogEntry } from '$lib/server/reports';
 
@@ -73,14 +74,16 @@
 <svelte:window onkeydown={onKey} />
 
 <a
-	class="fixed inset-0 z-30 block animate-scrim-in bg-[radial-gradient(circle_at_72%_50%,rgba(0,0,0,0.3),rgba(0,0,0,0.66))] motion-reduce:animate-none"
+	class="fixed inset-0 z-30 block bg-[radial-gradient(circle_at_72%_50%,rgba(0,0,0,0.3),rgba(0,0,0,0.66))]"
 	href={closeHref}
 	aria-label="Close world intel"
+	transition:fadeRise={{ y: 0 }}
 ></a>
 
 <aside
-	class="fixed top-0 right-0 z-[31] flex h-full w-[min(460px,100vw)] animate-drawer-in flex-col border-l border-border-lum bg-[linear-gradient(180deg,var(--color-panel-solid),var(--color-panel))] shadow-[-30px_0_80px_rgba(0,0,0,0.7)] motion-reduce:animate-none max-[720px]:w-screen"
+	class="fixed top-0 right-0 z-[31] flex h-full w-[min(460px,100vw)] flex-col border-l border-border-lum bg-[linear-gradient(180deg,var(--color-panel-solid),var(--color-panel))] shadow-[-30px_0_80px_rgba(0,0,0,0.7)] max-[720px]:w-screen"
 	aria-label="{world.name} intel"
+	transition:slideX
 >
 	<header
 		class="relative overflow-hidden border-b border-border px-6 pt-[22px] pb-5 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(120%_80%_at_82%_-10%,color-mix(in_srgb,var(--fcol)_30%,transparent),transparent_60%)] before:content-['']"

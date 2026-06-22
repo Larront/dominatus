@@ -123,9 +123,17 @@
 	const whole = (x: number | null) => (x == null ? '—' : Math.round(x).toString());
 	const signed = (x: number | null) => (x == null ? '—' : (x > 0 ? '+' : '') + Math.round(x));
 
-	const tile = 'bg-[color-mix(in_srgb,var(--color-panel)_70%,transparent)] px-3 py-3';
 	const label = 'font-display text-[9.5px] tracking-[0.12em] text-ink-faint uppercase';
-	const value = 'font-body text-[18px] font-semibold text-ink tabular-nums';
+
+	// Dossier panels: each clusters its related lines under a section head, so the block reads
+	// by theme (record / initiative / form / scoring) rather than as one flat field of tiles.
+	const panel = 'border border-border bg-[color-mix(in_srgb,var(--color-panel)_70%,transparent)]';
+	const panelHead =
+		'border-b border-border px-3.5 py-2 font-display text-[9px] tracking-[0.14em] text-ink-faint uppercase';
+	const row =
+		'flex items-baseline justify-between gap-3 px-3.5 py-[9px] [&+&]:border-t [&+&]:border-border';
+	const rowLabel = 'font-display text-[9.5px] tracking-[0.1em] text-ink-dim uppercase';
+	const rowVal = 'font-body text-[15px] leading-none font-semibold text-ink tabular-nums';
 </script>
 
 <section class="mt-8">
@@ -172,45 +180,69 @@
 			{/if}
 		</p>
 	{:else}
-		<div class="mt-4 grid grid-cols-2 gap-px bg-border sm:grid-cols-3 md:grid-cols-4">
-			<div class={tile}>
-				<div class={label}>Played</div>
-				<div class={value}>{block.played}</div>
+		<div class="mt-4 grid gap-3 sm:grid-cols-2">
+			<div class={panel}>
+				<div class={panelHead}>Record</div>
+				<dl class="flex flex-col">
+					<div class={row}>
+						<dt class={rowLabel}>Played</dt>
+						<dd class={rowVal}>{block.played}</dd>
+					</div>
+					<div class={row}>
+						<dt class={rowLabel}>W–D–L</dt>
+						<dd class={rowVal}>{block.wins}–{block.draws}–{block.losses}</dd>
+					</div>
+					<div class={row}>
+						<dt class={rowLabel}>Win rate</dt>
+						<dd class="{rowVal} text-accent">{percent(block.winRate)}</dd>
+					</div>
+				</dl>
 			</div>
-			<div class={tile}>
-				<div class={label}>Record</div>
-				<div class={value}>{block.wins}–{block.draws}–{block.losses}</div>
+
+			<div class={panel}>
+				<div class={panelHead}>Initiative</div>
+				<dl class="flex flex-col">
+					<div class={row}>
+						<dt class={rowLabel}>Win · go first</dt>
+						<dd class={rowVal}>{percent(block.firstWinRate)}</dd>
+					</div>
+					<div class={row}>
+						<dt class={rowLabel}>Win · go second</dt>
+						<dd class={rowVal}>{percent(block.secondWinRate)}</dd>
+					</div>
+				</dl>
 			</div>
-			<div class={tile}>
-				<div class={label}>Win rate</div>
-				<div class="{value} text-accent">{percent(block.winRate)}</div>
+
+			<div class={panel}>
+				<div class={panelHead}>Form</div>
+				<dl class="flex flex-col">
+					<div class={row}>
+						<dt class={rowLabel}>Current streak</dt>
+						<dd class={rowVal}>{block.currentStreak}</dd>
+					</div>
+					<div class={row}>
+						<dt class={rowLabel}>Best streak</dt>
+						<dd class={rowVal}>{whole(block.longestStreak)}</dd>
+					</div>
+				</dl>
 			</div>
-			<div class={tile}>
-				<div class={label}>Go first</div>
-				<div class={value}>{percent(block.firstWinRate)}</div>
-			</div>
-			<div class={tile}>
-				<div class={label}>Go second</div>
-				<div class={value}>{percent(block.secondWinRate)}</div>
-			</div>
-			<div class={tile}>
-				<div class={label}>Streak</div>
-				<div class={value}>
-					{block.currentStreak}
-					<span class="text-[10px] text-ink-faint">best {whole(block.longestStreak)}</span>
-				</div>
-			</div>
-			<div class={tile}>
-				<div class={label}>Avg VP · won</div>
-				<div class={value}>{whole(block.avgVpInWins)}</div>
-			</div>
-			<div class={tile}>
-				<div class={label}>Avg VP · lost</div>
-				<div class={value}>{whole(block.avgVpInLosses)}</div>
-			</div>
-			<div class={tile}>
-				<div class={label}>Loss margin</div>
-				<div class={value}>{signed(block.lossDifferential)}</div>
+
+			<div class={panel}>
+				<div class={panelHead}>Scoring</div>
+				<dl class="flex flex-col">
+					<div class={row}>
+						<dt class={rowLabel}>Avg VP · won</dt>
+						<dd class={rowVal}>{whole(block.avgVpInWins)}</dd>
+					</div>
+					<div class={row}>
+						<dt class={rowLabel}>Avg VP · lost</dt>
+						<dd class={rowVal}>{whole(block.avgVpInLosses)}</dd>
+					</div>
+					<div class={row}>
+						<dt class={rowLabel}>Loss margin</dt>
+						<dd class={rowVal}>{signed(block.lossDifferential)}</dd>
+					</div>
+				</dl>
 			</div>
 		</div>
 	{/if}

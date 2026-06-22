@@ -68,7 +68,23 @@
 
 	// Calm the drift while hovering or while a world is open for reading.
 	let hovered = $state(false);
-	const paused = $derived(hovered || !!selectedId);
+	// Touch has no hover: pointerenter/leave fire only for a mouse, so on a phone the orbits never
+	// settle and a drifting planet is hard to tap. Hold the drift while a finger is down and for a
+	// short beat after it lifts, so the tapped target stays put through the tap.
+	let touchHold = $state(false);
+	let releaseTimer: ReturnType<typeof setTimeout> | undefined;
+	const paused = $derived(hovered || touchHold || !!selectedId);
+
+	function onPointerDown(e: PointerEvent) {
+		if (e.pointerType === 'mouse') return;
+		clearTimeout(releaseTimer);
+		touchHold = true;
+	}
+	function releaseTouch(e: PointerEvent) {
+		if (e.pointerType === 'mouse') return;
+		clearTimeout(releaseTimer);
+		releaseTimer = setTimeout(() => (touchHold = false), 2500);
+	}
 
 	// Decorative starfield, client-only so SSR markup stays deterministic.
 	interface Star {
@@ -118,6 +134,9 @@
 			role="presentation"
 			onpointerenter={() => (hovered = true)}
 			onpointerleave={() => (hovered = false)}
+			onpointerdown={onPointerDown}
+			onpointerup={releaseTouch}
+			onpointercancel={releaseTouch}
 		>
 			<!-- orbit rings (dashed ellipses under tilt; circles when flat) -->
 			{#each worlds as world (world.id)}
@@ -578,6 +597,11 @@
 		.sun-facer,
 		.facer {
 			transition: none;
+		}
+		/* Drop the hover/focus zoom (the focus ring stays — it's a drop-shadow, not motion). */
+		.world:hover .world-canvas,
+		.world:focus-visible .world-canvas {
+			transform: none;
 		}
 	}
 </style>

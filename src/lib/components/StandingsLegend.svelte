@@ -30,39 +30,44 @@
 		</svg>
 	</Collapsible.Trigger>
 
-	<Collapsible.Content class="px-3.5 pb-3">
-		<div
-			class="mb-1 flex justify-between border-b border-border pb-2 font-display text-[9px] font-medium
-				tracking-[0.12em] text-ink-faint uppercase"
-		>
-			<span>Warband</span>
-			<span>Worlds</span>
-		</div>
-		{#each worldsHeld as wb (wb.id)}
+	<Collapsible.Content
+		class="overflow-hidden data-[state=closed]:animate-collapse-up data-[state=open]:animate-collapse-down"
+	>
+		<div class="px-3.5 pb-3">
 			<div
-				class="grid grid-cols-[12px_1fr_auto] items-center gap-2.5 py-[7px] font-body text-[13px]
-					[&+&]:border-t [&+&]:border-border"
+				class="mb-1 flex justify-between border-b border-border pb-2 font-display text-[9px] font-medium
+					tracking-[0.12em] text-ink-faint uppercase"
 			>
-				<span
-					class="size-[11px] shadow-[0_0_8px_currentColor]"
-					style="color: {wb.color}; background: {wb.color}"
-				></span>
-				<span class="flex min-w-0 items-center gap-1.5 leading-[1.2] text-ink">
-					{wb.name}
-					{#if wb.you}
-						<span
-							class="border border-accent-mid px-1 py-0.5 font-display text-[8.5px] font-semibold tracking-[0.08em] text-accent uppercase"
-						>
-							You
-						</span>
-					{/if}
-				</span>
-				<span class="font-body text-[15px] leading-none font-semibold text-accent">{wb.held}</span>
+				<span>Warband</span>
+				<span>Worlds</span>
 			</div>
-		{:else}
-			<p class="font-body text-[12px] leading-normal text-ink-dim">
-				No warbands have mustered yet.
-			</p>
-		{/each}
+			{#each worldsHeld as wb (wb.id)}
+				<div
+					class="grid grid-cols-[12px_1fr_auto] items-center gap-2.5 py-[7px] font-body text-[13px]
+					[&+&]:border-t [&+&]:border-border"
+				>
+					<span
+						class="size-[11px] shadow-[0_0_8px_currentColor]"
+						style="color: {wb.color}; background: {wb.color}"
+					></span>
+					<span class="flex min-w-0 items-center gap-1.5 leading-[1.2] text-ink">
+						{wb.name}
+						{#if wb.you}
+							<span
+								class="border border-accent-mid px-1 py-0.5 font-display text-[8.5px] font-semibold tracking-[0.08em] text-accent uppercase"
+							>
+								You
+							</span>
+						{/if}
+					</span>
+					<span class="font-body text-[15px] leading-none font-semibold text-accent">{wb.held}</span
+					>
+				</div>
+			{:else}
+				<p class="font-body text-[12px] leading-normal text-ink-dim">
+					No warbands have mustered yet.
+				</p>
+			{/each}
+		</div>
 	</Collapsible.Content>
 </Collapsible.Root>

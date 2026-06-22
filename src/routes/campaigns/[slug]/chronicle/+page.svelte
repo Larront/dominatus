@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import type { ChronicleWarband } from '$lib/domain/chronicle';
 	import GalleryThumb from '$lib/components/ui/GalleryThumb.svelte';
+	import { fadeRise, stagger } from '$lib/motion';
 
 	let { data }: { data: PageData } = $props();
 
@@ -53,12 +54,13 @@
 		</p>
 	{:else}
 		<ol class="flex flex-col">
-			{#each data.events as event (event.type + ':' + (event.type === 'cycle-advanced' ? event.cycle : event.id))}
+			{#each data.events as event, i (event.type + ':' + (event.type === 'cycle-advanced' ? event.cycle : event.id))}
 				{#if event.type === 'cycle-advanced'}
 					<!-- Cycle divider: the section header for everything below it, until the next divider. -->
 					<li
 						class="mt-7 mb-3 flex items-center gap-3 first:mt-0 max-[720px]:mt-6"
 						aria-label="Cycle {event.cycle}"
+						in:fadeRise={{ delay: stagger(i) }}
 					>
 						<span
 							class="font-display text-[11px] font-semibold tracking-[0.16em] whitespace-nowrap text-accent uppercase"
@@ -71,13 +73,30 @@
 					</li>
 				{:else}
 					<li
-						class="flex gap-3 border-l border-border py-2.5 pl-4 max-[720px]:gap-2.5 max-[720px]:pl-3.5"
+						class="flex gap-3 border-l py-2.5 pl-4 max-[720px]:gap-2.5 max-[720px]:pl-3.5 {event.type ===
+						'control-shift'
+							? 'border-accent-mid bg-[linear-gradient(90deg,var(--color-accent-soft),transparent_60%)]'
+							: 'border-border'}"
+						in:fadeRise={{ delay: stagger(i) }}
 					>
-						<!-- Marker dot sitting on the rail. -->
-						<span
-							class="mt-[7px] -ml-[21px] size-2 shrink-0 rounded-full bg-accent shadow-[0_0_6px_var(--color-accent-glow)] max-[720px]:-ml-[18px]"
-							aria-hidden="true"
-						></span>
+						<!-- Marker dot sitting on the rail. Control-shifts — the campaign's power swings —
+						     get a larger, flaring marker in the relevant warband's colour. -->
+						{#if event.type === 'control-shift'}
+							{@const shiftColor =
+								event.kind === 'lost'
+									? 'var(--color-state-contested)'
+									: (event.owner?.color ?? 'var(--color-accent)')}
+							<span
+								class="mt-[6px] -ml-[22px] size-2.5 shrink-0 animate-flare rounded-full max-[720px]:-ml-[19px]"
+								style="background: {shiftColor}; box-shadow: 0 0 4px {shiftColor}, 0 0 10px {shiftColor}"
+								aria-hidden="true"
+							></span>
+						{:else}
+							<span
+								class="mt-[7px] -ml-[21px] size-2 shrink-0 rounded-full bg-accent shadow-[0_0_6px_var(--color-accent-glow)] max-[720px]:-ml-[18px]"
+								aria-hidden="true"
+							></span>
+						{/if}
 
 						<div class="min-w-0 flex-1">
 							{#if event.type === 'battle-fought'}

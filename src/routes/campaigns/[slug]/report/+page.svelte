@@ -3,6 +3,7 @@
 	import { superForm } from 'sveltekit-superforms';
 	import { page } from '$app/state';
 	import { applyReport } from '$lib/domain/control-fold';
+	import { fadeRise } from '$lib/motion';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import SegmentedField from '$lib/components/ui/SegmentedField.svelte';
@@ -385,7 +386,9 @@
 					image — especially the secondary scores. The sheet doesn't record the world, sides, or
 					outcome, so set those yourself.
 				</p>
-				<div class="flex flex-wrap items-center gap-2.5">
+				<div
+					class="flex flex-wrap items-center gap-2.5 max-[680px]:flex-col max-[680px]:items-stretch"
+				>
 					<input
 						type="file"
 						accept="image/*"
@@ -393,12 +396,20 @@
 						disabled={analyzing}
 						class="max-w-full font-body text-[12px] text-ink-dim file:mr-2.5 file:cursor-pointer file:border file:border-border file:bg-panel-2 file:px-[11px] file:py-[7px] file:font-display file:text-[10px] file:tracking-[0.08em] file:text-ink-dim file:uppercase disabled:opacity-60"
 					/>
-					<Button disabled={!imageFile || analyzing} onclick={autofillFromPhoto}>
+					<Button
+						disabled={!imageFile || analyzing}
+						onclick={autofillFromPhoto}
+						class="max-[680px]:w-full"
+					>
 						{analyzing ? 'Reading…' : 'Auto-fill from photo'}
 					</Button>
 				</div>
 				{#if analyzeError}
-					<p role="alert" class="mt-2.5 font-body text-[12px] text-state-attacker">
+					<p
+						role="alert"
+						class="mt-2.5 font-body text-[12px] text-state-attacker"
+						transition:fadeRise={{ y: 4 }}
+					>
 						{analyzeError}
 					</p>
 				{/if}
@@ -406,18 +417,45 @@
 					<p
 						class="mt-2.5 border border-border-lum bg-accent-soft px-3 py-2.5 font-body text-[12px] leading-[1.5] text-accent-ink"
 						role="status"
+						transition:fadeRise={{ y: 4 }}
 					>
 						{draftNote}
 					</p>
 				{/if}
 				{#if imageUrl}
 					<figure class="mt-3.5 border-t border-border pt-3.5">
-						<img
-							src={imageUrl}
-							alt="Uploaded scoresheet — cross-reference against the fields below"
-							class="mx-auto max-h-[60vh] w-auto max-w-full border border-border bg-void object-contain"
-						/>
-						{#if imageFile}
+						<!-- While the cogitator reads the sheet, a scan line sweeps the preview. The line is
+						     decorative (aria-hidden); the labelled status below carries the state for SR/reduced
+						     motion. -->
+						<div class="relative mx-auto w-fit">
+							<img
+								src={imageUrl}
+								alt="Uploaded scoresheet — cross-reference against the fields below"
+								class="mx-auto max-h-[60vh] w-auto max-w-full border border-border bg-void object-contain"
+							/>
+							{#if analyzing}
+								<div
+									class="pointer-events-none absolute inset-0 overflow-hidden border border-accent-mid"
+									aria-hidden="true"
+								>
+									<span
+										class="absolute inset-x-0 h-0.5 animate-scan bg-[linear-gradient(90deg,transparent,var(--color-accent),transparent)] shadow-[0_0_14px_var(--color-accent-glow)]"
+									></span>
+								</div>
+							{/if}
+						</div>
+						{#if analyzing}
+							<figcaption
+								class="mt-2 flex items-center justify-center gap-2 text-center font-display text-[10px] font-semibold tracking-[0.14em] text-accent uppercase"
+								role="status"
+							>
+								<span
+									class="size-[7px] animate-blink bg-accent shadow-[0_0_7px_var(--color-accent)] motion-reduce:animate-none"
+									aria-hidden="true"
+								></span>
+								Reading scoresheet…
+							</figcaption>
+						{:else if imageFile}
 							<figcaption class="mt-2 text-center font-body text-[11.5px] text-ink-faint">
 								{imageFile.name}
 							</figcaption>
@@ -749,7 +787,7 @@
 
 			<!-- ── Projection ────────────────────────────────────────── -->
 			{#if preview}
-				<section class={panel}>
+				<section class={panel} transition:fadeRise={{ y: 6 }}>
 					<h2 class={sec}>// Control Projection</h2>
 					{#if preview.stalemate}
 						<p class="text-[12.5px] text-ink-dim">

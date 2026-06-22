@@ -375,6 +375,27 @@ export async function grantPaintingAward(input: {
 }
 
 /**
+ * Edit a painting award's grant fields — which warband it belongs to, what was painted, and the
+ * note — scoped to its campaign so a stray id can't reach across campaigns. The photo and cycle are
+ * left untouched (curated separately); points still derive from `kind` at read time (ADR 0004), so
+ * changing the kind re-scores the award without storing a value. Caller has checked the arbiter role.
+ */
+export async function updatePaintingAward(
+	id: string,
+	campaignId: string,
+	fields: { warbandId: string; kind: PaintingKind; note?: string | null }
+): Promise<void> {
+	await db
+		.update(paintingAward)
+		.set({
+			warbandId: fields.warbandId,
+			kind: fields.kind,
+			note: fields.note?.trim() || null
+		})
+		.where(and(eq(paintingAward.id, id), eq(paintingAward.campaignId, campaignId)));
+}
+
+/**
  * Revoke a painting award, scoped to its campaign so a stray id can't reach across campaigns.
  * Returns the revoked award's image filename (or null) so the caller can clean up the stored file.
  */
