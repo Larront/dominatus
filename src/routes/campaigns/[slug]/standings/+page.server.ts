@@ -8,6 +8,7 @@ import {
 	getStandings,
 	getStatReports,
 	getStatWarbands,
+	getMissionAnalytics,
 	getPaintingAwards,
 	getAwardsForCommander,
 	getAwardForImageWrite,
@@ -32,27 +33,39 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 	// The grant panel + full award list is arbiter-only. A commander instead sees the awards on
 	// their own warbands so they can attach a painted-models photo (the arbiter curates every one).
-	const [standings, statReports, statWarbands, warbands, awards, myAwards, awardForm, revokeForm] =
-		await Promise.all([
-			getStandings(campaign.id, profile, user?.id),
-			// The whole campaign log + every warband, so any warband's block and any head-to-head
-			// rivalry can be computed client-side (issue #12).
-			getStatReports(campaign.id),
-			getStatWarbands(campaign.id),
-			isArbiter ? getWarbandsForCampaign(campaign.id) : Promise.resolve([]),
-			isArbiter ? getPaintingAwards(campaign.id, profile) : Promise.resolve([]),
-			!isArbiter && user?.id
-				? getAwardsForCommander(campaign.id, user.id, profile)
-				: Promise.resolve([]),
-			superValidate(zod4(paintingAwardSchema), { id: 'award' }),
-			// Base form for the per-row revoke buttons; each row overrides the id client-side.
-			superValidate(zod4(idActionSchema))
-		]);
+	const [
+		standings,
+		statReports,
+		statWarbands,
+		missionAnalytics,
+		warbands,
+		awards,
+		myAwards,
+		awardForm,
+		revokeForm
+	] = await Promise.all([
+		getStandings(campaign.id, profile, user?.id),
+		// The whole campaign log + every warband, so any warband's block and any head-to-head
+		// rivalry can be computed client-side (issue #12).
+		getStatReports(campaign.id),
+		getStatWarbands(campaign.id),
+		// Campaign-wide mission win rates / average scores, computed server-side (static, no filters).
+		getMissionAnalytics(campaign.id),
+		isArbiter ? getWarbandsForCampaign(campaign.id) : Promise.resolve([]),
+		isArbiter ? getPaintingAwards(campaign.id, profile) : Promise.resolve([]),
+		!isArbiter && user?.id
+			? getAwardsForCommander(campaign.id, user.id, profile)
+			: Promise.resolve([]),
+		superValidate(zod4(paintingAwardSchema), { id: 'award' }),
+		// Base form for the per-row revoke buttons; each row overrides the id client-side.
+		superValidate(zod4(idActionSchema))
+	]);
 
 	return {
 		standings,
 		statReports,
 		statWarbands,
+		missionAnalytics,
 		// The id of the viewer's commander, so the stats default to their own warbands when present.
 		viewerUserId: user?.id ?? null,
 		myWarbands,

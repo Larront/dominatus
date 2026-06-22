@@ -7,6 +7,7 @@
 	import DestructiveForm from '$lib/components/ui/DestructiveForm.svelte';
 	import AwardImage from '$lib/components/ui/AwardImage.svelte';
 	import WarbandStats from '$lib/components/WarbandStats.svelte';
+	import MissionAnalytics from '$lib/components/MissionAnalytics.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -207,6 +208,8 @@
 			viewerUserId={data.viewerUserId}
 		/>
 	{/if}
+
+	<MissionAnalytics analytics={data.missionAnalytics} />
 
 	{#if data.isArbiter}
 		<!-- Arbiter award panel: grant painting points the report log can't capture. -->

@@ -10,6 +10,11 @@ import {
 	type PaintingKind
 } from '$lib/domain/standings';
 import type { StatReport } from '$lib/domain/stat-block';
+import {
+	computeMissionAnalytics,
+	type MissionAnalytics,
+	type MissionReport
+} from '$lib/domain/mission-analytics';
 import { DEFAULT_PROFILE, type ScoringProfile } from '$lib/domain/scoring-profile';
 
 /** A standings table row: a warband's display info plus its point breakdown. */
@@ -132,6 +137,37 @@ export async function getStatReports(campaignId: string): Promise<StatReport[]> 
 			secondaries: c.secondaries
 		}))
 	}));
+}
+
+/**
+ * Campaign-wide mission analytics (issue #13): win rate and average score grouped by primary and by
+ * secondary mission, over the whole report log. A pure derivation like standings — read the log,
+ * fold it through `computeMissionAnalytics`, never stored. Order is irrelevant here (nothing is
+ * sequential), so unlike the standings/stat reads this skips the fold order. The domain function
+ * constrains both breakdowns to the canonical mission set and excludes unrecorded primaries.
+ */
+export async function getMissionAnalytics(campaignId: string): Promise<MissionAnalytics> {
+	const reports = await db.query.battleReport.findMany({
+		where: eq(battleReport.campaignId, campaignId),
+		columns: { outcome: true },
+		with: {
+			combatants: {
+				columns: { side: true, primaryMission: true, primaryVp: true, secondaries: true }
+			}
+		}
+	});
+
+	const missionReports = reports.map<MissionReport>((r) => ({
+		outcome: r.outcome,
+		combatants: r.combatants.map((c) => ({
+			side: c.side,
+			primaryMission: c.primaryMission,
+			primaryVp: c.primaryVp,
+			secondaries: c.secondaries
+		}))
+	}));
+
+	return computeMissionAnalytics(missionReports);
 }
 
 /** A warband for the stats selectors: display identity plus its commander, to group the field by who commands what. */
