@@ -1,0 +1,74 @@
+import { eq } from 'drizzle-orm';
+import { db } from '$lib/server/db';
+import { battleReport, paintingAward, warband } from '$lib/server/db/schema';
+import { buildChronicle, type ChronicleEvent, type ChronicleWarband } from '$lib/domain/chronicle';
+
+/**
+ * The campaign Chronicle (issue #7): the activity feed, newest first and grouped by cycle. A pure
+ * read — it folds the records the campaign already keeps (reports, painting awards, warband
+ * musters) through `buildChronicle`, so an arbiter report edit or a fresh muster re-derives it with
+ * no stored feed. Returns the full campaign; the dataset is small at hobby scale (no pagination).
+ */
+export async function getChronicle(
+	campaignId: string,
+	currentCycle: number
+): Promise<ChronicleEvent[]> {
+	const [reports, awards, warbands] = await Promise.all([
+		db.query.battleReport.findMany({
+			where: eq(battleReport.campaignId, campaignId),
+			columns: { id: true, cycle: true, createdAt: true, worldId: true, outcome: true },
+			with: {
+				world: { columns: { name: true } },
+				combatants: {
+					columns: { side: true },
+					with: {
+						warband: { columns: { id: true, name: true, short: true, color: true } }
+					}
+				}
+			}
+		}),
+		db.query.paintingAward.findMany({
+			where: eq(paintingAward.campaignId, campaignId),
+			columns: { id: true, cycle: true, createdAt: true, kind: true, note: true },
+			with: { warband: { columns: { id: true, name: true, short: true, color: true } } }
+		}),
+		db.query.warband.findMany({
+			where: eq(warband.campaignId, campaignId),
+			columns: { id: true, name: true, short: true, color: true, createdAt: true }
+		})
+	]);
+
+	const tag = (w: ChronicleWarband): ChronicleWarband => ({
+		id: w.id,
+		name: w.name,
+		short: w.short,
+		color: w.color
+	});
+
+	return buildChronicle({
+		currentCycle,
+		reports: reports.map((r) => ({
+			id: r.id,
+			cycle: r.cycle,
+			at: r.createdAt.getTime(),
+			worldId: r.worldId,
+			worldName: r.world.name,
+			outcome: r.outcome,
+			attackers: r.combatants.filter((c) => c.side === 'attacker').map((c) => tag(c.warband)),
+			defenders: r.combatants.filter((c) => c.side === 'defender').map((c) => tag(c.warband))
+		})),
+		awards: awards.map((a) => ({
+			id: a.id,
+			cycle: a.cycle,
+			at: a.createdAt.getTime(),
+			warband: tag(a.warband),
+			kind: a.kind,
+			note: a.note
+		})),
+		musters: warbands.map((w) => ({
+			id: w.id,
+			at: w.createdAt.getTime(),
+			warband: tag(w)
+		}))
+	});
+}
