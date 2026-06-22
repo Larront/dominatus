@@ -6,8 +6,9 @@
  *
  * This slice covers the events derivable from existing records — **battle fought**, **painting
  * award granted**, **cycle advanced**, **warband mustered** — plus **control shift**, the
- * territorial swing read straight off the control replay (issue #10). Audit events are a separate
- * slice that extends this builder.
+ * territorial swing read straight off the control replay (issue #10), and **arbiter audit**, the
+ * corrections (edit / withdraw) lifted from the changelog audit trail (issue #6) so a control or
+ * standings swing caused by an edit has a visible cause.
  *
  * The output is one flat, render-ready list, newest first and grouped by cycle: cycle-advanced
  * dividers head each cycle's block (CONTEXT: Cycle), and the page renders the full campaign with no
@@ -71,10 +72,34 @@ export interface ChronicleMuster {
 	warband: ChronicleWarband;
 }
 
+/**
+ * Whether an arbiter correction amended a report (`edit`) or withdrew it (`delete`). Mirrors the
+ * server's `ReportAuditAction` enum; re-spelled here rather than imported because the domain layer
+ * can't reach the DB schema (the one exception to this file's reuse-the-canonical-union rule).
+ */
+export type AuditAction = 'edit' | 'delete';
+
+/**
+ * An arbiter correction to the report log, lifted from the changelog audit trail (issue #6). Unlike
+ * reports and awards the audit row carries no cycle stamp (only a `createdAt`), so the builder
+ * derives its cycle from the log the same way a muster does. The affected world comes from the
+ * report's frozen snapshot; a withdrawn report may no longer exist, but its world still does.
+ */
+export interface ChronicleAudit {
+	id: string;
+	at: number;
+	action: AuditAction;
+	worldId: string;
+	worldName: string;
+	/** The arbiter's optional free-text reason; never required (issue #6). */
+	reason: string | null;
+}
+
 export interface ChronicleSources {
 	reports: ChronicleReport[];
 	awards: ChronicleAward[];
 	musters: ChronicleMuster[];
+	audits: ChronicleAudit[];
 	/** The campaign's current cycle — the furthest divider the feed reaches (CONTEXT: Cycle). */
 	currentCycle: number;
 }
@@ -139,12 +164,26 @@ export interface ControlShiftEvent extends EventBase {
 	previous: ChronicleWarband | null;
 }
 
+/**
+ * An arbiter correction surfaced in the feed (issue #6): `edit` reads as "amended", `delete` as
+ * "withdrew". Renders with the affected world and, when present, the arbiter's reason.
+ */
+export interface AuditEvent extends EventBase {
+	type: 'audit';
+	id: string;
+	action: AuditAction;
+	worldId: string;
+	worldName: string;
+	reason: string | null;
+}
+
 export type ChronicleEvent =
 	| BattleFoughtEvent
 	| PaintingAwardEvent
 	| WarbandMusteredEvent
 	| CycleAdvancedEvent
-	| ControlShiftEvent;
+	| ControlShiftEvent
+	| AuditEvent;
 
 /**
  * Build the chronicle from a campaign's records. Pure: no I/O, inputs never mutated.
@@ -228,6 +267,22 @@ export function buildChronicle(src: ChronicleSources): ChronicleEvent[] {
 			at: m.at,
 			id: m.id,
 			warband: m.warband
+		});
+	}
+	// Audit rows, like musters, carry no cycle stamp — derive the cycle current at the correction's
+	// timestamp. The corrected report's own cycle is in reach (on the snapshot), but the feed groups a
+	// correction by *when the arbiter made it*, not the cycle of the battle it touched — the chronicle
+	// narrates the campaign's timeline, and a correction is an event at its own moment.
+	for (const au of src.audits) {
+		events.push({
+			type: 'audit',
+			cycle: cycleAt(au.at),
+			at: au.at,
+			id: au.id,
+			action: au.action,
+			worldId: au.worldId,
+			worldName: au.worldName,
+			reason: au.reason
 		});
 	}
 

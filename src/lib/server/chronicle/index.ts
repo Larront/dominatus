@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { battleReport, paintingAward, warband } from '$lib/server/db/schema';
+import { battleReport, paintingAward, reportAudit, warband, world } from '$lib/server/db/schema';
 import { buildChronicle, type ChronicleEvent, type ChronicleWarband } from '$lib/domain/chronicle';
 import { FOLD_ORDER } from '$lib/server/reports';
 import { replay, type FoldReport } from '$lib/domain/control-fold';
@@ -15,7 +15,7 @@ export async function getChronicle(
 	campaignId: string,
 	currentCycle: number
 ): Promise<ChronicleEvent[]> {
-	const [reports, awards, warbands] = await Promise.all([
+	const [reports, awards, warbands, audits, worlds] = await Promise.all([
 		db.query.battleReport.findMany({
 			where: eq(battleReport.campaignId, campaignId),
 			// Fold order (the one shared by control and standings) so the replay below reproduces the
@@ -40,8 +40,20 @@ export async function getChronicle(
 		db.query.warband.findMany({
 			where: eq(warband.campaignId, campaignId),
 			columns: { id: true, name: true, short: true, color: true, createdAt: true }
+		}),
+		db.query.reportAudit.findMany({
+			where: eq(reportAudit.campaignId, campaignId),
+			columns: { id: true, action: true, reason: true, snapshot: true, createdAt: true }
+		}),
+		// World names for audit rows: the affected world lives on the report's frozen snapshot (a
+		// withdrawn report may be gone, but its world endures), so resolve names by id from the map.
+		db.query.world.findMany({
+			where: eq(world.campaignId, campaignId),
+			columns: { id: true, name: true }
 		})
 	]);
+
+	const worldName = new Map(worlds.map((w) => [w.id, w.name]));
 
 	const tag = (w: ChronicleWarband): ChronicleWarband => ({
 		id: w.id,
@@ -88,6 +100,14 @@ export async function getChronicle(
 			id: w.id,
 			at: w.createdAt.getTime(),
 			warband: tag(w)
+		})),
+		audits: audits.map((au) => ({
+			id: au.id,
+			at: au.createdAt.getTime(),
+			action: au.action,
+			worldId: au.snapshot.report.worldId,
+			worldName: worldName.get(au.snapshot.report.worldId) ?? 'an unknown world',
+			reason: au.reason
 		}))
 	});
 }

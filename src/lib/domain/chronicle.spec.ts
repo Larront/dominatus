@@ -5,6 +5,7 @@ import {
 	type ChronicleReport,
 	type ChronicleAward,
 	type ChronicleMuster,
+	type ChronicleAudit,
 	type ChronicleEvent
 } from './chronicle';
 
@@ -63,12 +64,26 @@ const muster = (warbandId: string, at: number): ChronicleMuster => ({
 	warband: wb(warbandId)
 });
 
+const audit = (
+	id: string,
+	at: number,
+	opts: { action?: ChronicleAudit['action']; world?: string; reason?: string | null } = {}
+): ChronicleAudit => ({
+	id,
+	at,
+	action: opts.action ?? 'edit',
+	worldId: opts.world ?? 'w',
+	worldName: (opts.world ?? 'w').toUpperCase(),
+	reason: opts.reason ?? null
+});
+
 /** Build with empty sources unless supplied; currentCycle defaults to 1. */
 const build = (
 	src: {
 		reports?: ChronicleReport[];
 		awards?: ChronicleAward[];
 		musters?: ChronicleMuster[];
+		audits?: ChronicleAudit[];
 		currentCycle?: number;
 	} = {}
 ): ChronicleEvent[] =>
@@ -76,6 +91,7 @@ const build = (
 		reports: src.reports ?? [],
 		awards: src.awards ?? [],
 		musters: src.musters ?? [],
+		audits: src.audits ?? [],
 		currentCycle: src.currentCycle ?? 1
 	});
 
@@ -230,7 +246,12 @@ describe('buildChronicle', () => {
 				]
 			});
 			const shift = shiftOf(events);
-			expect(shift).toMatchObject({ type: 'control-shift', kind: 'seized', id: 'r1', worldId: 'p' });
+			expect(shift).toMatchObject({
+				type: 'control-shift',
+				kind: 'seized',
+				id: 'r1',
+				worldId: 'p'
+			});
 			expect(shift?.type === 'control-shift' && shift.owner?.id).toBe('a');
 			expect(shift?.type === 'control-shift' && shift.previous).toBeNull();
 		});
@@ -307,11 +328,53 @@ describe('buildChronicle', () => {
 		});
 	});
 
+	describe('audit events', () => {
+		const auditOf = (events: ChronicleEvent[]) => events.find((e) => e.type === 'audit');
+
+		it('derives an audit event from a changelog correction, carrying world, action and reason', () => {
+			const events = build({
+				audits: [
+					audit('au1', 100, {
+						action: 'edit',
+						world: 'cadia',
+						reason: 'corrected the winning side'
+					})
+				]
+			});
+			expect(auditOf(events)).toMatchObject({
+				type: 'audit',
+				id: 'au1',
+				action: 'edit',
+				worldId: 'cadia',
+				worldName: 'CADIA',
+				reason: 'corrected the winning side'
+			});
+		});
+
+		it('carries a withdraw with no reason', () => {
+			const events = build({ audits: [audit('au1', 100, { action: 'delete', world: 'cadia' })] });
+			expect(auditOf(events)).toMatchObject({ type: 'audit', action: 'delete', reason: null });
+		});
+
+		it('groups the audit by the cycle current at its timestamp (it carries no cycle stamp)', () => {
+			// Cycle advances to 2 at t=200; an audit at t=250 belongs to cycle 2, one at t=150 to cycle 1.
+			const events = build({
+				reports: [report('r1', 100, 1), report('r2', 200, 2)],
+				audits: [audit('early', 150), audit('late', 250)],
+				currentCycle: 2
+			});
+			const cycleOf = (id: string) => events.find((e) => e.type === 'audit' && e.id === id)?.cycle;
+			expect(cycleOf('early')).toBe(1);
+			expect(cycleOf('late')).toBe(2);
+		});
+	});
+
 	it('does not mutate its inputs', () => {
 		const reports = [report('r1', 100, 1)];
 		const musters = [muster('a', 50)];
-		const before = JSON.stringify({ reports, musters });
-		build({ reports, musters });
-		expect(JSON.stringify({ reports, musters })).toBe(before);
+		const audits = [audit('au1', 75)];
+		const before = JSON.stringify({ reports, musters, audits });
+		build({ reports, musters, audits });
+		expect(JSON.stringify({ reports, musters, audits })).toBe(before);
 	});
 });

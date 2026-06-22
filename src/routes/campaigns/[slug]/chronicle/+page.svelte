@@ -159,6 +159,20 @@
 										> lost its hold; the world is now contested.
 									{/if}
 								</p>
+							{:else if event.type === 'audit'}
+								<p
+									class="font-display text-[10px] font-semibold tracking-[0.12em] text-ink-faint uppercase"
+								>
+									Correction · <span class="text-ink-dim">{event.worldName}</span>
+								</p>
+								<p class="mt-1.5 font-body text-[13px] leading-[1.5] text-ink-dim">
+									{#if event.action === 'edit'}
+										Arbiter amended a report over <span class="text-ink">{event.worldName}</span>.
+									{:else}
+										Arbiter withdrew a report over <span class="text-ink">{event.worldName}</span>.
+									{/if}
+									{#if event.reason}<span class="text-ink-faint italic">— {event.reason}</span>{/if}
+								</p>
 							{/if}
 						</div>
 					</li>
