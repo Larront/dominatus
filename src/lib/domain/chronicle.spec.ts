@@ -25,6 +25,7 @@ const report = (
 		outcome?: ChronicleReport['outcome'];
 		att?: string[];
 		def?: string[];
+		control?: ChronicleReport['control'];
 	} = {}
 ): ChronicleReport => ({
 	id,
@@ -34,8 +35,13 @@ const report = (
 	worldName: (opts.world ?? 'w').toUpperCase(),
 	outcome: opts.outcome ?? 'attacker',
 	attackers: (opts.att ?? ['a']).map(wb),
-	defenders: (opts.def ?? ['b']).map(wb)
+	defenders: (opts.def ?? ['b']).map(wb),
+	control: opts.control
 });
+
+/** Terse share-list builder: `{ a: 60, b: 40 }` → the world's control shares. */
+const shares = (rec: Record<string, number>) =>
+	Object.entries(rec).map(([warbandId, share]) => ({ warbandId, share }));
 
 const award = (
 	id: string,
@@ -207,6 +213,98 @@ describe('buildChronicle', () => {
 			['cycle-advanced', 1],
 			['battle-fought', 1]
 		]);
+	});
+
+	describe('control-shift events', () => {
+		const shiftOf = (events: ChronicleEvent[]) => events.find((e) => e.type === 'control-shift');
+
+		it('emits a seized event when an unowned world gains a majority holder (none → W)', () => {
+			const events = build({
+				reports: [
+					report('r1', 100, 1, {
+						world: 'p',
+						att: ['a'],
+						def: ['b'],
+						control: { pre: [], post: shares({ a: 60, b: 40 }) }
+					})
+				]
+			});
+			const shift = shiftOf(events);
+			expect(shift).toMatchObject({ type: 'control-shift', kind: 'seized', id: 'r1', worldId: 'p' });
+			expect(shift?.type === 'control-shift' && shift.owner?.id).toBe('a');
+			expect(shift?.type === 'control-shift' && shift.previous).toBeNull();
+		});
+
+		it('emits a lost event when the holder slips below a majority (W → none)', () => {
+			const events = build({
+				reports: [
+					report('r1', 100, 1, {
+						att: ['b'],
+						def: ['a'],
+						control: { pre: shares({ a: 60, b: 40 }), post: shares({ a: 50, b: 50 }) }
+					})
+				]
+			});
+			const shift = shiftOf(events);
+			expect(shift).toMatchObject({ type: 'control-shift', kind: 'lost' });
+			expect(shift?.type === 'control-shift' && shift.owner).toBeNull();
+			expect(shift?.type === 'control-shift' && shift.previous?.id).toBe('a');
+		});
+
+		it('emits a wrested event when one majority passes to another (W → V)', () => {
+			const events = build({
+				reports: [
+					report('r1', 100, 1, {
+						att: ['b'],
+						def: ['a'],
+						control: { pre: shares({ a: 60, b: 40 }), post: shares({ a: 40, b: 60 }) }
+					})
+				]
+			});
+			const shift = shiftOf(events);
+			expect(shift).toMatchObject({ type: 'control-shift', kind: 'wrested' });
+			expect(shift?.type === 'control-shift' && shift.previous?.id).toBe('a');
+			expect(shift?.type === 'control-shift' && shift.owner?.id).toBe('b');
+		});
+
+		it('emits nothing for a sub-threshold nudge that leaves the owner unchanged', () => {
+			const events = build({
+				reports: [
+					report('r1', 100, 1, {
+						control: { pre: shares({ a: 70, b: 30 }), post: shares({ a: 60, b: 40 }) }
+					})
+				]
+			});
+			expect(shiftOf(events)).toBeUndefined();
+		});
+
+		it('emits nothing for first blood — unclaimed to contested with no majority (none → none)', () => {
+			const events = build({
+				reports: [
+					report('r1', 100, 1, {
+						control: { pre: [], post: shares({ a: 50, b: 50 }) }
+					})
+				]
+			});
+			expect(shiftOf(events)).toBeUndefined();
+		});
+
+		it('emits no control-shift when a report carries no replay context', () => {
+			const events = build({ reports: [report('r1', 100, 1)] });
+			expect(shiftOf(events)).toBeUndefined();
+		});
+
+		it('places the shift in the same cycle and timestamp as its report', () => {
+			const events = build({
+				reports: [
+					report('r1', 250, 2, {
+						control: { pre: [], post: shares({ a: 60, b: 40 }) }
+					})
+				],
+				currentCycle: 2
+			});
+			expect(shiftOf(events)).toMatchObject({ cycle: 2, at: 250 });
+		});
 	});
 
 	it('does not mutate its inputs', () => {

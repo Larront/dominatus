@@ -38,8 +38,8 @@
 	<header class="mb-8">
 		<h1 class="font-display text-2xl font-bold tracking-[0.02em] text-accent">Chronicle</h1>
 		<p class="mt-1 font-body text-[13px] leading-[1.5] text-ink-dim">
-			The campaign as it unfolds — battles fought, painting honours, warbands mustered, and the
-			cycles turning. Newest first.
+			The campaign as it unfolds — battles fought, worlds won and lost, painting honours, warbands
+			mustered, and the cycles turning. Newest first.
 		</p>
 	</header>
 
@@ -133,6 +133,31 @@
 										>{event.warband.name}</span
 									>
 									<span class="text-ink-dim"> mustered into the campaign.</span>
+								</p>
+							{:else if event.type === 'control-shift'}
+								<p
+									class="font-display text-[10px] font-semibold tracking-[0.12em] text-ink-faint uppercase"
+								>
+									Control · <span class="text-ink-dim">{event.worldName}</span>
+								</p>
+								<p class="mt-1.5 font-body text-[13px] leading-[1.5] text-ink-dim">
+									{#if event.kind === 'seized' && event.owner}
+										<span class="font-semibold" style="color: {event.owner.color}"
+											>{event.owner.name}</span
+										> seized control of the world.
+									{:else if event.kind === 'wrested' && event.owner && event.previous}
+										<span class="font-semibold" style="color: {event.owner.color}"
+											>{event.owner.name}</span
+										>
+										wrested the world from
+										<span class="font-semibold" style="color: {event.previous.color}"
+											>{event.previous.name}</span
+										>.
+									{:else if event.kind === 'lost' && event.previous}
+										<span class="font-semibold" style="color: {event.previous.color}"
+											>{event.previous.name}</span
+										> lost its hold; the world is now contested.
+									{/if}
 								</p>
 							{/if}
 						</div>

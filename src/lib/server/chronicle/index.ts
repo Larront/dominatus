@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { battleReport, paintingAward, warband } from '$lib/server/db/schema';
 import { buildChronicle, type ChronicleEvent, type ChronicleWarband } from '$lib/domain/chronicle';
+import { FOLD_ORDER } from '$lib/server/reports';
+import { replay, type FoldReport } from '$lib/domain/control-fold';
 
 /**
  * The campaign Chronicle (issue #7): the activity feed, newest first and grouped by cycle. A pure
@@ -16,6 +18,9 @@ export async function getChronicle(
 	const [reports, awards, warbands] = await Promise.all([
 		db.query.battleReport.findMany({
 			where: eq(battleReport.campaignId, campaignId),
+			// Fold order (the one shared by control and standings) so the replay below reproduces the
+			// map's per-report shares exactly — control-shift detection sits on that same replay.
+			orderBy: FOLD_ORDER,
 			columns: { id: true, cycle: true, createdAt: true, worldId: true, outcome: true },
 			with: {
 				world: { columns: { name: true } },
@@ -45,9 +50,22 @@ export async function getChronicle(
 		color: w.color
 	});
 
+	// Replay the whole campaign's reports (in fold order) once; `steps[i]` carries report `reports[i]`'s
+	// world shares before and after it applied. The chronicle reads owner off these — it never recomputes
+	// shares — so control-shift events stay in lockstep with the map.
+	const { steps } = replay(
+		reports.map<FoldReport>((r) => ({
+			worldId: r.worldId,
+			outcome: r.outcome,
+			combatants: r.combatants.map((c) => ({ warbandId: c.warband.id, side: c.side }))
+		}))
+	);
+	const toShares = (m: Map<string, number>) =>
+		[...m.entries()].map(([warbandId, share]) => ({ warbandId, share }));
+
 	return buildChronicle({
 		currentCycle,
-		reports: reports.map((r) => ({
+		reports: reports.map((r, i) => ({
 			id: r.id,
 			cycle: r.cycle,
 			at: r.createdAt.getTime(),
@@ -55,7 +73,8 @@ export async function getChronicle(
 			worldName: r.world.name,
 			outcome: r.outcome,
 			attackers: r.combatants.filter((c) => c.side === 'attacker').map((c) => tag(c.warband)),
-			defenders: r.combatants.filter((c) => c.side === 'defender').map((c) => tag(c.warband))
+			defenders: r.combatants.filter((c) => c.side === 'defender').map((c) => tag(c.warband)),
+			control: { pre: toShares(steps[i].pre), post: toShares(steps[i].post) }
 		})),
 		awards: awards.map((a) => ({
 			id: a.id,

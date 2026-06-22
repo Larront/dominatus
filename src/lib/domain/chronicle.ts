@@ -5,8 +5,9 @@
  * is rebuilt on read, so an arbiter report edit or a fresh muster simply re-derives it.
  *
  * This slice covers the events derivable from existing records — **battle fought**, **painting
- * award granted**, **cycle advanced**, **warband mustered**. Control-shift and audit events are
- * separate slices that extend this builder.
+ * award granted**, **cycle advanced**, **warband mustered** — plus **control shift**, the
+ * territorial swing read straight off the control replay (issue #10). Audit events are a separate
+ * slice that extends this builder.
  *
  * The output is one flat, render-ready list, newest first and grouped by cycle: cycle-advanced
  * dividers head each cycle's block (CONTEXT: Cycle), and the page renders the full campaign with no
@@ -16,6 +17,7 @@
 // Reuse the canonical domain unions rather than re-spelling them, so a new battle side or painting
 // kind flows here automatically: control-fold owns the sides, standings owns the award kinds.
 import type { FoldSide } from './control-fold';
+import { deriveControl, type ControlShare } from './control';
 import type { PaintingKind } from './standings';
 
 /** A warband reduced to its feed display fields. */
@@ -39,6 +41,13 @@ export interface ChronicleReport {
 	outcome: BattleOutcome;
 	attackers: ChronicleWarband[];
 	defenders: ChronicleWarband[];
+	/**
+	 * This report's shares on its world immediately before and after it applied, lifted straight
+	 * from the control replay (control-fold) — never recomputed here. A change in the world's derived
+	 * owner (majority holder) across this boundary emits a control-shift event. Optional so a caller
+	 * (or test) with no replay context simply produces no control-shift events.
+	 */
+	control?: { pre: ControlShare[]; post: ControlShare[] };
 }
 
 /** A painting award reduced to what the feed narrates. */
@@ -106,11 +115,36 @@ export interface CycleAdvancedEvent extends EventBase {
 	opening: boolean;
 }
 
+/**
+ * How a world's derived owner changed across one report (CONTEXT: Control):
+ * - `seized` — `none → W` (an unowned or contested world gains a majority holder)
+ * - `lost` — `W → none` (the holder slips below a majority; the world becomes contested)
+ * - `wrested` — `W → V` (one holder's majority passes to another)
+ *
+ * Sub-threshold nudges (owner unchanged) and first-blood (`none → none`, no majority either side)
+ * are not shifts and emit nothing.
+ */
+export type ControlShiftKind = 'seized' | 'lost' | 'wrested';
+
+export interface ControlShiftEvent extends EventBase {
+	type: 'control-shift';
+	/** The report whose fold flipped ownership; one report touches one world, so at most one shift. */
+	id: string;
+	worldId: string;
+	worldName: string;
+	kind: ControlShiftKind;
+	/** The new majority holder — set for `seized` and `wrested`; null when the world was lost to contest. */
+	owner: ChronicleWarband | null;
+	/** The former majority holder — set for `lost` and `wrested`; null when seized from no owner. */
+	previous: ChronicleWarband | null;
+}
+
 export type ChronicleEvent =
 	| BattleFoughtEvent
 	| PaintingAwardEvent
 	| WarbandMusteredEvent
-	| CycleAdvancedEvent;
+	| CycleAdvancedEvent
+	| ControlShiftEvent;
 
 /**
  * Build the chronicle from a campaign's records. Pure: no I/O, inputs never mutated.
@@ -150,6 +184,31 @@ export function buildChronicle(src: ChronicleSources): ChronicleEvent[] {
 			attackers: r.attackers,
 			defenders: r.defenders
 		});
+
+		// Control shift: did the world's derived owner change as this report folded? Owner is read
+		// (not recomputed) from the replay's before/after shares via the same `deriveControl` Control
+		// uses, so the chronicle can never disagree with the map. The new and former owners are always
+		// combatants of this very report — a winner gains the majority, a loser sheds it — so resolve
+		// their display info from the report's own sides rather than a campaign-wide lookup.
+		if (r.control) {
+			const before = deriveControl(r.control.pre).owner;
+			const after = deriveControl(r.control.post).owner;
+			if (before !== after) {
+				const find = (id: string) =>
+					[...r.attackers, ...r.defenders].find((w) => w.id === id) ?? null;
+				events.push({
+					type: 'control-shift',
+					cycle: r.cycle,
+					at: r.at,
+					id: r.id,
+					worldId: r.worldId,
+					worldName: r.worldName,
+					kind: before === null ? 'seized' : after === null ? 'lost' : 'wrested',
+					owner: after === null ? null : find(after),
+					previous: before === null ? null : find(before)
+				});
+			}
+		}
 	}
 	for (const a of src.awards) {
 		events.push({
