@@ -823,8 +823,7 @@
 					     (issue #6). Never required — leaving it blank still saves. -->
 					<label class="mt-3.5 flex flex-col gap-1.5">
 						<span class={label}
-							>› Reason for correction <span class="tracking-[0.06em] text-ink-faint"
-								>optional</span
+							>› Reason for correction <span class="tracking-[0.06em] text-ink-faint">optional</span
 							></span
 						>
 						<input
