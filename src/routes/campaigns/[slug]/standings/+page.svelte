@@ -5,6 +5,7 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import SegmentedField from '$lib/components/ui/SegmentedField.svelte';
 	import DestructiveForm from '$lib/components/ui/DestructiveForm.svelte';
+	import WarbandStats from '$lib/components/WarbandStats.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -182,6 +183,10 @@
 			</tbody>
 		</table>
 	</div>
+
+	{#if data.myWarbands.length > 0}
+		<WarbandStats myWarbands={data.myWarbands} reports={data.statReports} />
+	{/if}
 
 	{#if data.isArbiter}
 		<!-- Arbiter award panel: grant painting points the report log can't capture. -->

@@ -6,11 +6,12 @@ import { idActionSchema } from '$lib/schemas/id-action';
 import { requireArbiter } from '$lib/server/campaigns';
 import {
 	getStandings,
+	getStatReports,
 	getPaintingAwards,
 	grantPaintingAward,
 	revokePaintingAward
 } from '$lib/server/standings';
-import { getWarbandsForCampaign } from '$lib/server/warbands';
+import { getWarbandsForCampaign, getWarbandsForCommander } from '$lib/server/warbands';
 import { DEFAULT_PROFILE } from '$lib/domain/scoring-profile';
 import type { PageServerLoad, Actions } from './$types';
 
@@ -20,9 +21,17 @@ export const load: PageServerLoad = async ({ parent }) => {
 	// Score by the campaign's profile; legacy campaigns with no profile fall back to the default.
 	const profile = campaign.scoringProfile ?? DEFAULT_PROFILE;
 
+	// The stat block is for the viewing commander's own warbands — load them (empty for a
+	// non-commander viewer), then the games they fought, both shaped for the client-side block.
+	const myWarbands = user?.id ? await getWarbandsForCommander(campaign.id, user.id) : [];
+
 	// The award panel (warband picker + recent grants) is arbiter-only, so only load it then.
-	const [standings, warbands, awards, awardForm, revokeForm] = await Promise.all([
+	const [standings, statReports, warbands, awards, awardForm, revokeForm] = await Promise.all([
 		getStandings(campaign.id, profile, user?.id),
+		getStatReports(
+			campaign.id,
+			myWarbands.map((w) => w.id)
+		),
 		isArbiter ? getWarbandsForCampaign(campaign.id) : Promise.resolve([]),
 		isArbiter ? getPaintingAwards(campaign.id, profile) : Promise.resolve([]),
 		superValidate(zod4(paintingAwardSchema), { id: 'award' }),
@@ -32,6 +41,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 	return {
 		standings,
+		statReports,
+		myWarbands,
 		isArbiter,
 		profile,
 		warbands,

@@ -9,6 +9,7 @@ import {
 	type StandingBreakdown,
 	type PaintingKind
 } from '$lib/domain/standings';
+import type { StatReport } from '$lib/domain/stat-block';
 import { DEFAULT_PROFILE, type ScoringProfile } from '$lib/domain/scoring-profile';
 
 /** A standings table row: a warband's display info plus its point breakdown. */
@@ -89,6 +90,56 @@ export async function getStandings(
 			...(points.get(wb.id) ?? ZERO)
 		}))
 		.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+}
+
+/**
+ * The battle-report log shaped for the warband stat block (issue #8), in fold order (oldest first,
+ * so streaks read chronologically), narrowed to the games the viewer's warbands fought in. Carries
+ * every combatant of those reports — both sides — since the block reads the opposing side's VP line
+ * too. Returns the whole side's score components; the pure `computeStatBlock` does the rest under a
+ * self filter. Empty when the viewer commands no warbands here.
+ *
+ * Deliberately a separate read from `getStandings`' fold: the stat block is a personal, self-filtered
+ * derivation, not part of the control/standings replay, and it needs columns that fold doesn't (VP
+ * and the first-turn side). It can't disagree with the replay because it scores nothing control does.
+ */
+export async function getStatReports(
+	campaignId: string,
+	myWarbandIds: string[]
+): Promise<StatReport[]> {
+	if (myWarbandIds.length === 0) return [];
+	const mine = new Set(myWarbandIds);
+
+	const reports = await db.query.battleReport.findMany({
+		where: eq(battleReport.campaignId, campaignId),
+		orderBy: FOLD_ORDER,
+		columns: { outcome: true, wentFirst: true },
+		with: {
+			combatants: {
+				columns: {
+					warbandId: true,
+					side: true,
+					primaryVp: true,
+					battleReadyVp: true,
+					secondaries: true
+				}
+			}
+		}
+	});
+
+	return reports
+		.filter((r) => r.combatants.some((c) => mine.has(c.warbandId)))
+		.map<StatReport>((r) => ({
+			outcome: r.outcome,
+			wentFirst: r.wentFirst,
+			combatants: r.combatants.map((c) => ({
+				warbandId: c.warbandId,
+				side: c.side,
+				primaryVp: c.primaryVp,
+				battleReadyVp: c.battleReadyVp,
+				secondaries: c.secondaries
+			}))
+		}));
 }
 
 /**
