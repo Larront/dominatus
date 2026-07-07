@@ -3,6 +3,7 @@
 	import { untrack } from 'svelte';
 	import { superForm, type SuperValidated } from 'sveltekit-superforms';
 	import { signOut } from '$lib/auth-client';
+	import { fadeRise } from '$lib/motion';
 	import Button from '$lib/components/ui/Button.svelte';
 	import BrandMark from '$lib/components/BrandMark.svelte';
 	import type { JoinCampaignInput } from '$lib/schemas/campaign-create';
@@ -34,7 +35,13 @@
 		submitting: joinSubmitting
 	} = untrack(() => superForm(joinForm, { resetForm: false }));
 
+	// The header actions collapse into a dropdown below 720px — three inline ghost
+	// buttons plus the brand overflow a phone width. Closed on navigation, Escape, or a
+	// backdrop tap (mirrors the in-campaign section nav in campaigns/[slug]/+layout.svelte).
+	let menuOpen = $state(false);
+
 	async function logout() {
+		menuOpen = false;
 		await signOut();
 		await goto('/', { invalidateAll: true });
 	}
@@ -48,6 +55,8 @@
 		'w-full bg-void border border-border px-[11px] py-2.5 font-body text-[13px] text-ink placeholder:text-ink-faint transition-[border-color,box-shadow] duration-150 focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_var(--color-accent-mid),0_0_14px_var(--color-accent-soft)]';
 	const fieldError = 'font-body text-[12px] text-state-attacker';
 </script>
+
+<svelte:window onkeydown={(e) => e.key === 'Escape' && (menuOpen = false)} />
 
 <header
 	class="relative z-10 flex items-center gap-4 border-b border-border bg-[linear-gradient(180deg,var(--color-panel)_0%,transparent_140%)] px-[22px] py-3.5 backdrop-blur-[6px] after:absolute
@@ -64,12 +73,72 @@
 
 	<div class="flex-1"></div>
 
-	{#if user.name}
-		<span class="font-body text-[12px] text-ink-dim max-[520px]:hidden">{user.name}</span>
-	{/if}
-	<Button href="/feedback?from=/" variant="ghost">Feedback</Button>
-	<Button href="/account" variant="ghost">Account</Button>
-	<Button type="button" variant="ghost" onclick={logout}>Sign out</Button>
+	<!-- Wide widths: the actions inline. -->
+	<div class="flex items-center gap-4 max-[720px]:hidden">
+		{#if user.name}
+			<span class="font-body text-[12px] text-ink-dim">{user.name}</span>
+		{/if}
+		<Button href="/feedback?from=/" variant="ghost">Feedback</Button>
+		<Button href="/account" variant="ghost">Account</Button>
+		<Button type="button" variant="ghost" onclick={logout}>Sign out</Button>
+	</div>
+
+	<!-- Narrow widths: collapse the same actions into a dropdown. -->
+	<div class="relative hidden max-[720px]:block">
+		<button
+			type="button"
+			onclick={() => (menuOpen = !menuOpen)}
+			aria-label="Account menu"
+			aria-expanded={menuOpen}
+			class="flex size-9 items-center justify-center border border-border bg-panel-2 text-ink-dim transition-[color,border-color] duration-[120ms] hover:border-border-lum hover:text-accent focus-visible:border-accent focus-visible:text-accent focus-visible:outline-none"
+		>
+			<svg viewBox="0 0 20 20" class="size-[18px]" aria-hidden="true">
+				{#if menuOpen}
+					<path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" fill="none" />
+				{:else}
+					<path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" stroke-width="1.6" fill="none" />
+				{/if}
+			</svg>
+		</button>
+
+		{#if menuOpen}
+			<!-- Tap-outside backdrop; the menu sits above it. -->
+			<button
+				type="button"
+				tabindex="-1"
+				aria-hidden="true"
+				class="fixed inset-0 z-10 cursor-default"
+				onclick={() => (menuOpen = false)}
+				transition:fadeRise={{ y: 0 }}
+			></button>
+			<nav
+				class="absolute top-[calc(100%+12px)] right-0 z-20 flex min-w-[180px] flex-col border border-border bg-panel shadow-[0_12px_30px_-8px_rgba(0,0,0,0.7)]"
+				aria-label="Account menu"
+				transition:fadeRise={{ y: -6 }}
+			>
+				{#if user.name}
+					<span class="border-b border-border px-4 py-3 font-body text-[12px] text-ink-dim"
+						>{user.name}</span
+					>
+				{/if}
+				<a
+					class="border-b border-border px-4 py-3 font-display text-[11px] font-semibold tracking-[0.09em] text-ink-dim uppercase no-underline transition-[color,background-color] duration-[120ms] hover:text-accent"
+					href="/feedback?from=/"
+					onclick={() => (menuOpen = false)}>Feedback</a
+				>
+				<a
+					class="border-b border-border px-4 py-3 font-display text-[11px] font-semibold tracking-[0.09em] text-ink-dim uppercase no-underline transition-[color,background-color] duration-[120ms] hover:text-accent"
+					href="/account"
+					onclick={() => (menuOpen = false)}>Account</a
+				>
+				<button
+					type="button"
+					class="px-4 py-3 text-left font-display text-[11px] font-semibold tracking-[0.09em] text-ink-dim uppercase transition-[color,background-color] duration-[120ms] hover:text-accent"
+					onclick={logout}>Sign out</button
+				>
+			</nav>
+		{/if}
+	</div>
 </header>
 
 <main class="mx-auto max-w-[940px] px-6 pt-9 pb-20 max-[680px]:px-4">
