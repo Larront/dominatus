@@ -10,11 +10,13 @@
 	import Checkbox from '$lib/components/ui/Checkbox.svelte';
 	import { MAX_SECONDARIES, MAX_GUEST_NAME } from '$lib/schemas/battle-report';
 	import {
-		PRIMARY_MISSIONS,
 		SECONDARY_MISSIONS,
 		FORCE_DISPOSITIONS,
-		isSecondaryMission
+		isSecondaryMission,
+		primaryMissionsFor,
+		primaryMissionOptionsFor
 	} from '$lib/domain/missions';
+	import { BATTLE_SIZES, isBattleSize, usesSecondaries } from '$lib/domain/battle-sizes';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -46,13 +48,32 @@
 	const wbName = (id: string) => wbMap.get(id)?.name ?? '';
 	const wbColor = (id: string) => wbMap.get(id)?.color ?? 'var(--color-ink-dim)';
 
+	/**
+	 * The battle size picker. Combat Patrol sits in the same list as the points sizes because that is
+	 * the single choice made at the table (CONTEXT: Battle Size). An amended legacy report may carry
+	 * an off-ladder size from when this was a free number input — inject it so editing anything else
+	 * on that report never silently rewrites the size.
+	 */
+	const battleSizeItems = $derived.by(() => {
+		const items = [{ value: '', label: '— Not recorded —' }, ...BATTLE_SIZES];
+		const current = $form.battleSize ?? '';
+		return current && !isBattleSize(current)
+			? [...items, { value: current, label: `${current} pts` }]
+			: items;
+	});
+
+	/** Combat Patrol is its own game: a different mission pack, and no secondaries at all. */
+	const combatPatrol = $derived(!usesSecondaries($form.battleSize));
+
 	// Mission pickers are sourced from the edition's canonical lists (issue: mission capture). The
 	// primary is constrained to the list (with an explicit "none"); secondaries are too, but keep
 	// any out-of-list value an amended report already carries so editing never silently drops it.
-	const primaryMissionItems = [
+	// Which primary pack applies depends on the battle size, so this list is derived, not fixed —
+	// and for Combat Patrol each option is labelled with the faction whose mission it is.
+	const primaryMissionItems = $derived([
 		{ value: '', label: '— No primary mission —' },
-		...PRIMARY_MISSIONS.map((m) => ({ value: m, label: m }))
-	];
+		...primaryMissionOptionsFor($form.battleSize)
+	]);
 	const forceDispositionItems = [
 		{ value: '', label: '— No disposition —' },
 		...FORCE_DISPOSITIONS.map((d) => ({ value: d, label: d }))
@@ -62,6 +83,23 @@
 		return current && !isSecondaryMission(current)
 			? [{ value: current, label: current }, ...secondaryMissionItems]
 			: secondaryMissionItems;
+	}
+
+	/**
+	 * Switch the battle size, clearing whatever no longer applies. Changing game changes what a side
+	 * can score: a primary from the old pack is no longer canonical, and a Combat Patrol game scores
+	 * no secondaries. Dropping them here keeps the form honest, rather than leaving it holding values
+	 * the schema would reject on submit with an error pointing at a field that is now hidden.
+	 */
+	function setBattleSize(value: string) {
+		$form.battleSize = value;
+		const pack = primaryMissionsFor(value);
+		const keepSecondaries = usesSecondaries(value);
+		$form.combatants = $form.combatants.map((c) => ({
+			...c,
+			primaryMission: c.primaryMission && pack.includes(c.primaryMission) ? c.primaryMission : '',
+			secondaries: keepSecondaries ? c.secondaries : []
+		}));
 	}
 
 	const worldItems = $derived(data.worlds.map((w) => ({ value: w.id, label: w.name })));
@@ -553,18 +591,19 @@
 						</p>
 					</div>
 
-					<label class="flex shrink-0 grow-0 basis-[120px] flex-col gap-1.5">
-						<span class={label}>› Points</span>
-						<input
-							class={control}
-							type="number"
-							min="0"
-							step="50"
-							inputmode="numeric"
-							placeholder="2000"
-							bind:value={$form.pointsSize}
+					<div class="flex shrink-0 grow-0 basis-[160px] flex-col gap-1.5">
+						<span class={label}>› Battle size</span>
+						<Select
+							items={battleSizeItems}
+							value={$form.battleSize ?? ''}
+							onValueChange={setBattleSize}
+							ariaLabel="Battle size"
+							placeholder="Select a battle size"
 						/>
-					</label>
+						{#if $errors.battleSize}<span class="font-body text-[11.5px] text-state-attacker"
+								>{$errors.battleSize}</span
+							>{/if}
+					</div>
 				</div>
 
 				{#if selectedWorld && currentControl}
@@ -733,6 +772,11 @@
 							ariaLabel="{kind} primary mission"
 							placeholder="Select a primary mission"
 						/>
+						{#if combatPatrol}
+							<span class="font-body text-[11.5px] text-ink-faint"
+								>Combat Patrol missions are per faction — pick your army's.</span
+							>
+						{/if}
 						{#if $errors.combatants?.[lead]?.primaryMission}<span
 								class="font-body text-[11.5px] text-state-attacker"
 								>{$errors.combatants[lead].primaryMission}</span
@@ -757,7 +801,11 @@
 							>{/if}
 					</div>
 
-					<div class="mb-2.5 grid grid-cols-[1fr_auto_auto] items-end gap-2.5">
+					<div
+						class="mb-2.5 grid items-end gap-2.5 {combatPatrol
+							? 'grid-cols-[1fr_auto]'
+							: 'grid-cols-[1fr_auto_auto]'}"
+					>
 						<label class="flex flex-col gap-1.5">
 							<span class={label}>› Primary <span class="text-ink-faint">VP</span></span>
 							<input
@@ -769,12 +817,14 @@
 								bind:value={$form.combatants[lead].primaryVp}
 							/>
 						</label>
-						<div class="flex flex-col gap-1.5 pb-2.5 text-right">
-							<span class={label}>Secondary</span>
-							<span class="font-body text-[15px] leading-none font-semibold text-ink-dim"
-								>{secs ?? '—'}</span
-							>
-						</div>
+						{#if !combatPatrol}
+							<div class="flex flex-col gap-1.5 pb-2.5 text-right">
+								<span class={label}>Secondary</span>
+								<span class="font-body text-[15px] leading-none font-semibold text-ink-dim"
+									>{secs ?? '—'}</span
+								>
+							</div>
+						{/if}
 						<div class="flex flex-col gap-1.5 pb-2.5 text-right">
 							<span class={label}>Total VP</span>
 							<span class="font-body text-[15px] leading-none font-semibold text-accent"
@@ -797,54 +847,60 @@
 						/>
 					</div>
 
-					<div class="flex flex-col gap-1.5">
-						{#each c.secondaries ?? [] as sec, j (j)}
-							<div class="grid grid-cols-[1fr_58px_30px] gap-1.5">
-								<Select
-									items={secondaryItems(sec.name)}
-									value={sec.name}
-									onValueChange={(v) => patchSecondary(lead, j, { name: v })}
-									ariaLabel="Secondary mission"
-									placeholder="Secondary mission"
-									class="py-[7px] text-[12px]"
-								/>
-								<input
-									class="{control} px-[9px] py-[7px] text-right text-[12px]"
-									type="number"
-									min="0"
-									inputmode="numeric"
-									aria-label="Secondary VP"
-									value={sec.victoryPoints}
-									oninput={(e) =>
-										patchSecondary(lead, j, { victoryPoints: e.currentTarget.valueAsNumber || 0 })}
-								/>
+					<!-- A Combat Patrol game scores no secondaries, so the whole block goes away rather
+					     than sitting there empty and inviting entries the schema would reject. -->
+					{#if !combatPatrol}
+						<div class="flex flex-col gap-1.5">
+							{#each c.secondaries ?? [] as sec, j (j)}
+								<div class="grid grid-cols-[1fr_58px_30px] gap-1.5">
+									<Select
+										items={secondaryItems(sec.name)}
+										value={sec.name}
+										onValueChange={(v) => patchSecondary(lead, j, { name: v })}
+										ariaLabel="Secondary mission"
+										placeholder="Secondary mission"
+										class="py-[7px] text-[12px]"
+									/>
+									<input
+										class="{control} px-[9px] py-[7px] text-right text-[12px]"
+										type="number"
+										min="0"
+										inputmode="numeric"
+										aria-label="Secondary VP"
+										value={sec.victoryPoints}
+										oninput={(e) =>
+											patchSecondary(lead, j, {
+												victoryPoints: e.currentTarget.valueAsNumber || 0
+											})}
+									/>
+									<button
+										type="button"
+										aria-label="Remove secondary"
+										onclick={() => removeSecondary(lead, j)}
+										class="inline-flex items-center justify-center border border-border bg-panel-2 text-ink-faint transition-[color,border-color] duration-[120ms] hover:border-state-attacker-line hover:text-state-attacker [&_svg]:size-3"
+									>
+										<svg viewBox="0 0 14 14" aria-hidden="true"
+											><path
+												d="M3 3l8 8M11 3l-8 8"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.6"
+											/></svg
+										>
+									</button>
+								</div>
+							{/each}
+							{#if (c.secondaries?.length ?? 0) < MAX_SECONDARIES}
 								<button
 									type="button"
-									aria-label="Remove secondary"
-									onclick={() => removeSecondary(lead, j)}
-									class="inline-flex items-center justify-center border border-border bg-panel-2 text-ink-faint transition-[color,border-color] duration-[120ms] hover:border-state-attacker-line hover:text-state-attacker [&_svg]:size-3"
+									onclick={() => addSecondary(lead)}
+									class="self-start border-0 bg-transparent py-[3px] font-display text-[10px] font-semibold tracking-[0.08em] text-ink-dim uppercase transition-colors hover:text-accent"
 								>
-									<svg viewBox="0 0 14 14" aria-hidden="true"
-										><path
-											d="M3 3l8 8M11 3l-8 8"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="1.6"
-										/></svg
-									>
+									+ Add secondary
 								</button>
-							</div>
-						{/each}
-						{#if (c.secondaries?.length ?? 0) < MAX_SECONDARIES}
-							<button
-								type="button"
-								onclick={() => addSecondary(lead)}
-								class="self-start border-0 bg-transparent py-[3px] font-display text-[10px] font-semibold tracking-[0.08em] text-ink-dim uppercase transition-colors hover:text-accent"
-							>
-								+ Add secondary
-							</button>
-						{/if}
-					</div>
+							{/if}
+						</div>
+					{/if}
 				</fieldset>
 			{/snippet}
 

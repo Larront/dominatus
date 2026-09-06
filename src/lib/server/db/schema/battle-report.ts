@@ -26,8 +26,16 @@ export const battleReport = sqliteTable(
 		outcome: text('outcome', { enum: ['attacker', 'defender', 'stalemate'] }).notNull(),
 		/** Which side took the first turn, if recorded. */
 		wentFirst: text('went_first', { enum: ['attacker', 'defender'] }),
-		/** Agreed points size of the game, e.g. 2000. */
-		pointsSize: integer('points_size'),
+		/**
+		 * The battle size fought at — either `combat-patrol` or a points size off the canonical ladder
+		 * (see $lib/domain/battle-sizes). Null when not recorded.
+		 *
+		 * Text, not a number, because Combat Patrol is a distinct game rather than a points value, and
+		 * because — like the missions — keeping the ladder in code means rotating it is data, not a
+		 * schema migration. This column previously held a free integer; those values were migrated
+		 * across as their digits, so an off-ladder legacy size survives and still renders.
+		 */
+		battleSize: text('battle_size'),
 		/** The weekly planetary effect in play, if the players used one. Display-only. */
 		planetaryEffect: text('planetary_effect'),
 		narrative: text('narrative'),

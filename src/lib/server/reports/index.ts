@@ -42,7 +42,8 @@ export interface BattleLogEntry {
 	cycle: number;
 	outcome: 'attacker' | 'defender' | 'stalemate';
 	wentFirst: 'attacker' | 'defender' | null;
-	pointsSize: number | null;
+	/** The battle size fought at — `combat-patrol` or a points size; null if not recorded. */
+	battleSize: string | null;
 	planetaryEffect: string | null;
 	narrative: string | null;
 	/** Stored scoresheet filename, served via /report/image/[file]; null if none was uploaded. */
@@ -93,7 +94,7 @@ export async function getBattleLog(campaignId: string): Promise<BattleLogEntry[]
 		cycle: r.cycle,
 		outcome: r.outcome,
 		wentFirst: r.wentFirst,
-		pointsSize: r.pointsSize,
+		battleSize: r.battleSize,
 		planetaryEffect: r.planetaryEffect,
 		narrative: r.narrative,
 		imagePath: r.imagePath,
@@ -294,7 +295,8 @@ export async function getReportForEdit(
 			cycle: r.cycle,
 			outcome: r.outcome,
 			wentFirst: r.wentFirst,
-			pointsSize: r.pointsSize,
+			// '' rather than null so the picker binds to its "not recorded" entry on an amend.
+			battleSize: r.battleSize ?? '',
 			planetaryEffect: r.planetaryEffect ?? undefined,
 			narrative: r.narrative ?? undefined,
 			combatants: r.combatants.map((c) => ({
@@ -332,7 +334,7 @@ export function updateBattleReport(
 				cycle: input.cycle,
 				outcome: input.outcome,
 				wentFirst: input.wentFirst ?? null,
-				pointsSize: input.pointsSize ?? null,
+				battleSize: input.battleSize?.trim() || null,
 				planetaryEffect: input.planetaryEffect?.trim() || null,
 				narrative: input.narrative?.trim() || null,
 				// Only touch the scoresheet when the arbiter uploaded a replacement; an edit
@@ -417,7 +419,7 @@ export function submitBattleReport(
 				cycle: input.cycle,
 				outcome: input.outcome,
 				wentFirst: input.wentFirst ?? null,
-				pointsSize: input.pointsSize ?? null,
+				battleSize: input.battleSize?.trim() || null,
 				planetaryEffect: input.planetaryEffect?.trim() || null,
 				narrative: input.narrative?.trim() || null,
 				imagePath: input.imagePath ?? null,

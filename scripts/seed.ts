@@ -18,6 +18,7 @@ import * as schema from '../src/lib/server/db/schema';
 // Pure domain fold (ADR 0002) — control is derived from the report log, not hand-set.
 import { replay, type FoldReport } from '../src/lib/domain/control-fold';
 import { DEFAULT_PROFILE } from '../src/lib/domain/scoring-profile';
+import { COMBAT_PATROL } from '../src/lib/domain/battle-sizes';
 
 const {
 	user,
@@ -179,7 +180,8 @@ async function main() {
 	type SeedReport = {
 		world: string;
 		cycle: number;
-		pts: number;
+		/** Points size, or 'combat-patrol' for a Combat Patrol game (see $lib/domain/battle-sizes). */
+		pts: number | typeof COMBAT_PATROL;
 		win: boolean; // false → stalemate
 		att: string;
 		def: string;
@@ -190,7 +192,7 @@ async function main() {
 		att: string,
 		def: string,
 		cycle: number,
-		pts: number,
+		pts: number | typeof COMBAT_PATROL,
 		narrative: string
 	): SeedReport => ({ world, cycle, pts, win: true, att, def, narrative });
 	const draw = (
@@ -198,7 +200,7 @@ async function main() {
 		att: string,
 		def: string,
 		cycle: number,
-		pts: number,
+		pts: number | typeof COMBAT_PATROL,
 		narrative: string
 	): SeedReport => ({ world, cycle, pts, win: false, att, def, narrative });
 
@@ -251,6 +253,15 @@ async function main() {
 		win('Veska Prime', 'IW', 'AC', 3, 2000, 'Iron Wardens storm forty levels of the spire.'),
 		win('Veska Prime', 'IW', 'AC', 4, 1500, 'The Wardens break the Ashen hold on the upper hives.'),
 		win('Veska Prime', 'VR', 'AC', 4, 1000, 'Void Reavers seize a foothold amid the collapse.'),
+		// One Combat Patrol game, so the seeded log exercises the smaller format too.
+		win(
+			'Veska Prime',
+			'VR',
+			'IW',
+			4,
+			COMBAT_PATROL,
+			'A running skirmish through the sub-levels — patrol against patrol.'
+		),
 
 		// Coralis Tertius — lightly fought, Verdant Scourge ahead but far from owning it.
 		win(
@@ -296,7 +307,7 @@ async function main() {
 		worldId: wd[e.world],
 		cycle: e.cycle,
 		outcome: (e.win ? 'attacker' : 'stalemate') as 'attacker' | 'stalemate',
-		pointsSize: e.pts,
+		battleSize: String(e.pts),
 		narrative: e.narrative,
 		submittedByUserId: dev.id,
 		createdAt: new Date(base - (log.length - i) * 60_000)

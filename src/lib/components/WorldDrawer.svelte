@@ -4,6 +4,7 @@
 	import Button from './ui/Button.svelte';
 	import { fadeRise, slideX } from '$lib/motion';
 	import type { WorldWithControl } from '$lib/domain/world';
+	import { battleSizeLabel } from '$lib/domain/battle-sizes';
 	import type { BattleLogEntry } from '$lib/server/reports';
 
 	interface WarbandRef {
@@ -294,11 +295,11 @@
 										{report.narrative}
 									</p>
 								{/if}
-								{#if report.pointsSize}
+								{#if battleSizeLabel(report.battleSize)}
 									<p
 										class="mt-1.5 font-display text-[9.5px] font-medium tracking-[0.06em] text-ink-faint uppercase"
 									>
-										{report.pointsSize} pts engagement
+										{battleSizeLabel(report.battleSize)} engagement
 									</p>
 								{/if}
 								{#if report.imagePath}

@@ -16,7 +16,7 @@ export interface ReportSnapshot {
 		cycle: number;
 		outcome: 'attacker' | 'defender' | 'stalemate';
 		wentFirst: 'attacker' | 'defender' | null;
-		pointsSize: number | null;
+		battleSize: string | null;
 		planetaryEffect: string | null;
 		narrative: string | null;
 		imagePath: string | null;
@@ -55,7 +55,7 @@ export function buildReportSnapshot(
 			cycle: report.cycle,
 			outcome: report.outcome,
 			wentFirst: report.wentFirst,
-			pointsSize: report.pointsSize,
+			battleSize: report.battleSize,
 			planetaryEffect: report.planetaryEffect,
 			narrative: report.narrative,
 			imagePath: report.imagePath,
