@@ -47,15 +47,30 @@ const auth = betterAuth({
 	emailAndPassword: { enabled: true }
 });
 
+/**
+ * The dev commander, created with a properly hashed credential account and marked verified.
+ *
+ * The app requires a verified email to sign in (`requireEmailVerification`, see
+ * $lib/server/auth), and verification normally happens by clicking a link in a transactional
+ * email — which no one is going to receive from a local seed. So the seed sets the flag
+ * directly: sign-up goes through Better Auth (so the password hash is real and login exercises
+ * the true code path), then the row is marked verified as the one thing the email round-trip
+ * would otherwise have done. Applied on every run, not just at creation, so a dev user seeded
+ * before this existed gets fixed by a re-seed rather than needing a manual UPDATE.
+ */
 async function ensureDevUser() {
 	const existing = await db.query.user.findFirst({ where: eq(user.email, DEV_EMAIL) });
-	if (existing) return existing;
-	await auth.api.signUpEmail({
-		body: { email: DEV_EMAIL, password: DEV_PASSWORD, name: 'Castellan Vorne Adrec' }
-	});
-	const created = await db.query.user.findFirst({ where: eq(user.email, DEV_EMAIL) });
-	if (!created) throw new Error('Failed to create dev user');
-	return created;
+	if (!existing) {
+		await auth.api.signUpEmail({
+			body: { email: DEV_EMAIL, password: DEV_PASSWORD, name: 'Castellan Vorne Adrec' }
+		});
+	}
+
+	await db.update(user).set({ emailVerified: true }).where(eq(user.email, DEV_EMAIL));
+
+	const dev = await db.query.user.findFirst({ where: eq(user.email, DEV_EMAIL) });
+	if (!dev) throw new Error('Failed to create dev user');
+	return dev;
 }
 
 async function main() {
