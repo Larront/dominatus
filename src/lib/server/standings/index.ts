@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { battleReport, paintingAward, warband } from '$lib/server/db/schema';
 import { FOLD_ORDER } from '$lib/server/reports';
+import { foldCombatants } from '$lib/domain/control-fold';
 import {
 	computeStandings,
 	type StandingsReport,
@@ -80,7 +81,10 @@ export async function getStandings(
 		worldId: r.worldId,
 		outcome: r.outcome,
 		hasNarrative: !!r.narrative?.trim(),
-		combatants: r.combatants
+		// Drop outside opponents: a guest earns nothing and holds nothing, so the fold only ever
+		// sees league warbands. The warband that played them still scores the result in full —
+		// it is simply the lone member of its side.
+		combatants: foldCombatants(r.combatants)
 	}));
 
 	const points = computeStandings(foldReports, awards as StandingsAward[], profile);
@@ -157,6 +161,8 @@ export async function getMissionAnalytics(campaignId: string): Promise<MissionAn
 		}
 	});
 
+	// Not filtered for guests: this is keyed by mission, not by warband, so an outside opponent's
+	// primary and score are real data about how that mission plays — nothing here is a league standing.
 	const missionReports = reports.map<MissionReport>((r) => ({
 		outcome: r.outcome,
 		combatants: r.combatants.map((c) => ({

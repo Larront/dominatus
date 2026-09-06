@@ -71,11 +71,24 @@ replay, not part of it — they are points state, not control.
 _Avoid_: Recompute (too generic — a replay is specifically the ordered fold over the log).
 
 **Battle Report**:
-The record a commander submits documenting a game fought over a world. Splits its combatant
-warbands across two sides — attacker and defender — each holding one or two warbands (1v1 or
-2v2) — and records the outcome, scores, an optional narrative, and an optional image. The
-single source of a battle's record.
+The record a commander submits documenting a game fought over a world. Splits its combatants
+across two sides — attacker and defender — each holding **one or two**. The sides need **not**
+be balanced: 1v1, 2v2 and the uneven 1v2 / 2v1 are all real games, and control moves per
+combatant, so an uneven result is well-defined. Records the outcome, scores, an optional
+narrative, and an optional image. The single source of a battle's record.
 _Avoid_: Battle (the report is the record; there is no separate battle entity).
+
+**Guest**:
+A combatant on a battle report who is **not in the league** — a walk-in opponent, recorded by
+name rather than as a Warband. A guest exists only on the report: they hold **no** world share
+and never appear on the map or the leaderboard, because every fold drops non-warband
+combatants (`foldCombatants`). The warband facing a guest scores the result **in full** and
+still gains or loses ground — against the uncontested pool, since the guest has none to take.
+A guest game still counts in a warband's Stat Block (it was a real game), and the guest's own
+score still feeds Mission Analytics, which is keyed by mission rather than by warband. Every
+report needs at least one real warband.
+_Avoid_: Guest Warband (a guest is deliberately _not_ a warband — no row, no colour, no
+standing).
 
 **Mission**:
 A scoring objective from the current edition's canonical mission set (Warhammer 40k). A

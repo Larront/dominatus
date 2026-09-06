@@ -27,6 +27,13 @@ export interface ChronicleWarband {
 	name: string;
 	short: string;
 	color: string;
+	/**
+	 * True when this is an outside opponent rather than a campaign warband. Guests appear in the
+	 * feed because they played the game, but hold no ground and earn nothing — so they never drive
+	 * a control-shift event, and their `id` is synthetic (unique per report, for keyed rendering
+	 * only). Never use it to look a warband up.
+	 */
+	guest?: boolean;
 }
 
 export type BattleOutcome = FoldSide | 'stalemate';

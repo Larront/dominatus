@@ -436,13 +436,17 @@
 								class="flex items-center gap-1.5 font-display text-[11px] font-semibold text-ink-dim"
 							>
 								{#each r.attackers as c, i (i)}
-									<span class="size-2 shrink-0" style="background: {c.color}"></span>{c.short}
+									<span class="size-2 shrink-0" style="background: {c.color}"></span><span
+										class={c.guest ? 'text-ink-dim italic' : ''}>{c.short}</span
+									>
 								{/each}
 								<span class="font-display text-[9px] tracking-[0.1em] text-ink-faint uppercase"
 									>vs</span
 								>
 								{#each r.defenders as c, i (i)}
-									<span class="size-2 shrink-0" style="background: {c.color}"></span>{c.short}
+									<span class="size-2 shrink-0" style="background: {c.color}"></span><span
+										class={c.guest ? 'text-ink-dim italic' : ''}>{c.short}</span
+									>
 								{/each}
 							</span>
 

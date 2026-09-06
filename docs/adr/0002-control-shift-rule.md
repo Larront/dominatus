@@ -15,8 +15,16 @@ A **decisive** battle report over a world moves control by 10 percentage points:
   world's total never exceeds 100% and the winner never exceeds 100%**. In normal mid-game
   play (loser ≥10%, pool not full) this is a clean 10% transfer loser→winner; the caps only
   bite at the edges.
-- In a **2v2**, the rule applies **per warband**: each winning warband +10%, each losing
+- In a **team game**, the rule applies **per warband**: each winning warband +10%, each losing
   warband −10% (so a winning side pulls up to 20% off the world).
+- Sides need **not** be balanced. Because movement is per warband, an uneven **1v2** falls out
+  of the same rule with no special case: a lone winner takes only its own 10% while both losers
+  shed 10% each (the surplus returning to the uncontested pool), and two winners over one take
+  20% between them, most of it drawn from that pool. Deliberately asymmetric — being outnumbered
+  is not itself rewarded on the map.
+- A combatant who is **not in the league** (a _guest_ — see CONTEXT) holds no share and is
+  absent from the fold entirely. A warband beating one is the lone winner and claims its 10%
+  from the uncontested pool; losing to one, it is the lone loser and its 10% returns there.
 - A **draw** (`stalemate` outcome) moves **no** control.
 
 Control is **separate from the leaderboard**. The points table (win/draw, narrative log,

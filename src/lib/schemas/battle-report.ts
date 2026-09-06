@@ -28,8 +28,21 @@ export const secondaryScoreSchema = z.object({
 	victoryPoints: z.number().int().min(0)
 });
 
+/** Max characters for an outside opponent's name — a label on the record, not a warband. */
+export const MAX_GUEST_NAME = 60;
+
 export const combatantSchema = z.object({
-	warbandId: z.string().min(1, 'Select a warband'),
+	/**
+	 * The campaign warband that fought, or '' when this slot is a guest. Exactly one of this and
+	 * `guestName` is set — checked per combatant by the refine below rather than here, so the
+	 * error lands on the field the commander needs to fix.
+	 */
+	warbandId: z.string().default(''),
+	/**
+	 * An outside opponent who isn't in the league. Recorded by name so the game can be logged and
+	 * the league warband still scores; the guest holds no ground and never reaches the leaderboard.
+	 */
+	guestName: z.string().max(MAX_GUEST_NAME).nullish(),
 	side: battleSide,
 	/**
 	 * This side's primary mission (each side runs its own). Optional — a report without one submits
@@ -80,17 +93,49 @@ export const battleReportSchema = z
 		narrative: z.string().max(4000).optional(),
 		combatants: z.array(combatantSchema).min(2).max(4)
 	})
+	.superRefine((r, ctx) => {
+		// Each participant is EITHER a league warband or a named guest, never both or neither.
+		// Reported per slot so the message lands on the offending side rather than the whole form.
+		r.combatants.forEach((c, i) => {
+			const guest = c.guestName?.trim();
+			if (!c.warbandId && !guest) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['combatants', i, 'warbandId'],
+					message: 'Select a warband, or name an outside opponent'
+				});
+			} else if (c.warbandId && guest) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['combatants', i, 'guestName'],
+					message: 'A slot is either a warband or a guest, not both'
+				});
+			}
+		});
+	})
 	.refine(
 		(r) => {
 			const attackers = r.combatants.filter((c) => c.side === 'attacker').length;
 			const defenders = r.combatants.filter((c) => c.side === 'defender').length;
-			// games are 1v1 or 2v2: balanced sides of one or two warbands each
-			return attackers === defenders && attackers >= 1 && attackers <= 2;
+			// One or two per side, and sides need NOT match: 1v1, 2v2 and the uneven 1v2 / 2v1
+			// are all real games. Control moves per combatant, so an uneven result is well-defined.
+			return attackers >= 1 && attackers <= 2 && defenders >= 1 && defenders <= 2;
 		},
-		{ message: 'Sides must be balanced — 1v1 or 2v2', path: ['combatants'] }
+		{ message: 'Each side needs one or two combatants', path: ['combatants'] }
 	)
-	.refine((r) => new Set(r.combatants.map((c) => c.warbandId)).size === r.combatants.length, {
-		message: 'A warband cannot appear twice',
+	.refine(
+		(r) => {
+			// Guests are excluded — two different outsiders may share a name, and an empty
+			// warbandId marks a guest slot rather than a duplicate.
+			const ids = r.combatants.map((c) => c.warbandId).filter(Boolean);
+			return new Set(ids).size === ids.length;
+		},
+		{ message: 'A warband cannot appear twice', path: ['combatants'] }
+	)
+	.refine((r) => r.combatants.some((c) => c.warbandId), {
+		// A report is a league record: at least one side must be a campaign warband, or there is
+		// nothing to score and no control to move.
+		message: 'At least one combatant must be a warband in this campaign',
 		path: ['combatants']
 	});
 

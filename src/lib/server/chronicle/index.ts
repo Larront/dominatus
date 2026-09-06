@@ -3,7 +3,7 @@ import { db } from '$lib/server/db';
 import { battleReport, paintingAward, reportAudit, warband, world } from '$lib/server/db/schema';
 import { buildChronicle, type ChronicleEvent, type ChronicleWarband } from '$lib/domain/chronicle';
 import { FOLD_ORDER } from '$lib/server/reports';
-import { replay, type FoldReport } from '$lib/domain/control-fold';
+import { replay, foldCombatants, type FoldReport } from '$lib/domain/control-fold';
 
 /**
  * The campaign Chronicle (issue #7): the activity feed, newest first and grouped by cycle. A pure
@@ -25,7 +25,7 @@ export async function getChronicle(
 			with: {
 				world: { columns: { name: true } },
 				combatants: {
-					columns: { side: true },
+					columns: { side: true, guestName: true },
 					with: {
 						warband: { columns: { id: true, name: true, short: true, color: true } }
 					}
@@ -62,6 +62,32 @@ export async function getChronicle(
 		color: w.color
 	});
 
+	/**
+	 * One side's chips. An outside opponent has no warband row, so it gets a neutral chip carrying
+	 * its recorded name and a synthetic id — unique within the report, purely so the keyed `{#each}`
+	 * stays stable when a side fields two of them.
+	 */
+	const side = (
+		r: {
+			id: string;
+			combatants: { side: string; guestName: string | null; warband: ChronicleWarband | null }[];
+		},
+		which: 'attacker' | 'defender'
+	): ChronicleWarband[] =>
+		r.combatants
+			.filter((c) => c.side === which)
+			.map((c, i) =>
+				c.warband
+					? tag(c.warband)
+					: {
+							id: `${r.id}:guest:${which}:${i}`,
+							name: c.guestName ?? 'Outside opponent',
+							short: c.guestName ?? 'Guest',
+							color: 'var(--color-ink-faint)',
+							guest: true
+						}
+			);
+
 	// Replay the whole campaign's reports (in fold order) once; `steps[i]` carries report `reports[i]`'s
 	// world shares before and after it applied. The chronicle reads owner off these — it never recomputes
 	// shares — so control-shift events stay in lockstep with the map.
@@ -69,7 +95,11 @@ export async function getChronicle(
 		reports.map<FoldReport>((r) => ({
 			worldId: r.worldId,
 			outcome: r.outcome,
-			combatants: r.combatants.map((c) => ({ warbandId: c.warband.id, side: c.side }))
+			// Guests hold no ground, so they're absent from the replay exactly as they are in
+			// control and standings — a guest can never move a world's owner.
+			combatants: foldCombatants(
+				r.combatants.map((c) => ({ warbandId: c.warband?.id ?? null, side: c.side }))
+			)
 		}))
 	);
 	const toShares = (m: Map<string, number>) =>
@@ -84,8 +114,8 @@ export async function getChronicle(
 			worldId: r.worldId,
 			worldName: r.world.name,
 			outcome: r.outcome,
-			attackers: r.combatants.filter((c) => c.side === 'attacker').map((c) => tag(c.warband)),
-			defenders: r.combatants.filter((c) => c.side === 'defender').map((c) => tag(c.warband)),
+			attackers: side(r, 'attacker'),
+			defenders: side(r, 'defender'),
 			control: { pre: toShares(steps[i].pre), post: toShares(steps[i].post) }
 		})),
 		awards: awards.map((a) => ({

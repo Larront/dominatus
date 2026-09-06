@@ -23,7 +23,13 @@ import type { FoldSide } from './control-fold';
 
 /** A combatant reduced to side identity and recorded score components. */
 export interface StatCombatant {
-	warbandId: string;
+	/**
+	 * The campaign warband, or null for an outside opponent (a guest). A guest is never "mine"
+	 * and never a named foe, so it drops out of both filters below — but its side and score still
+	 * count, which is what makes a game against an outsider a real game in the block: it lands in
+	 * `played`, in the win/loss tallies, and in the VP conceded.
+	 */
+	warbandId: string | null;
 	side: FoldSide;
 	primaryVp: number | null;
 	battleReadyVp: number | null;
@@ -118,12 +124,17 @@ export function computeStatBlock(
 	for (const r of reports) {
 		// All my warbands sit on one side (a commander never fights themselves), so the first
 		// self combatant fixes my side; a report with none of my warbands isn't my game.
-		const mySide = r.combatants.find((c) => mine.has(c.warbandId))?.side;
+		const mySide = r.combatants.find((c) => c.warbandId !== null && mine.has(c.warbandId))?.side;
 		if (!mySide) continue;
 		const oppSide: FoldSide = mySide === 'attacker' ? 'defender' : 'attacker';
 
 		// Head-to-head: the game only counts when one of the named foes fought on the opposing side.
-		if (foes && !r.combatants.some((c) => c.side === oppSide && foes.has(c.warbandId))) continue;
+		// A guest can never be a named foe, so a head-to-head filter correctly skips guest games.
+		if (
+			foes &&
+			!r.combatants.some((c) => c.side === oppSide && c.warbandId !== null && foes.has(c.warbandId))
+		)
+			continue;
 
 		played++;
 		const won = r.outcome === mySide;

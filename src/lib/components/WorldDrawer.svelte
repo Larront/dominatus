@@ -32,6 +32,16 @@
 	const name = (id: string) => byId.get(id)?.name ?? 'Unknown warband';
 	const color = (id: string) => byId.get(id)?.color ?? 'var(--color-ink-dim)';
 
+	/**
+	 * A battle-log combatant's tag: the warband's short code, or an outside opponent's name in a
+	 * neutral colour. Guests are recorded on the report but hold no share of this world, so they
+	 * never appear in the control bar above — only here, in the log of who actually played.
+	 */
+	const tag = (c: { warbandId: string | null; guestName: string | null }) =>
+		c.warbandId
+			? { text: wb(c.warbandId)?.short ?? '??', color: color(c.warbandId), guest: false }
+			: { text: c.guestName ?? 'Guest', color: 'var(--color-ink-faint)', guest: true };
+
 	const segments = $derived(
 		[...world.shares].filter((s) => s.share > 0).sort((a, b) => b.share - a.share)
 	);
@@ -255,9 +265,10 @@
 									<span
 										class="inline-flex items-center gap-1.5 font-display text-[11px] font-semibold tracking-[0.04em] text-ink"
 									>
-										{#each report.attackers as c (c.warbandId)}
-											<span class="size-2" style="background: {color(c.warbandId)}"></span>
-											{wb(c.warbandId)?.short ?? '??'}
+										{#each report.attackers as c, i (i)}
+											{@const t = tag(c)}
+											<span class="size-2" style="background: {t.color}"></span>
+											<span class={t.guest ? 'font-normal text-ink-dim italic' : ''}>{t.text}</span>
 										{/each}
 									</span>
 									<span
@@ -267,9 +278,10 @@
 									<span
 										class="inline-flex items-center gap-1.5 font-display text-[11px] font-semibold tracking-[0.04em] text-ink"
 									>
-										{#each report.defenders as c (c.warbandId)}
-											<span class="size-2" style="background: {color(c.warbandId)}"></span>
-											{wb(c.warbandId)?.short ?? '??'}
+										{#each report.defenders as c, i (i)}
+											{@const t = tag(c)}
+											<span class="size-2" style="background: {t.color}"></span>
+											<span class={t.guest ? 'font-normal text-ink-dim italic' : ''}>{t.text}</span>
 										{/each}
 									</span>
 									<span

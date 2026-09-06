@@ -32,7 +32,7 @@
 		title={wb.name}
 	>
 		<span class="size-2 shrink-0" style="background: {wb.color}"></span>
-		{wb.short}
+		<span class={wb.guest ? 'font-normal italic' : ''}>{wb.short}</span>
 	</span>
 {/snippet}
 

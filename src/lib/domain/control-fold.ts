@@ -27,6 +27,35 @@ export interface FoldStep {
 	combatants: { warbandId: string; side: FoldSide }[];
 }
 
+/**
+ * A participant as stored: either a campaign warband or an outside opponent (a guest), who is
+ * recorded on the report by name but holds no `warbandId`.
+ */
+export interface FoldParticipant {
+	warbandId: string | null;
+	side: FoldSide;
+}
+
+/**
+ * Drop the guests from a report's participants, leaving only the league warbands the fold can
+ * move ground between. **The one home for the "guests hold no ground" rule** — every caller that
+ * turns stored combatant rows into a `FoldStep` goes through here, so control and standings can
+ * never disagree about who counts.
+ *
+ * A guest is simply absent from the fold rather than modelled as a zero-share holder, which makes
+ * a game against an outsider fall out of the existing rules with no special case: beating a guest,
+ * the league warband is the lone winner and takes its 10 from the uncontested pool; losing to one,
+ * it is the lone loser and its 10 returns to that pool. Sides can also be uneven (1v2), so a side
+ * may legitimately end up empty here — `applyReport` already tolerates that.
+ */
+export function foldCombatants(
+	combatants: readonly FoldParticipant[]
+): { warbandId: string; side: FoldSide }[] {
+	return combatants
+		.filter((c): c is { warbandId: string; side: FoldSide } => c.warbandId !== null)
+		.map((c) => ({ warbandId: c.warbandId, side: c.side }));
+}
+
 /** A report positioned in the multi-world Replay: a fold step tagged with the world it was fought over. */
 export interface FoldReport extends FoldStep {
 	worldId: string;
@@ -61,6 +90,13 @@ function total(control: Map<string, number>): number {
  * Apply a single report to a control snapshot, returning a NEW map (the input is never
  * mutated, so the client can preview a prospective report against live shares safely).
  * This is the one fold step; `replay` threads it across a world's reports in order.
+ *
+ * Movement is **per combatant**, so uneven sides are handled without a special case: each loser
+ * sheds 10 and each winner claims 10. Two warbands beating one therefore take 20 between them
+ * (the extra 10 drawn from the uncontested pool), while one beating two takes only 10 and the
+ * losers' surplus 10 falls back to that pool. Either side may be empty — a game against a guest,
+ * who holds no ground and so isn't in `combatants` — in which case the remaining side simply
+ * gains from, or returns to, the pool.
  */
 export function applyReport(control: Map<string, number>, report: FoldStep): Map<string, number> {
 	const next = new Map(control);
