@@ -44,7 +44,9 @@ jobs:
 
       # Publish a GitHub Release for the tag once the image is up. Notes are auto-generated from
       # merged PRs per .github/release.yml; a tag containing a hyphen (e.g. v1.0.0-rc1) is a pre-release.
-      - uses: softprops/action-gh-release@v2
+      # v3 for the Node 24 action runtime — `v2` is pinned to a Node 20 build, which the runners
+      # now force onto Node 24 anyway and warn about. v3.0.0 changed only the runtime, no inputs.
+      - uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}

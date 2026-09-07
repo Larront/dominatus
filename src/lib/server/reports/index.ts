@@ -14,13 +14,23 @@ import type { BattleReportInput } from '$lib/schemas/battle-report';
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
- * The fold order over the battle-report log: submit order (`createdAt`), with `id` breaking any
- * same-millisecond tie. This is the precondition `replay()` requires (CONTEXT: Replay) — declared
- * once and shared by every fold reader (here and in standings) so world control and the points
- * standings can never order the log differently. Display orderings (e.g. the battle log, newest
- * first) are deliberately *not* the fold order and don't use this.
+ * The fold order over the battle-report log: **played order** (`playedOn`, the day the battle was
+ * actually fought), then submit order (`createdAt`) to settle two battles on the same day, then `id`
+ * for the same-millisecond tie. This is the precondition `replay()` requires (CONTEXT: Replay) —
+ * declared once and shared by every fold reader (here, standings, the chronicle) so world control
+ * and the points standings can never order the log differently. Display orderings (e.g. the battle
+ * log, newest first) are deliberately *not* the fold order and don't use this.
+ *
+ * Played date leads, not submit time, so a report filed days after the game applies where the game
+ * happened (ADR 0006). That makes a late submission retroactive: it inserts into the middle of the
+ * log, and because the fold is order-dependent, every later report's outcome re-derives around it.
+ * Nothing here needs to know that — every fold reader re-reads the whole log in this order.
  */
-export const FOLD_ORDER = [asc(battleReport.createdAt), asc(battleReport.id)];
+export const FOLD_ORDER = [
+	asc(battleReport.playedOn),
+	asc(battleReport.createdAt),
+	asc(battleReport.id)
+];
 
 /** One combatant in the log, with its score breakdown and a derived total. */
 export interface BattleLogCombatant {
@@ -40,6 +50,8 @@ export interface BattleLogEntry {
 	id: string;
 	worldId: string;
 	cycle: number;
+	/** The day the battle was fought, `YYYY-MM-DD` — see $lib/domain/played-date for the format. */
+	playedOn: string;
 	outcome: 'attacker' | 'defender' | 'stalemate';
 	wentFirst: 'attacker' | 'defender' | null;
 	/** The battle size fought at — `combat-patrol` or a points size; null if not recorded. */
@@ -71,11 +83,15 @@ function totalVp(c: {
  * Every battle report in a campaign, newest cycle first, with combatants split
  * by side. Returned for the whole campaign and grouped by world on the client —
  * the dataset is small at hobby scale and the map shows one world at a time.
+ *
+ * A display ordering, not the fold order: newest first, and by the day each battle was *fought*
+ * within its cycle, so a report filed late reads in the ledger where it belongs rather than jumping
+ * to the top. Submit time still breaks a same-day tie, matching how the fold settles one.
  */
 export async function getBattleLog(campaignId: string): Promise<BattleLogEntry[]> {
 	const rows = await db.query.battleReport.findMany({
 		where: eq(battleReport.campaignId, campaignId),
-		orderBy: (r, { desc }) => [desc(r.cycle), desc(r.createdAt)],
+		orderBy: (r, { desc }) => [desc(r.cycle), desc(r.playedOn), desc(r.createdAt)],
 		with: { combatants: true }
 	});
 
@@ -92,6 +108,7 @@ export async function getBattleLog(campaignId: string): Promise<BattleLogEntry[]
 		id: r.id,
 		worldId: r.worldId,
 		cycle: r.cycle,
+		playedOn: r.playedOn,
 		outcome: r.outcome,
 		wentFirst: r.wentFirst,
 		battleSize: r.battleSize,
@@ -108,6 +125,11 @@ export async function getBattleLog(campaignId: string): Promise<BattleLogEntry[]
  * chronological order (ADR 0002). Run inside a transaction after any report write —
  * submit, edit, or delete — so the stored shares are always exactly the fold of the log.
  * Synchronous: better-sqlite3 transactions don't allow awaits in the callback.
+ *
+ * Always the world's *whole* log, never an incremental step from the stored shares, which is what
+ * makes a backdated report safe (ADR 0006): inserting into the middle of the log re-derives every
+ * report after it with no special case here. Control is per-world, so a backdated report can only
+ * disturb its own world — the caller re-folds that one (and, on an edit that moved worlds, both).
  */
 export function recomputeWorldControl(tx: Tx, worldId: string): void {
 	const reports = tx
@@ -218,6 +240,8 @@ export async function imageInCampaign(campaignId: string, name: string): Promise
 export interface AdminReportEntry {
 	id: string;
 	cycle: number;
+	/** The day the battle was fought, `YYYY-MM-DD` — the field this table's fold order sorts on. */
+	playedOn: string;
 	worldId: string;
 	worldName: string;
 	outcome: 'attacker' | 'defender' | 'stalemate';
@@ -241,7 +265,7 @@ export async function getCampaignReportsAdmin(campaignId: string): Promise<Admin
 	const rows = await db.query.battleReport.findMany({
 		where: eq(battleReport.campaignId, campaignId),
 		orderBy: FOLD_ORDER,
-		columns: { id: true, cycle: true, worldId: true, outcome: true },
+		columns: { id: true, cycle: true, playedOn: true, worldId: true, outcome: true },
 		with: {
 			world: { columns: { name: true } },
 			combatants: {
@@ -264,6 +288,7 @@ export async function getCampaignReportsAdmin(campaignId: string): Promise<Admin
 		return {
 			id: r.id,
 			cycle: r.cycle,
+			playedOn: r.playedOn,
 			worldId: r.worldId,
 			worldName: r.world.name,
 			outcome: r.outcome,
@@ -293,6 +318,7 @@ export async function getReportForEdit(
 		data: {
 			worldId: r.worldId,
 			cycle: r.cycle,
+			playedOn: r.playedOn,
 			outcome: r.outcome,
 			wentFirst: r.wentFirst,
 			// '' rather than null so the picker binds to its "not recorded" entry on an amend.
@@ -332,6 +358,8 @@ export function updateBattleReport(
 			.set({
 				worldId: input.worldId,
 				cycle: input.cycle,
+				// Correcting the played date re-orders the world's log; the re-fold below covers it.
+				playedOn: input.playedOn,
 				outcome: input.outcome,
 				wentFirst: input.wentFirst ?? null,
 				battleSize: input.battleSize?.trim() || null,
@@ -417,6 +445,7 @@ export function submitBattleReport(
 				campaignId: input.campaignId,
 				worldId: input.worldId,
 				cycle: input.cycle,
+				playedOn: input.playedOn,
 				outcome: input.outcome,
 				wentFirst: input.wentFirst ?? null,
 				battleSize: input.battleSize?.trim() || null,

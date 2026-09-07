@@ -33,7 +33,9 @@ does **not** feed world control. Only games move control.
 
 Because of the clamps and the pool draw, the order of games matters once a warband hits 0% or
 a world fills. Control is therefore **not** a stateless recompute from a bag of results: it is
-a **chronological fold (replay) over the approved battle reports** for that world. This makes
+a **chronological fold (replay) over the approved battle reports** for that world. (**ADR 0006**
+settles what "chronological" means: the day each battle was _fought_, not the order the reports
+were submitted in — so a report filed late applies retroactively.) This makes
 control a pure function of the ordered report log, and makes reversing or rejecting a report a
 replay from that point rather than a hand correction.
 

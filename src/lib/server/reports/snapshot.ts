@@ -6,7 +6,10 @@ import type { BattleReport, BattleReportCombatant } from '$lib/server/db/schema/
  * of what the report looked like before the arbiter touched it. Stored as JSON on `report_audit`.
  *
  * `createdAt` is the report's original submit time as epoch milliseconds (not a `Date`) so the
- * snapshot round-trips losslessly through JSON.
+ * snapshot round-trips losslessly through JSON. `playedOn` needs no such treatment — a played date
+ * is already a `YYYY-MM-DD` string (CONTEXT: Played Date). It is frozen here because an amend may
+ * *change* it, and changing it re-orders the fold, so the prior date is part of what a revert
+ * would have to restore.
  */
 export interface ReportSnapshot {
 	report: {
@@ -14,6 +17,7 @@ export interface ReportSnapshot {
 		campaignId: string;
 		worldId: string;
 		cycle: number;
+		playedOn: string;
 		outcome: 'attacker' | 'defender' | 'stalemate';
 		wentFirst: 'attacker' | 'defender' | null;
 		battleSize: string | null;
@@ -53,6 +57,7 @@ export function buildReportSnapshot(
 			campaignId: report.campaignId,
 			worldId: report.worldId,
 			cycle: report.cycle,
+			playedOn: report.playedOn,
 			outcome: report.outcome,
 			wentFirst: report.wentFirst,
 			battleSize: report.battleSize,

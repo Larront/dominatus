@@ -4,6 +4,7 @@ import { battleReport, paintingAward, reportAudit, warband, world } from '$lib/s
 import { buildChronicle, type ChronicleEvent, type ChronicleWarband } from '$lib/domain/chronicle';
 import { FOLD_ORDER } from '$lib/server/reports';
 import { replay, foldCombatants, type FoldReport } from '$lib/domain/control-fold';
+import { playedDateSortKey } from '$lib/domain/played-date';
 
 /**
  * The campaign Chronicle (issue #7): the activity feed, newest first and grouped by cycle. A pure
@@ -21,7 +22,14 @@ export async function getChronicle(
 			// Fold order (the one shared by control and standings) so the replay below reproduces the
 			// map's per-report shares exactly — control-shift detection sits on that same replay.
 			orderBy: FOLD_ORDER,
-			columns: { id: true, cycle: true, createdAt: true, worldId: true, outcome: true },
+			columns: {
+				id: true,
+				cycle: true,
+				playedOn: true,
+				createdAt: true,
+				worldId: true,
+				outcome: true
+			},
 			with: {
 				world: { columns: { name: true } },
 				combatants: {
@@ -110,7 +118,12 @@ export async function getChronicle(
 		reports: reports.map((r, i) => ({
 			id: r.id,
 			cycle: r.cycle,
-			at: r.createdAt.getTime(),
+			// The day the battle was fought, not the day it was filed — the feed is a chronicle of the
+			// war, and it has to run in the same order the fold does or a report's control shift would
+			// appear detached from the shares that produced it. Submit time still separates two battles
+			// on the same day, exactly as it does in the fold.
+			at: playedDateSortKey(r.playedOn),
+			filedAt: r.createdAt.getTime(),
 			worldId: r.worldId,
 			worldName: r.world.name,
 			outcome: r.outcome,

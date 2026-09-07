@@ -62,7 +62,9 @@ when no warband holds a majority, and **unclaimed** when no warband holds any sh
 
 **Replay**:
 The ordered re-derivation of world control from the approved battle-report log: reports are
-folded oldest-first, one at a time, each moving control by ±10% (ADR 0002). It is never a
+folded oldest-first, one at a time, each moving control by ±10% (ADR 0002). "Oldest" means
+**played order** — the day each battle was fought, then the order same-day games were filed in
+(ADR 0006) — not the order the reports were submitted. It is never a
 stateless sum — the 0% floor and the 100% pool make order matter — so it is a pure function of
 the ordered log. Both readers sit on the _same_ replay: world **Control** takes the final
 per-world shares, and the points **Standings** read each report's shares _before_ and _after_
@@ -74,9 +76,19 @@ _Avoid_: Recompute (too generic — a replay is specifically the ordered fold ov
 The record a commander submits documenting a game fought over a world. Splits its combatants
 across two sides — attacker and defender — each holding **one or two**. The sides need **not**
 be balanced: 1v1, 2v2 and the uneven 1v2 / 2v1 are all real games, and control moves per
-combatant, so an uneven result is well-defined. Records the outcome, scores, its **Battle Size**, an optional
+combatant, so an uneven result is well-defined. Records the outcome, scores, its **Battle Size**, its **Played Date**, an optional
 narrative, and an optional image. The single source of a battle's record.
 _Avoid_: Battle (the report is the record; there is no separate battle entity).
+
+**Played Date**:
+The calendar day a battle was **fought**, recorded on its report and distinct from when the report
+was **filed**. The date the Replay orders by (ADR 0006), which is what makes a report submitted days
+late apply where the battle happened rather than at the end of the log — and therefore what makes a
+late report change control and standings retroactively. A calendar day, never an instant: it carries
+no time of day and no time zone, and is stored as its own `YYYY-MM-DD` value. Two battles fought on
+the same day are separated by the order their reports were filed, the only order known within a day.
+_Avoid_: Date, timestamp, submitted-at (unqualified — the point of the term is the split between
+fought and filed); "played at" (an instant, which this deliberately is not).
 
 **Guest**:
 A combatant on a battle report who is **not in the league** — a walk-in opponent, recorded by
@@ -142,8 +154,11 @@ campaign (weekly, in the running group), and the app remembers only the present 
 
 **Cycle**:
 A numbered phase of a campaign. The campaign tracks its current cycle, and each battle
-report is stamped with the cycle it was fought in. (How long a cycle lasts and what happens
-when one closes are deferred rules.)
+report is stamped with it **at submit** — so a report filed after a cycle turns over carries the new
+cycle, not the one it was fought in. Deliberate: the cycle is a coarse grouping for the Chronicle
+and the awards, and the report's **Played Date** is what records when the battle actually happened
+(ADR 0006). (How long a cycle lasts and what happens when one closes are deferred rules — nothing
+maps a date to a cycle, so the stamp could not be derived from the played date anyway.)
 _Avoid_: Turn.
 
 **Standings** (the **Leaderboard**):

@@ -21,8 +21,25 @@ export const battleReport = sqliteTable(
 		worldId: text('world_id')
 			.notNull()
 			.references(() => world.id, { onDelete: 'cascade' }),
-		/** The cycle the battle was fought in. */
+		/**
+		 * The campaign's cycle at the moment the report was filed, stamped by the submit action. Not
+		 * necessarily the cycle the battle was fought in: a report filed after a cycle turns over
+		 * carries the new one (ADR 0006). `playedOn` is what records when the battle happened.
+		 */
 		cycle: integer('cycle').notNull(),
+		/**
+		 * The calendar day the battle was fought (CONTEXT: Played Date), as `YYYY-MM-DD`. This — not
+		 * `createdAt` — is what the fold orders by (ADR 0006), so a game logged days late still applies
+		 * where it happened.
+		 *
+		 * Text, not a timestamp, because a played date is a calendar day and not an instant: no anchor
+		 * hour survives the date line (noon UTC on the 6th is already the 7th at UTC+13, where this
+		 * campaign's players are). As text there is nothing to shift, and ISO dates sort chronologically
+		 * so the ordering is a plain string sort. See $lib/domain/played-date.
+		 */
+		playedOn: text('played_on')
+			.notNull()
+			.default(sql`(strftime('%Y-%m-%d','now'))`),
 		outcome: text('outcome', { enum: ['attacker', 'defender', 'stalemate'] }).notNull(),
 		/** Which side took the first turn, if recorded. */
 		wentFirst: text('went_first', { enum: ['attacker', 'defender'] }),
@@ -48,6 +65,11 @@ export const battleReport = sqliteTable(
 		submittedByUserId: text('submitted_by_user_id')
 			.notNull()
 			.references(() => user.id),
+		/**
+		 * When the report was *filed*. Never the day the battle was fought — that is `playedOn`. Still
+		 * load-bearing: it breaks ties between two reports sharing a played date, so the fold stays a
+		 * total order (ADR 0006).
+		 */
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
