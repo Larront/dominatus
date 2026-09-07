@@ -9,6 +9,7 @@
 	import WorldRow from '$lib/components/admin/WorldRow.svelte';
 	import { SCORING_GROUPS } from '$lib/domain/scoring-profile';
 	import { ARCHETYPES } from '$lib/domain/archetypes';
+	import { formatPlayedDate } from '$lib/domain/played-date';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -430,6 +431,16 @@
 
 							<span class="min-w-[110px] font-display text-[12px] font-semibold text-ink">
 								{r.worldName}
+							</span>
+
+							<!-- The day the battle was fought. Worth showing here because this list is in fold
+							     order (ADR 0006) and it is the played date that decides that order — a report
+							     filed today can sit halfway up the list. -->
+							<span
+								class="shrink-0 font-display text-[10px] tracking-[0.06em] text-ink-faint uppercase"
+								title="Fought on {formatPlayedDate(r.playedOn)}"
+							>
+								{formatPlayedDate(r.playedOn)}
 							</span>
 
 							<span

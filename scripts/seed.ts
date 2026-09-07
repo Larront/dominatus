@@ -19,6 +19,7 @@ import * as schema from '../src/lib/server/db/schema';
 import { replay, type FoldReport } from '../src/lib/domain/control-fold';
 import { DEFAULT_PROFILE } from '../src/lib/domain/scoring-profile';
 import { COMBAT_PATROL } from '../src/lib/domain/battle-sizes';
+import { utcPlayedDate } from '../src/lib/domain/played-date';
 
 const {
 	user,
@@ -298,14 +299,18 @@ async function main() {
 		)
 	];
 
-	// Stamp each report into the past in array order so the DB's submit-time fold order
-	// matches the chronology folded here. (Live submissions land after `base`.)
+	// Stamp each report into the past in array order so the DB's fold order matches the chronology
+	// folded here. The fold orders by *played* date (ADR 0006), so that is the field that has to run
+	// in order: one game a day, ending yesterday. `createdAt` trails it a minute apart to stay a
+	// consistent tiebreak. (Live submissions land after `base`.)
 	const base = Date.now();
+	const DAY_MS = 24 * 60 * 60 * 1000;
 	const reportRows = log.map((e, i) => ({
 		id: crypto.randomUUID(),
 		campaignId: camp.id,
 		worldId: wd[e.world],
 		cycle: e.cycle,
+		playedOn: utcPlayedDate(new Date(base - (log.length - i) * DAY_MS)),
 		outcome: (e.win ? 'attacker' : 'stalemate') as 'attacker' | 'stalemate',
 		battleSize: String(e.pts),
 		narrative: e.narrative,

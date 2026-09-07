@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { FORCE_DISPOSITIONS, isPrimaryMissionFor } from '$lib/domain/missions';
 import { isBattleSize, usesSecondaries, MAX_BATTLE_SIZE } from '$lib/domain/battle-sizes';
+import { isPlayedDate } from '$lib/domain/played-date';
 
 /**
  * Validation for the battle-report form. Shared by the Superforms client and the
@@ -78,7 +79,19 @@ export const combatantSchema = z.object({
 export const battleReportSchema = z
 	.object({
 		worldId: z.string().min(1, 'Select a world'),
+		/**
+		 * The campaign's cycle, stamped by the submit action rather than offered on the form — a
+		 * report filed after a cycle turns over carries the new one (ADR 0006). Still part of the
+		 * schema because an arbiter amend round-trips the stored value through the form.
+		 */
 		cycle: z.number().int().positive(),
+		/**
+		 * The calendar day the battle was fought, as `YYYY-MM-DD` (CONTEXT: Played Date). This is what
+		 * the fold orders by (ADR 0006) — the whole point of asking for it is that a report filed late
+		 * still applies where the battle happened. "Not in the future" is checked at the action, which
+		 * has a clock; this only checks that the day is real.
+		 */
+		playedOn: z.string().refine(isPlayedDate, 'Enter the date the battle was fought'),
 		outcome: battleOutcome,
 		/** Which side took the first turn — at most one. */
 		wentFirst: battleSide.nullish(),

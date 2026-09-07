@@ -5,6 +5,7 @@
 	import { fadeRise, slideX } from '$lib/motion';
 	import type { WorldWithControl } from '$lib/domain/world';
 	import { battleSizeLabel } from '$lib/domain/battle-sizes';
+	import { formatPlayedDate } from '$lib/domain/played-date';
 	import type { BattleLogEntry } from '$lib/server/reports';
 
 	interface WarbandRef {
@@ -295,13 +296,14 @@
 										{report.narrative}
 									</p>
 								{/if}
-								{#if battleSizeLabel(report.battleSize)}
-									<p
-										class="mt-1.5 font-display text-[9.5px] font-medium tracking-[0.06em] text-ink-faint uppercase"
-									>
-										{battleSizeLabel(report.battleSize)} engagement
-									</p>
-								{/if}
+								<!-- The day the battle was fought, not the day the report was filed — the two differ
+								     whenever a game is logged late, and the ledger reads in fought order. -->
+								<p
+									class="mt-1.5 font-display text-[9.5px] font-medium tracking-[0.06em] text-ink-faint uppercase"
+								>
+									{formatPlayedDate(report.playedOn)}{#if battleSizeLabel(report.battleSize)}
+										· {battleSizeLabel(report.battleSize)} engagement{/if}
+								</p>
 								{#if report.imagePath}
 									<a
 										href="{reportHref}/image/{report.imagePath}"

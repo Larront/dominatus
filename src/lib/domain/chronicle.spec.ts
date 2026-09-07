@@ -27,11 +27,14 @@ const report = (
 		att?: string[];
 		def?: string[];
 		control?: ChronicleReport['control'];
+		/** Submit instant — only needed when two reports share a played day (`at`). */
+		filedAt?: number;
 	} = {}
 ): ChronicleReport => ({
 	id,
 	at,
 	cycle,
+	filedAt: opts.filedAt,
 	worldId: opts.world ?? 'w',
 	worldName: (opts.world ?? 'w').toUpperCase(),
 	outcome: opts.outcome ?? 'attacker',
@@ -198,6 +201,31 @@ describe('buildChronicle', () => {
 			.filter((e) => e.type === 'battle-fought' && e.cycle === 1)
 			.map((e) => ('id' in e ? e.id : ''));
 		expect(cycle1BattleIds).toEqual(['r2', 'r1']);
+	});
+
+	describe('battles sharing a played day', () => {
+		const ids = (events: ChronicleEvent[]) =>
+			events.filter((e) => e.type === 'battle-fought').map((e) => ('id' in e ? e.id : ''));
+
+		it('orders them by submit time, newest first — the fold order, not the id', () => {
+			// Both fought on the same day, so `at` ties. The one logged later reads first.
+			const events = build({
+				reports: [report('aaa', 100, 1, { filedAt: 900 }), report('zzz', 100, 1, { filedAt: 500 })]
+			});
+			expect(ids(events)).toEqual(['aaa', 'zzz']);
+		});
+
+		it('still puts an earlier played day below a later one, whenever each was logged', () => {
+			// The whole point of ADR 0006: a battle fought earlier stays earlier in the feed even when
+			// its report was filed last.
+			const events = build({
+				reports: [
+					report('old-battle-late-report', 100, 1, { filedAt: 9_000 }),
+					report('new-battle-early-report', 200, 1, { filedAt: 1_000 })
+				]
+			});
+			expect(ids(events)).toEqual(['new-battle-early-report', 'old-battle-late-report']);
+		});
 	});
 
 	it('interleaves the three record kinds within a cycle by timestamp, newest first', () => {

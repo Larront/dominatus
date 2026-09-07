@@ -7,6 +7,7 @@ const report: BattleReport = {
 	campaignId: 'c1',
 	worldId: 'w1',
 	cycle: 3,
+	playedOn: '2026-05-28',
 	outcome: 'attacker',
 	wentFirst: 'defender',
 	battleSize: '2000',
@@ -52,6 +53,9 @@ describe('buildReportSnapshot', () => {
 			campaignId: 'c1',
 			worldId: 'w1',
 			cycle: 3,
+			// The played date is kept as its own calendar day, distinct from the submit instant below —
+			// this report was filed four days after the battle it records.
+			playedOn: '2026-05-28',
 			outcome: 'attacker',
 			wentFirst: 'defender',
 			battleSize: '2000',

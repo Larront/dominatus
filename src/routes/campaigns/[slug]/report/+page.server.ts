@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { superValidate, setError } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { battleReportSchema } from '$lib/schemas/battle-report';
+import { isFuturePlayedDate, utcPlayedDate } from '$lib/domain/played-date';
 import { requireCampaignAccess } from '$lib/server/campaigns';
 import { getWorldsWithControl } from '$lib/server/worlds';
 import { getWarbandsForCampaign } from '$lib/server/warbands';
@@ -30,6 +31,10 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 		// Seed defaults the commander confirms before submit. A CV draft will later
 		// pre-fill these same fields (see ADR 0001); for now they start blank.
 		form.data.cycle = campaign.currentCycle;
+		// Today as the server sees it (UTC). The client replaces this with the commander's *local*
+		// today on mount — the server has no view of their zone, and in UTC+12 the two differ for
+		// half the day. See $lib/domain/played-date.
+		form.data.playedOn = utcPlayedDate();
 		// Each side's lead combatant carries the (in 2v2, shared) score; battle-ready
 		// defaults on at +10 VP, so the commander only unticks an unpainted force.
 		// `primaryMission`/`forceDisposition: ''` bind cleanly to each side's pickers (a CV draft may
@@ -101,6 +106,13 @@ export const actions: Actions = {
 			return setError(form, 'combatants._errors', 'A combatant is not part of this campaign');
 		}
 
+		// A battle can't have been fought on a day that hasn't happened. Checked here rather than in
+		// the shared schema because it needs a clock, and it carries a couple of days of slack so a
+		// commander whose local date is ahead of the server's can still log today's game.
+		if (isFuturePlayedDate(form.data.playedOn)) {
+			return setError(form, 'playedOn', 'That date is in the future');
+		}
+
 		// Edit path (?edit=<id>): arbiter-only amend + re-fold, then back to the admin panel.
 		const editId = url.searchParams.get('edit');
 		if (editId) {
@@ -129,7 +141,10 @@ export const actions: Actions = {
 			redirect(303, `/campaigns/${params.slug}/admin`);
 		}
 
-		// Create path: a new report is stamped with the campaign's current cycle and applied at once.
+		// Create path: the report is stamped with the campaign's current cycle and folded into its world
+		// at once. The cycle is a stamp, but the *played date* is the commander's (ADR 0006) — so a
+		// backdated report lands mid-log and re-derives every later report on that world, even though
+		// it carries whichever cycle the campaign has reached by the time it was filed.
 		const imagePath = imageCheck.kind === 'ok' ? await saveReportImage(imageCheck.file) : null;
 		try {
 			submitBattleReport({

@@ -9,6 +9,7 @@
 	import SegmentedField from '$lib/components/ui/SegmentedField.svelte';
 	import Checkbox from '$lib/components/ui/Checkbox.svelte';
 	import { MAX_SECONDARIES, MAX_GUEST_NAME } from '$lib/schemas/battle-report';
+	import { localPlayedDate } from '$lib/domain/played-date';
 	import {
 		SECONDARY_MISSIONS,
 		FORCE_DISPOSITIONS,
@@ -43,6 +44,25 @@
 	// the action reads to update + re-fold instead of inserting. Cancel returns to the admin panel.
 	const editing = $derived(data.editing);
 	const exitHref = $derived(editing ? `${base}/admin` : base);
+
+	/**
+	 * The load seeds `playedOn` with the *server's* today (UTC). For a commander in UTC+12/13 that is
+	 * yesterday for half the day, so a fresh form would offer the wrong date unless they noticed.
+	 * Correct it to their local today here — client-only, since `$effect` never runs on the server.
+	 *
+	 * Never on an amend: an arbiter editing a months-old report must not have its date silently
+	 * rewritten to today. `taint: false` so seeding a default doesn't mark the form dirty.
+	 */
+	let playedOnSeeded = false;
+	$effect(() => {
+		if (playedOnSeeded || editing) return;
+		playedOnSeeded = true;
+		const today = localPlayedDate();
+		form.update((d) => ({ ...d, playedOn: today }), { taint: false });
+	});
+
+	// A commander can only log a battle already fought, so the picker stops at today.
+	const latestPlayable = localPlayedDate();
 
 	const wbMap = $derived(new Map(data.warbands.map((w) => [w.id, w])));
 	const wbName = (id: string) => wbMap.get(id)?.name ?? '';
@@ -578,6 +598,22 @@
 								>{$errors.worldId}</span
 							>{/if}
 					</div>
+
+					<label class="flex shrink-0 grow-0 basis-[170px] flex-col gap-1.5">
+						<span class={label}>› Fought on</span>
+						<!-- The day the battle was played, which is not necessarily today: a report filed
+						     late still folds where the battle happened (ADR 0006). -->
+						<input
+							class={control}
+							type="date"
+							max={latestPlayable}
+							bind:value={$form.playedOn}
+							aria-invalid={$errors.playedOn ? 'true' : undefined}
+						/>
+						{#if $errors.playedOn}<span class="font-body text-[11.5px] text-state-attacker"
+								>{$errors.playedOn}</span
+							>{/if}
+					</label>
 
 					<div class="flex flex-col gap-1.5">
 						<span class={label}>› Format</span>

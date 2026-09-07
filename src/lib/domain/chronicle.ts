@@ -39,11 +39,20 @@ export interface ChronicleWarband {
 export type BattleOutcome = FoldSide | 'stalemate';
 export type { PaintingKind };
 
-/** A battle report reduced to what the feed narrates. `at` is its `createdAt` (ms epoch). */
+/**
+ * A battle report reduced to what the feed narrates.
+ *
+ * `at` is the **day the battle was fought** as an ordering key (see `playedDateSortKey` in
+ * $lib/domain/played-date), not the moment the report was filed — the feed narrates the war, so it
+ * has to run in the same order the fold does (ADR 0006), or a report's control-shift event would
+ * appear detached from the shares that produced it. `filedAt` is the submit instant, and exists only
+ * to separate two battles that share a played date — the same tiebreak the fold uses.
+ */
 export interface ChronicleReport {
 	id: string;
 	cycle: number;
 	at: number;
+	filedAt?: number;
 	worldId: string;
 	worldName: string;
 	outcome: BattleOutcome;
@@ -115,8 +124,18 @@ export interface ChronicleSources {
 
 interface EventBase {
 	cycle: number;
-	/** Source `createdAt` (ms); dividers carry 0 since they sort by cycle, not time. */
+	/**
+	 * When the event happened, on the epoch-millisecond scale — a submit instant for awards, musters
+	 * and corrections, and the played *day* for a battle (and its control shift). Dividers carry 0
+	 * since they sort by cycle, not time.
+	 */
 	at: number;
+	/**
+	 * Tiebreak for events sharing an `at`: a battle's submit instant, so two games played on the same
+	 * day read in the order they were logged. Absent on every other kind, whose `at` is already an
+	 * instant precise enough to order them.
+	 */
+	filedAt?: number;
 }
 
 export interface BattleFoughtEvent extends EventBase {
@@ -227,6 +246,7 @@ export function buildChronicle(src: ChronicleSources): ChronicleEvent[] {
 			type: 'battle-fought',
 			cycle: r.cycle,
 			at: r.at,
+			filedAt: r.filedAt,
 			id: r.id,
 			worldId: r.worldId,
 			worldName: r.worldName,
@@ -250,6 +270,7 @@ export function buildChronicle(src: ChronicleSources): ChronicleEvent[] {
 					type: 'control-shift',
 					cycle: r.cycle,
 					at: r.at,
+					filedAt: r.filedAt,
 					id: r.id,
 					worldId: r.worldId,
 					worldName: r.worldName,
@@ -307,13 +328,16 @@ export function buildChronicle(src: ChronicleSources): ChronicleEvent[] {
 	}
 
 	// Newest first, grouped by cycle: cycle descending; within a cycle the divider heads the block,
-	// then events newest first; a stable id tiebreak keeps same-timestamp events deterministic.
+	// then events newest first. Two battles on the same played day fall to `filedAt` — the order they
+	// were logged in, matching the fold — and a stable id tiebreak keeps the rest deterministic.
 	const isDivider = (e: ChronicleEvent) => (e.type === 'cycle-advanced' ? 1 : 0);
 	const id = (e: ChronicleEvent) => (e.type === 'cycle-advanced' ? '' : e.id);
+	const filed = (e: ChronicleEvent) => e.filedAt ?? 0;
 	return events.sort((a, b) => {
 		if (a.cycle !== b.cycle) return b.cycle - a.cycle;
 		if (isDivider(a) !== isDivider(b)) return isDivider(b) - isDivider(a);
 		if (a.at !== b.at) return b.at - a.at;
+		if (filed(a) !== filed(b)) return filed(b) - filed(a);
 		return id(b).localeCompare(id(a));
 	});
 }

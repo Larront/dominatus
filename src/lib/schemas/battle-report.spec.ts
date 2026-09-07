@@ -28,6 +28,7 @@ const parse = (combatants: Slot[], report: Record<string, unknown> = {}) =>
 	battleReportSchema.safeParse({
 		worldId: 'w1',
 		cycle: 1,
+		playedOn: '2026-09-06',
 		outcome: 'attacker',
 		...report,
 		combatants: combatants.map((c) => ({ secondaries: [], ...c }))
@@ -166,12 +167,40 @@ describe('battleReportSchema — battle size', () => {
 	});
 });
 
+describe('battleReportSchema — the played date', () => {
+	const sides: Slot[] = [wb('attacker', 'a'), wb('defender', 'b')];
+	const on = (playedOn: unknown) => parse(sides, { playedOn });
+
+	it('accepts a calendar day', () => {
+		expect(on('2026-09-06').success).toBe(true);
+	});
+
+	it('requires a played date — the fold has nothing to order by without one', () => {
+		expect(on(undefined).success).toBe(false);
+		expect(on('').success).toBe(false);
+		expect(on(null).success).toBe(false);
+	});
+
+	it('rejects a date that is not a real day, or not a bare YYYY-MM-DD', () => {
+		for (const bad of ['2026-02-30', '2026-9-6', '06/09/2026', '2026-09-06T00:00:00Z']) {
+			expect(on(bad).success, bad).toBe(false);
+			expect(messagesFor(on(bad), ['playedOn'])).toContain('Enter the date the battle was fought');
+		}
+	});
+
+	it('says nothing about future dates — that check needs a clock, so it lives at the action', () => {
+		// Deliberate: this schema runs on the client too, where the clock is the user's.
+		expect(on('2099-01-01').success).toBe(true);
+	});
+});
+
 describe('battleReportSchema — Combat Patrol scoring', () => {
 	const sides: Slot[] = [wb('attacker', 'a'), wb('defender', 'b')];
 	const combatPatrol = (slots: unknown[]) =>
 		battleReportSchema.safeParse({
 			worldId: 'w1',
 			cycle: 1,
+			playedOn: '2026-09-06',
 			outcome: 'attacker',
 			battleSize: COMBAT_PATROL,
 			combatants: slots
