@@ -8,13 +8,15 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import SegmentedField from '$lib/components/ui/SegmentedField.svelte';
 	import Checkbox from '$lib/components/ui/Checkbox.svelte';
-	import { MAX_SECONDARIES } from '$lib/schemas/battle-report';
+	import { MAX_SECONDARIES, MAX_GUEST_NAME } from '$lib/schemas/battle-report';
 	import {
-		PRIMARY_MISSIONS,
 		SECONDARY_MISSIONS,
 		FORCE_DISPOSITIONS,
-		isSecondaryMission
+		isSecondaryMission,
+		primaryMissionsFor,
+		primaryMissionOptionsFor
 	} from '$lib/domain/missions';
+	import { BATTLE_SIZES, isBattleSize, usesSecondaries } from '$lib/domain/battle-sizes';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -46,13 +48,32 @@
 	const wbName = (id: string) => wbMap.get(id)?.name ?? '';
 	const wbColor = (id: string) => wbMap.get(id)?.color ?? 'var(--color-ink-dim)';
 
+	/**
+	 * The battle size picker. Combat Patrol sits in the same list as the points sizes because that is
+	 * the single choice made at the table (CONTEXT: Battle Size). An amended legacy report may carry
+	 * an off-ladder size from when this was a free number input — inject it so editing anything else
+	 * on that report never silently rewrites the size.
+	 */
+	const battleSizeItems = $derived.by(() => {
+		const items = [{ value: '', label: '— Not recorded —' }, ...BATTLE_SIZES];
+		const current = $form.battleSize ?? '';
+		return current && !isBattleSize(current)
+			? [...items, { value: current, label: `${current} pts` }]
+			: items;
+	});
+
+	/** Combat Patrol is its own game: a different mission pack, and no secondaries at all. */
+	const combatPatrol = $derived(!usesSecondaries($form.battleSize));
+
 	// Mission pickers are sourced from the edition's canonical lists (issue: mission capture). The
 	// primary is constrained to the list (with an explicit "none"); secondaries are too, but keep
 	// any out-of-list value an amended report already carries so editing never silently drops it.
-	const primaryMissionItems = [
+	// Which primary pack applies depends on the battle size, so this list is derived, not fixed —
+	// and for Combat Patrol each option is labelled with the faction whose mission it is.
+	const primaryMissionItems = $derived([
 		{ value: '', label: '— No primary mission —' },
-		...PRIMARY_MISSIONS.map((m) => ({ value: m, label: m }))
-	];
+		...primaryMissionOptionsFor($form.battleSize)
+	]);
 	const forceDispositionItems = [
 		{ value: '', label: '— No disposition —' },
 		...FORCE_DISPOSITIONS.map((d) => ({ value: d, label: d }))
@@ -64,54 +85,108 @@
 			: secondaryMissionItems;
 	}
 
+	/**
+	 * Switch the battle size, clearing whatever no longer applies. Changing game changes what a side
+	 * can score: a primary from the old pack is no longer canonical, and a Combat Patrol game scores
+	 * no secondaries. Dropping them here keeps the form honest, rather than leaving it holding values
+	 * the schema would reject on submit with an error pointing at a field that is now hidden.
+	 */
+	function setBattleSize(value: string) {
+		$form.battleSize = value;
+		const pack = primaryMissionsFor(value);
+		const keepSecondaries = usesSecondaries(value);
+		$form.combatants = $form.combatants.map((c) => ({
+			...c,
+			primaryMission: c.primaryMission && pack.includes(c.primaryMission) ? c.primaryMission : '',
+			secondaries: keepSecondaries ? c.secondaries : []
+		}));
+	}
+
 	const worldItems = $derived(data.worlds.map((w) => ({ value: w.id, label: w.name })));
-	const warbandItems = $derived(
-		data.warbands.map((w) => ({
+	/**
+	 * Sentinel value for the "outside opponent" entry in the warband picker. A slot holds either a
+	 * real warband id or this, which stands for "not in the league" and reveals a name field. It
+	 * can't collide with a warband id (those are UUIDs) and is never submitted — the schema sees
+	 * an empty `warbandId` plus a `guestName`.
+	 */
+	const GUEST = '__guest__';
+
+	const warbandItems = $derived([
+		...data.warbands.map((w) => ({
 			value: w.id,
 			label: w.name + (w.commanderUserId === data.userId ? ' · You' : '')
-		}))
-	);
+		})),
+		{ value: GUEST, label: 'Outside opponent — not in the league' }
+	]);
 
-	const canReport = $derived(data.worlds.length > 0 && data.warbands.length >= 2);
+	// One warband is enough to file a report: the other side can be a guest.
+	const canReport = $derived(data.worlds.length > 0 && data.warbands.length >= 1);
 
-	const format = $derived(
-		$form.combatants.filter((c) => c.side === 'attacker').length === 2 ? '2v2' : '1v1'
-	);
 	const attackerIdx = $derived(
 		$form.combatants.flatMap((c, i) => (c.side === 'attacker' ? [i] : []))
 	);
 	const defenderIdx = $derived(
 		$form.combatants.flatMap((c, i) => (c.side === 'defender' ? [i] : []))
 	);
+	/** e.g. "1 v 2" — derived from the slots rather than chosen, since sides can be uneven. */
+	const format = $derived(`${attackerIdx.length} v ${defenderIdx.length}`);
 
-	const formatOptions = [
-		{ value: '1v1', label: '1 v 1' },
-		{ value: '2v2', label: '2 v 2' }
-	];
+	const MAX_PER_SIDE = 2;
+
 	const outcomeOptions = [
 		{ value: 'attacker', label: '◂ Attacker won', tone: 'attacker' as const },
 		{ value: 'stalemate', label: 'Stalemate', tone: 'contested' as const },
 		{ value: 'defender', label: 'Defender held ▸', tone: 'defender' as const }
 	];
 
-	function setFormat(next: string) {
-		const n = next === '2v2' ? 2 : 1;
-		const blank = (side: 'attacker' | 'defender') => ({
+	/**
+	 * Add a slot to one side. Sides are sized independently, so 1v1, 2v2 and the uneven 1v2 / 2v1
+	 * are all reachable; the score block stays on each side's lead, which the new slot never is.
+	 */
+	function addCombatant(side: 'attacker' | 'defender') {
+		if ($form.combatants.filter((c) => c.side === side).length >= MAX_PER_SIDE) return;
+		const att = $form.combatants.filter((c) => c.side === 'attacker');
+		const def = $form.combatants.filter((c) => c.side === 'defender');
+		const blank = {
 			side,
 			warbandId: '',
+			guestName: null,
 			primaryMission: '',
 			forceDisposition: '',
 			secondaries: []
-		});
-		const att = $form.combatants.filter((c) => c.side === 'attacker');
-		const def = $form.combatants.filter((c) => c.side === 'defender');
-		while (att.length < n) att.push(blank('attacker'));
-		while (def.length < n) def.push(blank('defender'));
-		$form.combatants = [...att.slice(0, n), ...def.slice(0, n)];
+		};
+		$form.combatants = side === 'attacker' ? [...att, blank, ...def] : [...att, ...def, blank];
+	}
+
+	/** Drop a slot. Never the last one on a side — every side needs at least one combatant. */
+	function removeCombatant(i: number) {
+		const side = $form.combatants[i].side;
+		if ($form.combatants.filter((c) => c.side === side).length <= 1) return;
+		$form.combatants = $form.combatants.filter((_, k) => k !== i);
 	}
 
 	function patchCombatant(i: number, patch: Record<string, unknown>) {
 		$form.combatants = $form.combatants.map((c, k) => (k === i ? { ...c, ...patch } : c));
+	}
+
+	/** True when this slot holds an outside opponent rather than a campaign warband. */
+	const isGuest = (c: (typeof $form.combatants)[number]) =>
+		!c.warbandId && c.guestName !== null && c.guestName !== undefined;
+
+	/** What the picker shows for a slot: the chosen warband, the guest sentinel, or nothing. */
+	const slotValue = (c: (typeof $form.combatants)[number]) =>
+		c.warbandId || (isGuest(c) ? GUEST : '');
+
+	/**
+	 * Picking from the warband list sets the warband and clears any guest name; picking the
+	 * "outside opponent" entry does the reverse and opens the name field. The two are mutually
+	 * exclusive — the schema and the DB check constraint enforce the same rule.
+	 */
+	function selectSlot(i: number, value: string) {
+		patchCombatant(
+			i,
+			value === GUEST ? { warbandId: '', guestName: '' } : { warbandId: value, guestName: null }
+		);
 	}
 	function addSecondary(i: number) {
 		const secs = $form.combatants[i].secondaries ?? [];
@@ -178,10 +253,15 @@
 		if (!selectedWorld) return null;
 		const o = $form.outcome;
 		if (o !== 'attacker' && o !== 'defender' && o !== 'stalemate') return null;
+		// Every slot must be resolved before projecting, so the commander isn't shown a shift
+		// that a half-filled side would change.
+		if (!$form.combatants.every((c) => c.warbandId || c.guestName?.trim())) return null;
+		// Guests hold no ground, so they're absent from the fold exactly as the server drops them
+		// (`foldCombatants`). That's what makes a lone warband's game against an outsider project.
 		const combatants = $form.combatants
 			.filter((c) => c.warbandId)
 			.map((c) => ({ warbandId: c.warbandId, side: c.side }));
-		if (combatants.length < 2) return null;
+		if (combatants.length === 0) return null;
 		const current = new Map(selectedWorld.shares.map((s) => [s.warbandId, s.share]));
 		const next = applyReport(current, { outcome: o, combatants });
 		const ids = new Set([...combatants.map((c) => c.warbandId), ...current.keys(), ...next.keys()]);
@@ -260,7 +340,7 @@
 		}
 		// The sheet has no notion of sides, so seat the first half as attackers, the rest as
 		// defenders; the commander flips sides if needed. Only each side's lead carries the score
-		// block (the form's 2v2 model shares one team score), matching setFormat()'s shape.
+		// block (the form's team model shares one score), matching the shape addCombatant() builds.
 		const half = Math.floor(players.length / 2);
 		$form.combatants = players.map((p, i) => {
 			const side: 'attacker' | 'defender' = i < half ? 'attacker' : 'defender';
@@ -271,6 +351,7 @@
 				? {
 						side,
 						warbandId: p.warbandId ?? '',
+						guestName: null,
 						primaryMission: p.primaryMission ?? '',
 						forceDisposition: '',
 						primaryVp: p.primaryVp ?? null,
@@ -282,6 +363,7 @@
 				: {
 						side,
 						warbandId: p.warbandId ?? '',
+						guestName: null,
 						primaryMission: '',
 						forceDisposition: '',
 						secondaries: []
@@ -295,7 +377,9 @@
 			(missing.length
 				? ` Couldn't match ${missing.length} warband${missing.length > 1 ? 's' : ''}${
 						names.length ? ` (${names.join(', ')})` : ''
-					} — select ${missing.length > 1 ? 'them' : 'it'} above.`
+					} — select ${missing.length > 1 ? 'them' : 'it'} above, or mark ${
+						missing.length > 1 ? 'them' : 'it'
+					} as an outside opponent.`
 				: '');
 	}
 
@@ -497,27 +581,29 @@
 
 					<div class="flex flex-col gap-1.5">
 						<span class={label}>› Format</span>
-						<SegmentedField
-							options={formatOptions}
-							value={format}
-							onValueChange={setFormat}
-							ariaLabel="Battle format"
-							class="flex-1"
-						/>
+						<!-- Derived, not chosen: sides are sized with the add/remove controls in each
+						     side panel below, which is what makes an uneven 1v2 expressible. -->
+						<p
+							class="flex flex-1 items-center border border-border bg-void px-[11px] font-body text-[13px] text-ink tabular-nums"
+							aria-live="polite"
+						>
+							{format}
+						</p>
 					</div>
 
-					<label class="flex shrink-0 grow-0 basis-[120px] flex-col gap-1.5">
-						<span class={label}>› Points</span>
-						<input
-							class={control}
-							type="number"
-							min="0"
-							step="50"
-							inputmode="numeric"
-							placeholder="2000"
-							bind:value={$form.pointsSize}
+					<div class="flex shrink-0 grow-0 basis-[160px] flex-col gap-1.5">
+						<span class={label}>› Battle size</span>
+						<Select
+							items={battleSizeItems}
+							value={$form.battleSize ?? ''}
+							onValueChange={setBattleSize}
+							ariaLabel="Battle size"
+							placeholder="Select a battle size"
 						/>
-					</label>
+						{#if $errors.battleSize}<span class="font-body text-[11.5px] text-state-attacker"
+								>{$errors.battleSize}</span
+							>{/if}
+					</div>
 				</div>
 
 				{#if selectedWorld && currentControl}
@@ -599,22 +685,71 @@
 						{/if}
 					</legend>
 
-					<!-- warband select(s): 1 in 1v1, 2 sharing a team score in 2v2 -->
+					<!-- Combatant slot(s). Each side holds one or two, sized independently of the other,
+					     so 1v1, 2v2 and the uneven 1v2 / 2v1 are all reachable. A slot is either a
+					     campaign warband or an outside opponent named by hand. -->
 					{#each idxList as i, pos (i)}
+						{@const slot = $form.combatants[i]}
+						{@const slotLabel = `${kind} combatant${idxList.length > 1 ? ` ${pos + 1}` : ''}`}
 						<div class="mb-3 flex flex-col gap-1.5">
-							<span class={label}>› Warband{idxList.length > 1 ? ` ${pos + 1}` : ''}</span>
+							<div class="flex items-center justify-between gap-2">
+								<span class={label}>› Combatant{idxList.length > 1 ? ` ${pos + 1}` : ''}</span>
+								{#if idxList.length > 1}
+									<button
+										type="button"
+										onclick={() => removeCombatant(i)}
+										class="border-0 bg-transparent py-[3px] font-display text-[9.5px] font-semibold tracking-[0.08em] text-ink-faint uppercase transition-colors hover:text-state-attacker"
+									>
+										Remove
+									</button>
+								{/if}
+							</div>
 							<Select
 								items={warbandItems}
-								value={$form.combatants[i].warbandId}
-								onValueChange={(v) => patchCombatant(i, { warbandId: v })}
-								leadColor={$form.combatants[i].warbandId
-									? wbColor($form.combatants[i].warbandId)
-									: undefined}
-								ariaLabel="{kind} warband{idxList.length > 1 ? ` ${pos + 1}` : ''}"
+								value={slotValue(slot)}
+								onValueChange={(v) => selectSlot(i, v)}
+								leadColor={slot.warbandId ? wbColor(slot.warbandId) : undefined}
+								ariaLabel={slotLabel}
 								placeholder="Select a warband"
 							/>
+							{#if isGuest(slot)}
+								<!-- Outside opponent: a name on the record only. They hold no ground and never
+								     reach the leaderboard, but the warband facing them scores in full. -->
+								<input
+									class={control}
+									type="text"
+									maxlength={MAX_GUEST_NAME}
+									placeholder="Opponent's name"
+									aria-label="{slotLabel} — outside opponent's name"
+									value={slot.guestName ?? ''}
+									oninput={(e) => patchCombatant(i, { guestName: e.currentTarget.value })}
+								/>
+								<span class="font-body text-[11.5px] text-ink-faint">
+									Holds no ground and scores no points — the warband facing them still does.
+								</span>
+							{/if}
+							{#if $errors.combatants?.[i]?.warbandId}
+								<span class="font-body text-[11.5px] text-state-attacker"
+									>{$errors.combatants[i].warbandId}</span
+								>
+							{/if}
+							{#if $errors.combatants?.[i]?.guestName}
+								<span class="font-body text-[11.5px] text-state-attacker"
+									>{$errors.combatants[i].guestName}</span
+								>
+							{/if}
 						</div>
 					{/each}
+
+					{#if idxList.length < MAX_PER_SIDE}
+						<button
+							type="button"
+							onclick={() => addCombatant(kind)}
+							class="mb-3 self-start border-0 bg-transparent py-[3px] font-display text-[10px] font-semibold tracking-[0.08em] text-ink-dim uppercase transition-colors hover:text-accent"
+						>
+							+ Add combatant
+						</button>
+					{/if}
 
 					<!-- one score block per side; in 2v2 the team shares it -->
 					{#if idxList.length > 1}
@@ -637,6 +772,11 @@
 							ariaLabel="{kind} primary mission"
 							placeholder="Select a primary mission"
 						/>
+						{#if combatPatrol}
+							<span class="font-body text-[11.5px] text-ink-faint"
+								>Combat Patrol missions are per faction — pick your army's.</span
+							>
+						{/if}
 						{#if $errors.combatants?.[lead]?.primaryMission}<span
 								class="font-body text-[11.5px] text-state-attacker"
 								>{$errors.combatants[lead].primaryMission}</span
@@ -661,7 +801,11 @@
 							>{/if}
 					</div>
 
-					<div class="mb-2.5 grid grid-cols-[1fr_auto_auto] items-end gap-2.5">
+					<div
+						class="mb-2.5 grid items-end gap-2.5 {combatPatrol
+							? 'grid-cols-[1fr_auto]'
+							: 'grid-cols-[1fr_auto_auto]'}"
+					>
 						<label class="flex flex-col gap-1.5">
 							<span class={label}>› Primary <span class="text-ink-faint">VP</span></span>
 							<input
@@ -673,12 +817,14 @@
 								bind:value={$form.combatants[lead].primaryVp}
 							/>
 						</label>
-						<div class="flex flex-col gap-1.5 pb-2.5 text-right">
-							<span class={label}>Secondary</span>
-							<span class="font-body text-[15px] leading-none font-semibold text-ink-dim"
-								>{secs ?? '—'}</span
-							>
-						</div>
+						{#if !combatPatrol}
+							<div class="flex flex-col gap-1.5 pb-2.5 text-right">
+								<span class={label}>Secondary</span>
+								<span class="font-body text-[15px] leading-none font-semibold text-ink-dim"
+									>{secs ?? '—'}</span
+								>
+							</div>
+						{/if}
 						<div class="flex flex-col gap-1.5 pb-2.5 text-right">
 							<span class={label}>Total VP</span>
 							<span class="font-body text-[15px] leading-none font-semibold text-accent"
@@ -701,54 +847,60 @@
 						/>
 					</div>
 
-					<div class="flex flex-col gap-1.5">
-						{#each c.secondaries ?? [] as sec, j (j)}
-							<div class="grid grid-cols-[1fr_58px_30px] gap-1.5">
-								<Select
-									items={secondaryItems(sec.name)}
-									value={sec.name}
-									onValueChange={(v) => patchSecondary(lead, j, { name: v })}
-									ariaLabel="Secondary mission"
-									placeholder="Secondary mission"
-									class="py-[7px] text-[12px]"
-								/>
-								<input
-									class="{control} px-[9px] py-[7px] text-right text-[12px]"
-									type="number"
-									min="0"
-									inputmode="numeric"
-									aria-label="Secondary VP"
-									value={sec.victoryPoints}
-									oninput={(e) =>
-										patchSecondary(lead, j, { victoryPoints: e.currentTarget.valueAsNumber || 0 })}
-								/>
+					<!-- A Combat Patrol game scores no secondaries, so the whole block goes away rather
+					     than sitting there empty and inviting entries the schema would reject. -->
+					{#if !combatPatrol}
+						<div class="flex flex-col gap-1.5">
+							{#each c.secondaries ?? [] as sec, j (j)}
+								<div class="grid grid-cols-[1fr_58px_30px] gap-1.5">
+									<Select
+										items={secondaryItems(sec.name)}
+										value={sec.name}
+										onValueChange={(v) => patchSecondary(lead, j, { name: v })}
+										ariaLabel="Secondary mission"
+										placeholder="Secondary mission"
+										class="py-[7px] text-[12px]"
+									/>
+									<input
+										class="{control} px-[9px] py-[7px] text-right text-[12px]"
+										type="number"
+										min="0"
+										inputmode="numeric"
+										aria-label="Secondary VP"
+										value={sec.victoryPoints}
+										oninput={(e) =>
+											patchSecondary(lead, j, {
+												victoryPoints: e.currentTarget.valueAsNumber || 0
+											})}
+									/>
+									<button
+										type="button"
+										aria-label="Remove secondary"
+										onclick={() => removeSecondary(lead, j)}
+										class="inline-flex items-center justify-center border border-border bg-panel-2 text-ink-faint transition-[color,border-color] duration-[120ms] hover:border-state-attacker-line hover:text-state-attacker [&_svg]:size-3"
+									>
+										<svg viewBox="0 0 14 14" aria-hidden="true"
+											><path
+												d="M3 3l8 8M11 3l-8 8"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.6"
+											/></svg
+										>
+									</button>
+								</div>
+							{/each}
+							{#if (c.secondaries?.length ?? 0) < MAX_SECONDARIES}
 								<button
 									type="button"
-									aria-label="Remove secondary"
-									onclick={() => removeSecondary(lead, j)}
-									class="inline-flex items-center justify-center border border-border bg-panel-2 text-ink-faint transition-[color,border-color] duration-[120ms] hover:border-state-attacker-line hover:text-state-attacker [&_svg]:size-3"
+									onclick={() => addSecondary(lead)}
+									class="self-start border-0 bg-transparent py-[3px] font-display text-[10px] font-semibold tracking-[0.08em] text-ink-dim uppercase transition-colors hover:text-accent"
 								>
-									<svg viewBox="0 0 14 14" aria-hidden="true"
-										><path
-											d="M3 3l8 8M11 3l-8 8"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="1.6"
-										/></svg
-									>
+									+ Add secondary
 								</button>
-							</div>
-						{/each}
-						{#if (c.secondaries?.length ?? 0) < MAX_SECONDARIES}
-							<button
-								type="button"
-								onclick={() => addSecondary(lead)}
-								class="self-start border-0 bg-transparent py-[3px] font-display text-[10px] font-semibold tracking-[0.08em] text-ink-dim uppercase transition-colors hover:text-accent"
-							>
-								+ Add secondary
-							</button>
-						{/if}
-					</div>
+							{/if}
+						</div>
+					{/if}
 				</fieldset>
 			{/snippet}
 

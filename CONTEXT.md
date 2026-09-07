@@ -71,18 +71,47 @@ replay, not part of it — they are points state, not control.
 _Avoid_: Recompute (too generic — a replay is specifically the ordered fold over the log).
 
 **Battle Report**:
-The record a commander submits documenting a game fought over a world. Splits its combatant
-warbands across two sides — attacker and defender — each holding one or two warbands (1v1 or
-2v2) — and records the outcome, scores, an optional narrative, and an optional image. The
-single source of a battle's record.
+The record a commander submits documenting a game fought over a world. Splits its combatants
+across two sides — attacker and defender — each holding **one or two**. The sides need **not**
+be balanced: 1v1, 2v2 and the uneven 1v2 / 2v1 are all real games, and control moves per
+combatant, so an uneven result is well-defined. Records the outcome, scores, its **Battle Size**, an optional
+narrative, and an optional image. The single source of a battle's record.
 _Avoid_: Battle (the report is the record; there is no separate battle entity).
+
+**Guest**:
+A combatant on a battle report who is **not in the league** — a walk-in opponent, recorded by
+name rather than as a Warband. A guest exists only on the report: they hold **no** world share
+and never appear on the map or the leaderboard, because every fold drops non-warband
+combatants (`foldCombatants`). The warband facing a guest scores the result **in full** and
+still gains or loses ground — against the uncontested pool, since the guest has none to take.
+A guest game still counts in a warband's Stat Block (it was a real game), and the guest's own
+score still feeds Mission Analytics, which is keyed by mission rather than by warband. Every
+report needs at least one real warband.
+_Avoid_: Guest Warband (a guest is deliberately _not_ a warband — no row, no colour, no
+standing).
+
+**Battle Size**:
+What kind of game a battle report records — **Combat Patrol**, or a points size off the ladder
+(500 / 1000 / 1500 / 2000). One field, because it is one choice made at the table: you agree to
+play a Combat Patrol game _or_ a points game, never both. Combat Patrol is 500 points' worth of
+models but is deliberately **not** a synonym for `500` — it is a different game, with its own
+pre-built rosters, its own **Mission** pack, and **no secondaries at all**. Those two consequences
+are the only things that key off this field: which primary pack the picker offers, and whether the
+side scores secondaries. It never touches **Control** or **Standings** — a win is a win at any
+size. Stored as free text, like the missions, so rotating the ladder is data rather than a schema
+migration; the field was once a free points number, and an off-ladder legacy value still loads,
+still renders, and still survives an amend.
+_Avoid_: Points size (that is one kind of battle size, not the field), Format (the report form
+already uses "format" for the 1v1 / 2v2 shape of the sides).
 
 **Mission**:
 A scoring objective from the current edition's canonical mission set (Warhammer 40k). A
 **Primary Mission** is the main objective a side plays to — **each side runs its own** — and a
-**Secondary Mission** is one of the side's chosen extra objectives. The canonical lists are a
-code-level domain constant, not arbiter-editable: an edition's set is fixed game data, so
-rotating packs is a code change, not a campaign setting. A battle report carries each side's
+**Secondary Mission** is one of the side's chosen extra objectives. There are **two primary
+packs**, chosen by the report's **Battle Size**: the matched-play set, and Combat Patrol's own.
+A Combat Patrol game has no secondaries, so the block is hidden on the form and refused by the
+schema. The canonical lists are a code-level domain constant, not arbiter-editable: an edition's
+set is fixed game data, so rotating packs is a code change, not a campaign setting. A battle report carries each side's
 primary mission and its secondary scores; the picker (and, later, analytics) constrains entries
 to the canonical set, while storage stays free text so a future pack is data, not a schema
 migration.

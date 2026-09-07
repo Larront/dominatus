@@ -211,3 +211,96 @@ describe('computeStandings', () => {
 		});
 	});
 });
+
+describe('uneven sides and outside opponents', () => {
+	/** An uneven or guest-bearing report. Guests are already dropped by the caller's fold. */
+	const report = (
+		attackers: string[],
+		defenders: string[],
+		outcome: 'attacker' | 'defender' | 'stalemate',
+		opts: { world?: string; narrative?: boolean } = {}
+	): StandingsReport => ({
+		worldId: opts.world ?? 'w',
+		outcome,
+		hasNarrative: opts.narrative ?? false,
+		combatants: [
+			...attackers.map((warbandId) => ({ warbandId, side: 'attacker' as const })),
+			...defenders.map((warbandId) => ({ warbandId, side: 'defender' as const }))
+		]
+	});
+
+	it('pays every warband on the winning side of a 2v1', () => {
+		const m = score([report(['a', 'b'], ['c'], 'attacker')]);
+		expect(m.get('a')).toMatchObject({ win: 3, total: 3 });
+		expect(m.get('b')).toMatchObject({ win: 3, total: 3 });
+	});
+
+	it('pays the lone winner of a 1v2 a single win, not one per opponent', () => {
+		expect(score([report(['a'], ['b', 'c'], 'attacker')]).get('a')).toMatchObject({
+			win: 3,
+			total: 3
+		});
+	});
+
+	it('pays a loss to every warband on the losing side of a 1v2', () => {
+		const m = score([report(['a'], ['b', 'c'], 'defender')], [], profile({ loss: 1 }));
+		expect(m.get('a')).toMatchObject({ loss: 1 });
+		expect(m.get('b')).toMatchObject({ win: 3 });
+		expect(m.get('c')).toMatchObject({ win: 3 });
+	});
+
+	it('gives underdog in a 1v2 when ANY opponent held a bigger share', () => {
+		const m = score([win('b', 'z'), win('b', 'z'), report(['a'], ['b', 'c'], 'attacker')]);
+		expect(m.get('a')).toMatchObject({ win: 3, underdog: 1 });
+	});
+
+	it('narrative pays every warband in an uneven report', () => {
+		const m = score([report(['a'], ['b', 'c'], 'attacker', { narrative: true })]);
+		expect(m.get('a')?.narrative).toBe(1);
+		expect(m.get('b')?.narrative).toBe(1);
+		expect(m.get('c')?.narrative).toBe(1);
+	});
+
+	// A game against someone outside the league reaches the fold as a one-sided report: the
+	// guest is already filtered out (see foldCombatants), so the warband is alone on its side.
+	it('pays a full win for beating an outside opponent', () => {
+		expect(score([report(['a'], [], 'attacker')]).get('a')).toMatchObject({ win: 3, total: 3 });
+	});
+
+	it('pays a full draw against an outside opponent', () => {
+		expect(score([report(['a'], [], 'stalemate')]).get('a')).toMatchObject({ draw: 1, total: 1 });
+	});
+
+	it('pays a loss for losing to an outside opponent', () => {
+		expect(score([report(['a'], [], 'defender')], [], profile({ loss: 1 })).get('a')).toMatchObject(
+			{ loss: 1, total: 1 }
+		);
+	});
+
+	it('never scores the guest — only the warband appears', () => {
+		expect(Object.keys(totals(score([report(['a'], [], 'attacker')])))).toEqual(['a']);
+	});
+
+	it('counts a guest game towards a warband win streak', () => {
+		const p = profile({ streakBonus: 5, streakLength: 3 });
+		const m = score([win('a', 'b'), report(['a'], [], 'attacker'), win('a', 'b')], [], p);
+		expect(m.get('a')?.streak).toBe(5);
+	});
+
+	it('breaks a streak when a warband loses to a guest', () => {
+		const p = profile({ streakBonus: 5, streakLength: 2 });
+		const m = score([win('a', 'b'), report(['a'], [], 'defender'), win('a', 'b')], [], p);
+		// Win, then the guest loss resets the run, so the third game is only run #1 — no bounty.
+		expect(m.get('a')?.streak).toBe(0);
+	});
+
+	it('banks control milestones from ground taken off a guest', () => {
+		const p = profile({ milestonePoints: 1, milestoneStep: 20 });
+		const m = score([report(['a'], [], 'attacker'), report(['a'], [], 'attacker')], [], p);
+		expect(m.get('a')?.milestone).toBe(1);
+	});
+
+	it('gives no underdog against a guest — an outsider holds no ground to be bigger', () => {
+		expect(score([report(['a'], [], 'attacker')]).get('a')?.underdog).toBe(0);
+	});
+});

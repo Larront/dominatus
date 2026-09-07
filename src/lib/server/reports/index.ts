@@ -6,7 +6,7 @@ import {
 	reportAudit,
 	worldControl
 } from '$lib/server/db/schema';
-import { replay, type FoldReport } from '$lib/domain/control-fold';
+import { replay, foldCombatants, type FoldReport } from '$lib/domain/control-fold';
 import { buildReportSnapshot } from './snapshot';
 import type { BattleReportInput } from '$lib/schemas/battle-report';
 
@@ -24,7 +24,10 @@ export const FOLD_ORDER = [asc(battleReport.createdAt), asc(battleReport.id)];
 
 /** One combatant in the log, with its score breakdown and a derived total. */
 export interface BattleLogCombatant {
-	warbandId: string;
+	/** The campaign warband, or null when this was an outside opponent — then `guestName` is set. */
+	warbandId: string | null;
+	/** An outside opponent's name; null for a campaign warband. */
+	guestName: string | null;
 	primaryVp: number | null;
 	battleReadyVp: number | null;
 	secondaries: { name: string; victoryPoints: number }[];
@@ -39,7 +42,8 @@ export interface BattleLogEntry {
 	cycle: number;
 	outcome: 'attacker' | 'defender' | 'stalemate';
 	wentFirst: 'attacker' | 'defender' | null;
-	pointsSize: number | null;
+	/** The battle size fought at — `combat-patrol` or a points size; null if not recorded. */
+	battleSize: string | null;
 	planetaryEffect: string | null;
 	narrative: string | null;
 	/** Stored scoresheet filename, served via /report/image/[file]; null if none was uploaded. */
@@ -77,6 +81,7 @@ export async function getBattleLog(campaignId: string): Promise<BattleLogEntry[]
 
 	const toCombatant = (c: (typeof rows)[number]['combatants'][number]): BattleLogCombatant => ({
 		warbandId: c.warbandId,
+		guestName: c.guestName,
 		primaryVp: c.primaryVp,
 		battleReadyVp: c.battleReadyVp,
 		secondaries: c.secondaries ?? [],
@@ -89,7 +94,7 @@ export async function getBattleLog(campaignId: string): Promise<BattleLogEntry[]
 		cycle: r.cycle,
 		outcome: r.outcome,
 		wentFirst: r.wentFirst,
-		pointsSize: r.pointsSize,
+		battleSize: r.battleSize,
 		planetaryEffect: r.planetaryEffect,
 		narrative: r.narrative,
 		imagePath: r.imagePath,
@@ -129,10 +134,12 @@ export function recomputeWorldControl(tx: Tx, worldId: string): void {
 				.all()
 		: [];
 
+	// Guests hold no ground, so they never reach the fold — `foldCombatants` is the one place
+	// that rule lives, shared with the standings fold.
 	const byReport = new Map<string, { warbandId: string; side: 'attacker' | 'defender' }[]>();
 	for (const c of combatants) {
 		const list = byReport.get(c.reportId) ?? [];
-		list.push({ warbandId: c.warbandId, side: c.side });
+		list.push(...foldCombatants([c]));
 		byReport.set(c.reportId, list);
 	}
 
@@ -214,8 +221,16 @@ export interface AdminReportEntry {
 	worldId: string;
 	worldName: string;
 	outcome: 'attacker' | 'defender' | 'stalemate';
-	attackers: { short: string; color: string }[];
-	defenders: { short: string; color: string }[];
+	attackers: AdminReportTag[];
+	defenders: AdminReportTag[];
+}
+
+/** A combatant reduced to the chip the admin table draws: a warband's tag, or a guest's name. */
+export interface AdminReportTag {
+	short: string;
+	color: string;
+	/** True when this chip is an outside opponent rather than a campaign warband. */
+	guest: boolean;
 }
 
 /**
@@ -230,17 +245,22 @@ export async function getCampaignReportsAdmin(campaignId: string): Promise<Admin
 		with: {
 			world: { columns: { name: true } },
 			combatants: {
-				columns: { side: true },
+				columns: { side: true, guestName: true },
 				with: { warband: { columns: { short: true, color: true } } }
 			}
 		}
 	});
 
 	return rows.map((r) => {
-		const tag = (side: 'attacker' | 'defender') =>
+		const tag = (side: 'attacker' | 'defender'): AdminReportTag[] =>
 			r.combatants
 				.filter((c) => c.side === side)
-				.map((c) => ({ short: c.warband.short, color: c.warband.color }));
+				// A guest has no warband row, so it shows its own name in a neutral colour.
+				.map((c) =>
+					c.warband
+						? { short: c.warband.short, color: c.warband.color, guest: false }
+						: { short: c.guestName ?? 'Guest', color: 'var(--color-ink-faint)', guest: true }
+				);
 		return {
 			id: r.id,
 			cycle: r.cycle,
@@ -275,11 +295,13 @@ export async function getReportForEdit(
 			cycle: r.cycle,
 			outcome: r.outcome,
 			wentFirst: r.wentFirst,
-			pointsSize: r.pointsSize,
+			// '' rather than null so the picker binds to its "not recorded" entry on an amend.
+			battleSize: r.battleSize ?? '',
 			planetaryEffect: r.planetaryEffect ?? undefined,
 			narrative: r.narrative ?? undefined,
 			combatants: r.combatants.map((c) => ({
-				warbandId: c.warbandId,
+				warbandId: c.warbandId ?? '',
+				guestName: c.guestName,
 				side: c.side,
 				primaryMission: c.primaryMission ?? '',
 				forceDisposition: c.forceDisposition ?? '',
@@ -312,7 +334,7 @@ export function updateBattleReport(
 				cycle: input.cycle,
 				outcome: input.outcome,
 				wentFirst: input.wentFirst ?? null,
-				pointsSize: input.pointsSize ?? null,
+				battleSize: input.battleSize?.trim() || null,
 				planetaryEffect: input.planetaryEffect?.trim() || null,
 				narrative: input.narrative?.trim() || null,
 				// Only touch the scoresheet when the arbiter uploaded a replacement; an edit
@@ -327,7 +349,10 @@ export function updateBattleReport(
 			.values(
 				input.combatants.map((c) => ({
 					reportId,
-					warbandId: c.warbandId,
+					// Exactly one identity per row (the table's check constraint): a warband, or a
+					// guest's name for an opponent outside the league.
+					warbandId: c.warbandId || null,
+					guestName: c.warbandId ? null : (c.guestName?.trim() ?? null),
 					side: c.side,
 					primaryMission: c.primaryMission?.trim() || null,
 					forceDisposition: c.forceDisposition?.trim() || null,
@@ -394,7 +419,7 @@ export function submitBattleReport(
 				cycle: input.cycle,
 				outcome: input.outcome,
 				wentFirst: input.wentFirst ?? null,
-				pointsSize: input.pointsSize ?? null,
+				battleSize: input.battleSize?.trim() || null,
 				planetaryEffect: input.planetaryEffect?.trim() || null,
 				narrative: input.narrative?.trim() || null,
 				imagePath: input.imagePath ?? null,
@@ -407,7 +432,10 @@ export function submitBattleReport(
 			.values(
 				input.combatants.map((c) => ({
 					reportId: report.id,
-					warbandId: c.warbandId,
+					// Exactly one identity per row (the table's check constraint): a warband, or a
+					// guest's name for an opponent outside the league.
+					warbandId: c.warbandId || null,
+					guestName: c.warbandId ? null : (c.guestName?.trim() ?? null),
 					side: c.side,
 					primaryMission: c.primaryMission?.trim() || null,
 					forceDisposition: c.forceDisposition?.trim() || null,

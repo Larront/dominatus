@@ -9,7 +9,7 @@ const report: BattleReport = {
 	cycle: 3,
 	outcome: 'attacker',
 	wentFirst: 'defender',
-	pointsSize: 2000,
+	battleSize: '2000',
 	planetaryEffect: 'Warp Storm',
 	narrative: 'A hard-fought push.',
 	imagePath: 'sheet.jpg',
@@ -22,6 +22,7 @@ const combatants: BattleReportCombatant[] = [
 		id: 'cmb1',
 		reportId: 'r1',
 		warbandId: 'wb-att',
+		guestName: null,
 		side: 'attacker',
 		primaryMission: 'Take and Hold',
 		forceDisposition: 'Recon',
@@ -33,6 +34,7 @@ const combatants: BattleReportCombatant[] = [
 		id: 'cmb2',
 		reportId: 'r1',
 		warbandId: 'wb-def',
+		guestName: null,
 		side: 'defender',
 		primaryMission: null,
 		forceDisposition: null,
@@ -52,7 +54,7 @@ describe('buildReportSnapshot', () => {
 			cycle: 3,
 			outcome: 'attacker',
 			wentFirst: 'defender',
-			pointsSize: 2000,
+			battleSize: '2000',
 			planetaryEffect: 'Warp Storm',
 			narrative: 'A hard-fought push.',
 			imagePath: 'sheet.jpg',
@@ -66,6 +68,7 @@ describe('buildReportSnapshot', () => {
 		expect(snap.combatants).toEqual([
 			{
 				warbandId: 'wb-att',
+				guestName: null,
 				side: 'attacker',
 				primaryMission: 'Take and Hold',
 				forceDisposition: 'Recon',
@@ -75,6 +78,7 @@ describe('buildReportSnapshot', () => {
 			},
 			{
 				warbandId: 'wb-def',
+				guestName: null,
 				side: 'defender',
 				primaryMission: null,
 				forceDisposition: null,
@@ -83,6 +87,19 @@ describe('buildReportSnapshot', () => {
 				secondaries: []
 			}
 		]);
+	});
+
+	it('freezes an outside opponent by name, so a revert restores who actually played', () => {
+		const vsGuest: BattleReportCombatant[] = [
+			{ ...combatants[0] },
+			{ ...combatants[1], warbandId: null, guestName: 'Walk-in Bob' }
+		];
+		const snap = buildReportSnapshot(report, vsGuest);
+		expect(snap.combatants[1]).toMatchObject({
+			warbandId: null,
+			guestName: 'Walk-in Bob',
+			side: 'defender'
+		});
 	});
 
 	it('round-trips losslessly through JSON', () => {

@@ -92,8 +92,18 @@
 			<li class="flex gap-2.5">
 				<span class="mt-[7px] size-1 shrink-0 bg-state-defender" aria-hidden="true"></span>
 				<span
-					>In a <b class="text-ink">2v2</b> the rule applies per warband: each winner +10%, each loser
-					−10%, so a winning side pulls up to 20% off the world.</span
+					>In a <b class="text-ink">team game</b> the rule applies per warband: each winner +10%,
+					each loser −10%, so a winning side pulls up to 20% off the world. Sides need not be even —
+					in a
+					<b class="text-ink">1v2</b> a lone winner still takes only 10%, while both losers drop 10% each.</span
+				>
+			</li>
+			<li class="flex gap-2.5">
+				<span class="mt-[7px] size-1 shrink-0 bg-ink-faint" aria-hidden="true"></span>
+				<span
+					>An <b class="text-ink">outside opponent</b> — someone not in the league — holds no ground,
+					so the warband facing them takes its 10% from (or gives it back to) the uncontested pool. They
+					score no points; you score yours in full.</span
 				>
 			</li>
 			<li class="flex gap-2.5">

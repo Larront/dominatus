@@ -18,6 +18,7 @@ import * as schema from '../src/lib/server/db/schema';
 // Pure domain fold (ADR 0002) — control is derived from the report log, not hand-set.
 import { replay, type FoldReport } from '../src/lib/domain/control-fold';
 import { DEFAULT_PROFILE } from '../src/lib/domain/scoring-profile';
+import { COMBAT_PATROL } from '../src/lib/domain/battle-sizes';
 
 const {
 	user,
@@ -47,15 +48,30 @@ const auth = betterAuth({
 	emailAndPassword: { enabled: true }
 });
 
+/**
+ * The dev commander, created with a properly hashed credential account and marked verified.
+ *
+ * The app requires a verified email to sign in (`requireEmailVerification`, see
+ * $lib/server/auth), and verification normally happens by clicking a link in a transactional
+ * email — which no one is going to receive from a local seed. So the seed sets the flag
+ * directly: sign-up goes through Better Auth (so the password hash is real and login exercises
+ * the true code path), then the row is marked verified as the one thing the email round-trip
+ * would otherwise have done. Applied on every run, not just at creation, so a dev user seeded
+ * before this existed gets fixed by a re-seed rather than needing a manual UPDATE.
+ */
 async function ensureDevUser() {
 	const existing = await db.query.user.findFirst({ where: eq(user.email, DEV_EMAIL) });
-	if (existing) return existing;
-	await auth.api.signUpEmail({
-		body: { email: DEV_EMAIL, password: DEV_PASSWORD, name: 'Castellan Vorne Adrec' }
-	});
-	const created = await db.query.user.findFirst({ where: eq(user.email, DEV_EMAIL) });
-	if (!created) throw new Error('Failed to create dev user');
-	return created;
+	if (!existing) {
+		await auth.api.signUpEmail({
+			body: { email: DEV_EMAIL, password: DEV_PASSWORD, name: 'Castellan Vorne Adrec' }
+		});
+	}
+
+	await db.update(user).set({ emailVerified: true }).where(eq(user.email, DEV_EMAIL));
+
+	const dev = await db.query.user.findFirst({ where: eq(user.email, DEV_EMAIL) });
+	if (!dev) throw new Error('Failed to create dev user');
+	return dev;
 }
 
 async function main() {
@@ -164,7 +180,8 @@ async function main() {
 	type SeedReport = {
 		world: string;
 		cycle: number;
-		pts: number;
+		/** Points size, or 'combat-patrol' for a Combat Patrol game (see $lib/domain/battle-sizes). */
+		pts: number | typeof COMBAT_PATROL;
 		win: boolean; // false → stalemate
 		att: string;
 		def: string;
@@ -175,7 +192,7 @@ async function main() {
 		att: string,
 		def: string,
 		cycle: number,
-		pts: number,
+		pts: number | typeof COMBAT_PATROL,
 		narrative: string
 	): SeedReport => ({ world, cycle, pts, win: true, att, def, narrative });
 	const draw = (
@@ -183,7 +200,7 @@ async function main() {
 		att: string,
 		def: string,
 		cycle: number,
-		pts: number,
+		pts: number | typeof COMBAT_PATROL,
 		narrative: string
 	): SeedReport => ({ world, cycle, pts, win: false, att, def, narrative });
 
@@ -236,6 +253,15 @@ async function main() {
 		win('Veska Prime', 'IW', 'AC', 3, 2000, 'Iron Wardens storm forty levels of the spire.'),
 		win('Veska Prime', 'IW', 'AC', 4, 1500, 'The Wardens break the Ashen hold on the upper hives.'),
 		win('Veska Prime', 'VR', 'AC', 4, 1000, 'Void Reavers seize a foothold amid the collapse.'),
+		// One Combat Patrol game, so the seeded log exercises the smaller format too.
+		win(
+			'Veska Prime',
+			'VR',
+			'IW',
+			4,
+			COMBAT_PATROL,
+			'A running skirmish through the sub-levels — patrol against patrol.'
+		),
 
 		// Coralis Tertius — lightly fought, Verdant Scourge ahead but far from owning it.
 		win(
@@ -281,7 +307,7 @@ async function main() {
 		worldId: wd[e.world],
 		cycle: e.cycle,
 		outcome: (e.win ? 'attacker' : 'stalemate') as 'attacker' | 'stalemate',
-		pointsSize: e.pts,
+		battleSize: String(e.pts),
 		narrative: e.narrative,
 		submittedByUserId: dev.id,
 		createdAt: new Date(base - (log.length - i) * 60_000)

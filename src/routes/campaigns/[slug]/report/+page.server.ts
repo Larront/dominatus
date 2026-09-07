@@ -38,6 +38,7 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 			{
 				side: 'attacker',
 				warbandId: '',
+				guestName: null,
 				primaryMission: '',
 				forceDisposition: '',
 				secondaries: [],
@@ -46,6 +47,7 @@ export const load: PageServerLoad = async ({ parent, locals, url }) => {
 			{
 				side: 'defender',
 				warbandId: '',
+				guestName: null,
 				primaryMission: '',
 				forceDisposition: '',
 				secondaries: [],
@@ -93,8 +95,9 @@ export const actions: Actions = {
 		if (!worlds.some((w) => w.id === form.data.worldId)) {
 			return setError(form, 'worldId', 'That world is not part of this campaign');
 		}
+		// Guest slots carry no warbandId — only the league warbands are checked for membership.
 		const campaignWarbands = new Set(warbands.map((w) => w.id));
-		if (!form.data.combatants.every((c) => campaignWarbands.has(c.warbandId))) {
+		if (!form.data.combatants.every((c) => !c.warbandId || campaignWarbands.has(c.warbandId))) {
 			return setError(form, 'combatants._errors', 'A combatant is not part of this campaign');
 		}
 

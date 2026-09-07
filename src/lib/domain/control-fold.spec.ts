@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { replay, applyReport, type FoldReport, type FoldStep } from './control-fold';
+import {
+	replay,
+	applyReport,
+	foldCombatants,
+	type FoldReport,
+	type FoldStep
+} from './control-fold';
 
 /** Terse builders so the sequences below read as a campaign, not as object soup. World defaults to 'w'. */
 const v1 = (winner: string, loser: string, world = 'w'): FoldReport => ({
@@ -176,5 +182,117 @@ describe('replay — 2v2', () => {
 		];
 		const sum = [...fold([...build, team('a', 'b', 'c', 'd')]).values()].reduce((s, n) => s + n, 0);
 		expect(sum).toBeLessThanOrEqual(100);
+	});
+});
+
+describe('uneven sides — 1v2 and 2v1', () => {
+	/** An uneven report: `attackers` vs `defenders`, won by `outcome`'s side. */
+	const uneven = (
+		attackers: string[],
+		defenders: string[],
+		outcome: 'attacker' | 'defender' | 'stalemate',
+		world = 'w'
+	): FoldReport => ({
+		worldId: world,
+		outcome,
+		combatants: [
+			...attackers.map((warbandId) => ({ warbandId, side: 'attacker' as const })),
+			...defenders.map((warbandId) => ({ warbandId, side: 'defender' as const }))
+		]
+	});
+
+	it('gives the lone winner of a 1v2 only its own 10%', () => {
+		// Movement is per combatant: 'a' claims 10 regardless of how many it beat.
+		expect(obj(fold([uneven(['a'], ['b', 'c'], 'attacker')]))).toEqual({ a: 10 });
+	});
+
+	it('takes 10% from each loser in a 1v2, the surplus falling back to the pool', () => {
+		// Build b and c to 20 each, then 'a' beats them both: each sheds 10, 'a' gains 10.
+		const build = [v1('b', 'z'), v1('b', 'z'), v1('c', 'z'), v1('c', 'z')];
+		expect(obj(fold([...build, uneven(['a'], ['b', 'c'], 'attacker')]))).toEqual({
+			b: 10,
+			c: 10,
+			a: 10
+		});
+	});
+
+	it('gives both winners of a 2v1 their own 10% each', () => {
+		expect(obj(fold([uneven(['a'], ['b', 'c'], 'defender')]))).toEqual({ b: 10, c: 10 });
+	});
+
+	it('moves nothing on an uneven stalemate', () => {
+		const build = [v1('a', 'z')];
+		expect(obj(fold([...build, uneven(['a'], ['b', 'c'], 'stalemate')]))).toEqual({ a: 10 });
+	});
+
+	it('still respects the 100% cap when a 2v1 lands on a nearly-full world', () => {
+		const build = [
+			v1('a', 'z'),
+			v1('a', 'z'),
+			v1('a', 'z'),
+			v1('a', 'z'),
+			v1('b', 'z'),
+			v1('b', 'z'),
+			v1('b', 'z'),
+			v1('b', 'z'),
+			v1('c', 'z'),
+			v1('c', 'z')
+		];
+		const sum = [...fold([...build, uneven(['a', 'b'], ['c'], 'attacker')]).values()].reduce(
+			(s, n) => s + n,
+			0
+		);
+		expect(sum).toBeLessThanOrEqual(100);
+	});
+});
+
+describe('foldCombatants — guests hold no ground', () => {
+	it('drops participants with no warband', () => {
+		expect(
+			foldCombatants([
+				{ warbandId: 'a', side: 'attacker' },
+				{ warbandId: null, side: 'defender' }
+			])
+		).toEqual([{ warbandId: 'a', side: 'attacker' }]);
+	});
+
+	it('keeps a full league report untouched', () => {
+		const both = [
+			{ warbandId: 'a', side: 'attacker' as const },
+			{ warbandId: 'b', side: 'defender' as const }
+		];
+		expect(foldCombatants(both)).toEqual(both);
+	});
+
+	/** A report against an outsider, as the server hands it to the fold. */
+	const vsGuest = (
+		warbandId: string,
+		side: 'attacker' | 'defender',
+		outcome: 'attacker' | 'defender' | 'stalemate'
+	): FoldReport => ({
+		worldId: 'w',
+		outcome,
+		combatants: foldCombatants([
+			{ warbandId, side },
+			{ warbandId: null, side: side === 'attacker' ? 'defender' : 'attacker' }
+		])
+	});
+
+	it('lets a warband claim 10% from the pool by beating a guest', () => {
+		expect(obj(fold([vsGuest('a', 'attacker', 'attacker')]))).toEqual({ a: 10 });
+	});
+
+	it('returns 10% to the pool when a warband loses to a guest', () => {
+		const build = [v1('a', 'z'), v1('a', 'z')];
+		expect(obj(fold([...build, vsGuest('a', 'attacker', 'defender')]))).toEqual({ a: 10 });
+	});
+
+	it('leaves a warband at 0% rather than going negative against a guest', () => {
+		expect(obj(fold([vsGuest('a', 'defender', 'attacker')]))).toEqual({});
+	});
+
+	it('moves nothing when a game against a guest is drawn', () => {
+		const build = [v1('a', 'z')];
+		expect(obj(fold([...build, vsGuest('a', 'attacker', 'stalemate')]))).toEqual({ a: 10 });
 	});
 });

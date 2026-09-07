@@ -1,5 +1,5 @@
 import { sql, relations } from 'drizzle-orm';
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { user } from '../auth.schema';
 import { campaign } from './campaign';
 import { world } from './world';
@@ -26,8 +26,16 @@ export const battleReport = sqliteTable(
 		outcome: text('outcome', { enum: ['attacker', 'defender', 'stalemate'] }).notNull(),
 		/** Which side took the first turn, if recorded. */
 		wentFirst: text('went_first', { enum: ['attacker', 'defender'] }),
-		/** Agreed points size of the game, e.g. 2000. */
-		pointsSize: integer('points_size'),
+		/**
+		 * The battle size fought at — either `combat-patrol` or a points size off the canonical ladder
+		 * (see $lib/domain/battle-sizes). Null when not recorded.
+		 *
+		 * Text, not a number, because Combat Patrol is a distinct game rather than a points value, and
+		 * because — like the missions — keeping the ladder in code means rotating it is data, not a
+		 * schema migration. This column previously held a free integer; those values were migrated
+		 * across as their digits, so an off-ladder legacy size survives and still renders.
+		 */
+		battleSize: text('battle_size'),
 		/** The weekly planetary effect in play, if the players used one. Display-only. */
 		planetaryEffect: text('planetary_effect'),
 		narrative: text('narrative'),
@@ -50,7 +58,18 @@ export const battleReport = sqliteTable(
 	]
 );
 
-/** A warband on one side of a battle report (1v1 → 2 rows, 2v2 → 4 rows). */
+/**
+ * A participant on one side of a battle report. Sides need not be balanced — a report carries
+ * one or two participants per side, so 1v1, 2v2 and the uneven 1v2 / 2v1 are all expressible.
+ *
+ * A participant is EITHER a campaign warband (`warbandId`) OR an outside opponent who isn't in
+ * the league (`guestName`) — exactly one, enforced by the check constraint below and mirrored in
+ * the zod schema. A guest is a name on the record only: they hold no world share and never reach
+ * the leaderboard, because both the control fold and the standings fold drop non-warband
+ * participants (see `foldCombatants` in $lib/domain/control-fold). The league warband opposite a
+ * guest still scores and still gains or loses ground — against the uncontested pool, since the
+ * guest has none to take.
+ */
 export const battleReportCombatant = sqliteTable(
 	'battle_report_combatant',
 	{
@@ -60,9 +79,10 @@ export const battleReportCombatant = sqliteTable(
 		reportId: text('report_id')
 			.notNull()
 			.references(() => battleReport.id, { onDelete: 'cascade' }),
-		warbandId: text('warband_id')
-			.notNull()
-			.references(() => warband.id, { onDelete: 'cascade' }),
+		/** The campaign warband that fought. Null for a guest — see `guestName`. */
+		warbandId: text('warband_id').references(() => warband.id, { onDelete: 'cascade' }),
+		/** An outside opponent's name, when this participant isn't in the league. Null for a warband. */
+		guestName: text('guest_name'),
 		side: text('side', { enum: ['attacker', 'defender'] }).notNull(),
 		/**
 		 * This side's primary mission, from the edition's canonical list (see $lib/domain/missions) —
@@ -86,7 +106,16 @@ export const battleReportCombatant = sqliteTable(
 			{ name: string; victoryPoints: number }[]
 		>()
 	},
-	(t) => [index('battle_report_combatant_report_idx').on(t.reportId)]
+	(t) => [
+		index('battle_report_combatant_report_idx').on(t.reportId),
+		// Exactly one identity per participant: a league warband or a named guest, never both
+		// or neither. The zod schema enforces the same rule at the form boundary; this is the
+		// backstop so no code path can write a nameless, warbandless row.
+		check(
+			'battle_report_combatant_identity',
+			sql`(${t.warbandId} is not null) <> (${t.guestName} is not null)`
+		)
+	]
 );
 
 export const battleReportRelations = relations(battleReport, ({ one, many }) => ({

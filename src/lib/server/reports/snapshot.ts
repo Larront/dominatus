@@ -16,7 +16,7 @@ export interface ReportSnapshot {
 		cycle: number;
 		outcome: 'attacker' | 'defender' | 'stalemate';
 		wentFirst: 'attacker' | 'defender' | null;
-		pointsSize: number | null;
+		battleSize: string | null;
 		planetaryEffect: string | null;
 		narrative: string | null;
 		imagePath: string | null;
@@ -24,7 +24,11 @@ export interface ReportSnapshot {
 		createdAt: number;
 	};
 	combatants: {
-		warbandId: string;
+		/** The campaign warband, or null for an outside opponent — then `guestName` carries them. */
+		warbandId: string | null;
+		/** An outside opponent's name; null for a campaign warband. Frozen so a reverted edit
+		 * restores who actually played, not just the league side of the game. */
+		guestName: string | null;
 		side: 'attacker' | 'defender';
 		primaryMission: string | null;
 		forceDisposition: string | null;
@@ -51,7 +55,7 @@ export function buildReportSnapshot(
 			cycle: report.cycle,
 			outcome: report.outcome,
 			wentFirst: report.wentFirst,
-			pointsSize: report.pointsSize,
+			battleSize: report.battleSize,
 			planetaryEffect: report.planetaryEffect,
 			narrative: report.narrative,
 			imagePath: report.imagePath,
@@ -60,6 +64,7 @@ export function buildReportSnapshot(
 		},
 		combatants: combatants.map((c) => ({
 			warbandId: c.warbandId,
+			guestName: c.guestName,
 			side: c.side,
 			primaryMission: c.primaryMission,
 			forceDisposition: c.forceDisposition,

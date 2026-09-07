@@ -317,3 +317,54 @@ describe('computeStatBlock', () => {
 		});
 	});
 });
+
+describe('computeStatBlock — outside opponents and uneven sides', () => {
+	/** A game against someone outside the league: the opposing slot carries no warband. */
+	const vsGuest = (
+		outcome: 'attacker' | 'defender' | 'stalemate',
+		opts: { meVp?: number; oppVp?: number } = {}
+	): StatReport => ({
+		outcome,
+		wentFirst: null,
+		combatants: [
+			combatant('me', 'attacker', opts.meVp),
+			{ ...combatant('unused', 'defender', opts.oppVp), warbandId: null }
+		]
+	});
+
+	it('counts a game against an outside opponent as a real game', () => {
+		const b = computeStatBlock(
+			[vsGuest('attacker'), vsGuest('defender'), vsGuest('stalemate')],
+			SELF
+		);
+		expect(b.played).toBe(3);
+		expect(b.wins).toBe(1);
+		expect(b.losses).toBe(1);
+		expect(b.draws).toBe(1);
+	});
+
+	it('scores a win over an outside opponent into the VP averages like any other win', () => {
+		const b = computeStatBlock([vsGuest('attacker', { meVp: 80, oppVp: 40 })], SELF);
+		expect(b.avgVpInWins).toBe(80);
+	});
+
+	it('excludes guest games from a head-to-head filter — a guest is never a named foe', () => {
+		const b = computeStatBlock([vsGuest('attacker'), g('attacker')], SELF, ['opp']);
+		expect(b.played).toBe(1);
+	});
+
+	it('counts an uneven 1v2 once, from the viewer perspective', () => {
+		const uneven: StatReport = {
+			outcome: 'attacker',
+			wentFirst: null,
+			combatants: [
+				combatant('me', 'attacker'),
+				combatant('opp', 'defender'),
+				combatant('opp2', 'defender')
+			]
+		};
+		const b = computeStatBlock([uneven], SELF);
+		expect(b.played).toBe(1);
+		expect(b.wins).toBe(1);
+	});
+});
